@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -646,7 +646,7 @@
         class="server-status"
         style="line-height: 1;"
       >
-        ● ONLINE
+        &#9679; ONLINE
       </div>
 
       <!-- Nama kasir disembunyikan agar tampilan rapi, tapi ID tetap ada agar JS tidak error -->
@@ -720,7 +720,7 @@
           onclick="toggleHamburgerMenu(event)"
           style="background: transparent; border: none; box-shadow: none; cursor: pointer; padding: 10px 14px; font-size: 1.5rem; color: #ffffff; display: flex; align-items: center; justify-content: center;"
         >
-          ☰
+          &#9776;
         </button>
 
         <div id="hamburgerDropdown" class="hamburger-dropdown">
@@ -1142,7 +1142,7 @@
 <div id="hasilTransaksiModal" class="popup-overlay">
   <div class="popup-card">
     <div class="receipt-modal-content">
-      <div class="receipt-success-title">TRANSAKSI BERHASIL ✓</div>
+      <div class="receipt-success-title">TRANSAKSI BERHASIL &#10003;</div>
       
       <div class="receipt-row">
         <span>No. Transaksi</span>
@@ -1286,7 +1286,7 @@
     >
 
       <div class="locked-icon">
-        🔒
+        &#128274;
       </div>
 
 
@@ -2082,8 +2082,8 @@ async function cekServer() {
       )
       .textContent =
         result.success
-          ? "● ONLINE"
-          : "● OFFLINE";
+          ? "&#9679; ONLINE"
+          : "&#9679; OFFLINE";
 
   } catch {
 
@@ -2092,7 +2092,7 @@ async function cekServer() {
         "serverStatus"
       )
       .textContent =
-        "● OFFLINE";
+        "&#9679; OFFLINE";
 
   }
 
@@ -2714,18 +2714,28 @@ function renderPopupMeja() {
     });
 
     let topBadgesHtml = "";
+    let bookingTimeHtml = "";
+
     if (isKaryawan) {
       topBadgesHtml += `<span class="ribbon-karyawan">KARYAWAN</span>`;
     }
 
+    // BOOKING HANYA DARI WAITING LIST.
+    // Tampilkan nama sebagai "BOOKING Nama" dan jam booking.
     if (bookingForTable && bookingForTable.namaCustomer) {
       const namaBooking = escapeHtml(String(bookingForTable.namaCustomer).trim());
-      topBadgesHtml += `<span class="badge-member" title="Booking: ${namaBooking}">${namaBooking}</span>`;
+      const jamBooking = escapeHtml(String(bookingForTable.jamBooking || bookingForTable.jam_booking || "").trim());
+
+      topBadgesHtml += `<span class="badge-member" title="Booking ${namaBooking}">BOOKING ${namaBooking}</span>`;
+
+      if (jamBooking) {
+        bookingTimeHtml = `<div style="font-size: 0.7rem; font-weight: 800; color: #d97706; line-height: 1.1; margin-top: 1px;">${jamBooking}</div>`;
+      }
     } else if (session && session.status === "AKTIF" && session.namaPemesan) {
       topBadgesHtml += `<span class="badge-member" title="${escapeHtml(session.namaPemesan)}">${escapeHtml(session.namaPemesan)}</span>`;
     }
 
-    const topContainerHtml = `<div class="meja-top-badge-container"${!topBadgesHtml ? ' style="visibility: hidden;"' : ''}>${topBadgesHtml || '<span class="badge-member">-</span>'}</div>`;
+    const topContainerHtml = `<div class="meja-top-badge-container"${!topBadgesHtml ? ' style="visibility: hidden;"' : ''}>${topBadgesHtml || '<span class="badge-member">-</span>'}${bookingTimeHtml}</div>`;
 
     // 2. MEJA XX
     const mejaNumHtml = `<div class="popup-table-num">MEJA ${i < 10 ? '0' + i : i}</div>`;
@@ -2734,7 +2744,9 @@ function renderPopupMeja() {
     const statusHtml = `<div class="popup-table-status">${statusText}</div>`;
 
     // 4. BADGE BOOKING
-    const bookingBadgeHtml = `<div class="meja-booking-container"${!isBooking ? ' style="visibility: hidden;"' : ''}><span class="ribbon-booking">BOOKING</span></div>`;
+    // Jika booking berasal dari Waiting List dan sudah ditampilkan di bagian atas,
+    // jangan tampilkan badge BOOKING kedua di bawah MEJA.
+    const bookingBadgeHtml = `<div class="meja-booking-container"${(!isBooking || bookingForTable) ? ' style="visibility: hidden;"' : ''}><span class="ribbon-booking">BOOKING</span></div>`;
 
     // 5 & 6. TIMER & TOMBOL STOP LOSS
     let timerHtml = "";
@@ -2953,10 +2965,31 @@ async function klikMejaPopup(nomor) {
     }
   }
 
+  // ==================================================
+  // PRIORITAS 1: SESI AKTIF
+  // ==================================================
+  // Jika meja sedang digunakan customer lain, buka sesi
+  // tersebut terlebih dahulu. Booking tidak boleh mengambil
+  // alih pembayaran customer yang sedang bermain.
+  const session = mejaSessions[nomor];
+
+  if (session && session.status === "AKTIF") {
+    activeMeja = nomor;
+    nomorMeja = nomor;
+    updateMejaHeaderUI();
+    updateSaveOrderButton();
+    await fetchDetailSesi(session.sessionId, true);
+    return;
+  }
+
+  // ==================================================
+  // PRIORITAS 2: BOOKING
+  // ==================================================
+  // Booking hanya diperiksa jika meja tidak sedang aktif.
   const currentWaitingList = (typeof waitingListData !== "undefined" && Array.isArray(waitingListData))
     ? waitingListData
     : (typeof window !== "undefined" && Array.isArray(window.waitingListData) ? window.waitingListData : []);
-  
+
   const foundBooking = currentWaitingList.find(w => {
     const mejaNo = Number(w?.nomorMeja || w?.nomor_meja);
     const status = String(w?.status || "").toUpperCase();
@@ -2968,26 +3001,20 @@ async function klikMejaPopup(nomor) {
     return;
   }
 
-  const session = mejaSessions[nomor];
-
-  if (!session || session.status !== "AKTIF") {
-    if (!window.MejaModal || typeof window.MejaModal.buka !== "function") {
-      alert("Modul meja-modal.js belum termuat.");
-      return;
-    }
-    if (window.MejaProdukModal && typeof window.MejaProdukModal.mulaiMejaBaru === "function") {
-      window.MejaProdukModal.mulaiMejaBaru();
-    }
-    window.MejaModal.buka(nomor);
-  } else {
-    activeMeja = nomor;
-    nomorMeja = nomor;
-    updateMejaHeaderUI();
-    updateSaveOrderButton();
-    await fetchDetailSesi(session.sessionId, true);
+  // ==================================================
+  // PRIORITAS 3: MEJA BIASA
+  // ==================================================
+  if (!window.MejaModal || typeof window.MejaModal.buka !== "function") {
+    alert("Modul meja-modal.js belum termuat.");
+    return;
   }
-}
 
+  if (window.MejaProdukModal && typeof window.MejaProdukModal.mulaiMejaBaru === "function") {
+    window.MejaProdukModal.mulaiMejaBaru();
+  }
+
+  window.MejaModal.buka(nomor);
+}
 // BRIDGE FUNCTION UNTUK MEJA-MODAL.JS & FITUR WAKTU LOSS
 let modeSesiDraft = "DURASI";
 
@@ -3350,7 +3377,7 @@ async function simpanPesananMeja() {
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; flex-shrink: 0;">
         <polyline points="20 6 9 17 4 12"></polyline>
       </svg>
-      <span>TERSIMPAN ✓</span>`;
+      <span>TERSIMPAN &#10003;</span>`;
 
     setTimeout(() => {
       btn.innerHTML = `
@@ -3725,7 +3752,7 @@ function renderCart() {
       lossBannerHtml = `
         <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
           <div>
-            <div style="font-size: 0.75rem; font-weight: 800; color: #065f46; letter-spacing: 0.5px;">MEJA ${activeMeja < 10 ? '0' + activeMeja : activeMeja} — WAKTU LOSS</div>
+            <div style="font-size: 0.75rem; font-weight: 800; color: #065f46; letter-spacing: 0.5px;">MEJA ${activeMeja < 10 ? '0' + activeMeja : activeMeja} &mdash; WAKTU LOSS</div>
             <div id="cartLossTimerVal" style="font-size: 1.15rem; font-weight: 800; color: #047857; font-family: monospace, monospace; margin-top: 2px;">00:00:00</div>
           </div>
           <button 
@@ -3855,7 +3882,7 @@ function renderCart() {
             ${hargaTampil}
           </div>
           <div class="qty-row">
-            <button class="qty-btn" onclick="kurangQty(${index})">−</button>
+            <button class="qty-btn" onclick="kurangQty(${index})">&minus;</button>
             <strong>${item.qty}</strong>
             <button class="qty-btn" onclick="tambahQty(${index})">+</button>
           </div>

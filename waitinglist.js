@@ -302,7 +302,7 @@ function initWaitingListDOM() {
         </div>
 
         <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 20px;">
-          <button type="button" class="qty-btn" style="width: 40px; height: 40px; font-size: 1.2rem; background: #e5e7eb; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;" onclick="ubahDurasiQty(-1)">−</button>
+          <button type="button" class="qty-btn" style="width: 40px; height: 40px; font-size: 1.2rem; background: #e5e7eb; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;" onclick="ubahDurasiQty(-1)">&minus;</button>
           <strong id="wlDurasiQtyVal" style="font-size: 1.5rem; min-width: 40px; text-align: center;">1</strong>
           <button type="button" class="qty-btn" style="width: 40px; height: 40px; font-size: 1.2rem; background: #e5e7eb; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;" onclick="ubahDurasiQty(1)">+</button>
         </div>
@@ -360,7 +360,7 @@ async function bukaCekMejaModal() {
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; background: #f9fafb;">
             <div>
               <div style="font-weight: bold; font-size: 1rem; color: #111827;">${mejaStr}</div>
-              <div style="font-size: 0.85rem; color: #10b981; font-weight: bold; margin-top: 2px;">✅ KOSONG</div>
+              <div style="font-size: 0.85rem; color: #10b981; font-weight: bold; margin-top: 2px;">&#9989; KOSONG</div>
               <div style="font-size: 0.8rem; color: #6b7280; margin-top: 2px;">Bisa langsung dimainkan</div>
             </div>
             <button type="button" class="popup-table-btn" style="padding: 8px 16px; background: #3b82f6; color: #ffffff; font-weight: bold; border-radius: 6px; border: none; cursor: pointer;" onclick="pilihMejaDariCekMeja(${i})">PILIH</button>
@@ -377,7 +377,7 @@ async function bukaCekMejaModal() {
              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; background: #fef2f2;">
                <div>
                  <div style="font-weight: bold; font-size: 1rem; color: #111827;">${mejaStr}</div>
-                 <div style="font-size: 0.85rem; color: #ef4444; font-weight: bold; margin-top: 2px;">🔴 AKTIF</div>
+                 <div style="font-size: 0.85rem; color: #ef4444; font-weight: bold; margin-top: 2px;">&#128308; AKTIF</div>
                  <div style="font-size: 0.8rem; color: #6b7280; margin-top: 2px;">Sedang digunakan (tanpa batas waktu)</div>
                </div>
                <button type="button" class="popup-table-btn" style="padding: 8px 16px; background: #3b82f6; color: #ffffff; font-weight: bold; border-radius: 6px; border: none; cursor: pointer;" onclick="pilihMejaDariCekMeja(${i})">PILIH</button>
@@ -392,7 +392,7 @@ async function bukaCekMejaModal() {
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; background: #f9fafb;">
                   <div>
                     <div style="font-weight: bold; font-size: 1rem; color: #111827;">${mejaStr}</div>
-                    <div style="font-size: 0.85rem; color: #10b981; font-weight: bold; margin-top: 2px;">✅ BISA LANGSUNG</div>
+                    <div style="font-size: 0.85rem; color: #10b981; font-weight: bold; margin-top: 2px;">&#9989; BISA LANGSUNG</div>
                     <div style="font-size: 0.8rem; color: #6b7280; margin-top: 2px;">Waktu sudah habis</div>
                   </div>
                   <button type="button" class="popup-table-btn" style="padding: 8px 16px; background: #3b82f6; color: #ffffff; font-weight: bold; border-radius: 6px; border: none; cursor: pointer;" onclick="pilihMejaDariCekMeja(${i})">PILIH</button>
@@ -408,9 +408,9 @@ async function bukaCekMejaModal() {
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; background: #fef2f2;">
                   <div>
                     <div style="font-weight: bold; font-size: 1rem; color: #111827;">${mejaStr}</div>
-                    <div style="font-size: 0.85rem; color: #ef4444; font-weight: bold; margin-top: 2px;">🔴 AKTIF</div>
+                    <div style="font-size: 0.85rem; color: #ef4444; font-weight: bold; margin-top: 2px;">&#128308; AKTIF</div>
                     <div style="font-size: 0.8rem; color: #6b7280; margin-top: 2px;">Tersedia pukul ${jam}:${menit}</div>
-                    <div style="font-size: 0.8rem; color: #d97706; margin-top: 2px; font-weight: 500;">Menunggu ±${diffMins} menit</div>
+                    <div style="font-size: 0.8rem; color: #d97706; margin-top: 2px; font-weight: 500;">Menunggu &plusmn;${diffMins} menit</div>
                   </div>
                   <button type="button" class="popup-table-btn" style="padding: 8px 16px; background: #3b82f6; color: #ffffff; font-weight: bold; border-radius: 6px; border: none; cursor: pointer;" onclick="pilihMejaDariCekMeja(${i})">PILIH</button>
                 </div>
@@ -1175,29 +1175,69 @@ async function konfirmasiDurasiWaitingList() {
       sessionStorage.getItem("deviceId")
     );
 
+    // ==================================================
+    // VALIDASI WAKTU BOOKING
+    // Booking hanya boleh dimulai pada jam booking atau setelahnya.
+    // ==================================================
+    const now = new Date();
+    const tanggalBooking = String(item.tanggalBooking || "").trim();
+    const jamBooking = String(item.jamBooking || "").trim();
+
+    if (!tanggalBooking || !jamBooking) {
+      throw new Error("Tanggal atau jam booking tidak valid.");
+    }
+
+    const bookingDateTime = new Date(
+      tanggalBooking + "T" + jamBooking + ":00"
+    );
+
+    if (isNaN(bookingDateTime.getTime())) {
+      throw new Error("Waktu booking tidak valid.");
+    }
+
+    if (now < bookingDateTime) {
+      alert(
+        "Booking " + item.namaCustomer + " belum waktunya.\n\n" +
+        "Waktu booking: " + tanggalBooking + " " + jamBooking
+      );
+      return;
+    }
+
+    // ==================================================
+    // BOOKING TIDAK BOLEH MENGAMBIL SESSION CUSTOMER LAIN
+    // ==================================================
     const sesiList = await getSesiMejaWaitingList();
-    const activeSession = sesiList.find(s => Number(s.nomorMeja) === Number(item.nomorMeja) && s.status === "AKTIF");
+
+    const activeSession = sesiList.find(
+      s =>
+        Number(s.nomorMeja) === Number(item.nomorMeja) &&
+        s.status === "AKTIF"
+    );
+
+    if (activeSession) {
+      alert(
+        "MEJA " + String(item.nomorMeja).padStart(2, "0") +
+        " masih digunakan.\n\n" +
+        "Booking " + item.namaCustomer + " belum dapat dimulai.\n" +
+        "Tagihan tidak akan digabung dengan customer yang sedang bermain."
+      );
+      return;
+    }
 
     let sessionId = "";
-    let isMejaAktif = false;
 
-    if (!activeSession) {
-      console.log("[WAITING LIST DEBUG] Durasi dipilih:", durasiJam);
-      console.log("[WAITING LIST DEBUG] Nomor meja:", item.nomorMeja);
-      console.log("[WAITING LIST DEBUG] Nama customer:", item.namaCustomer);
+    console.log("[WAITING LIST DEBUG] Durasi dipilih:", durasiJam);
+    console.log("[WAITING LIST DEBUG] Nomor meja:", item.nomorMeja);
+    console.log("[WAITING LIST DEBUG] Nama customer:", item.namaCustomer);
 
-      const bukaRes = await bukaSesiMejaWaitingList(
-        item.nomorMeja,
-        item.namaCustomer,
-        kasirNama,
-        durasiJam
-      );
-      sessionId = bukaRes.sessionId;
-    } else {
-      isMejaAktif = true;
-      sessionId = activeSession.sessionId;
-      await tambahDurasiSesiWaitingList(sessionId, durasiJam);
-    }
+    const bukaRes = await bukaSesiMejaWaitingList(
+      item.nomorMeja,
+      item.namaCustomer,
+      kasirNama,
+      durasiJam
+    );
+
+    sessionId = bukaRes.sessionId;
 
     if (!sessionId) {
       throw new Error("Session ID tidak valid dari server.");
@@ -1399,7 +1439,7 @@ function renderFormPesanan() {
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
           <div class="qty-row" style="display: flex; align-items: center; gap: 4px;">
-            <button type="button" class="qty-btn" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: #e5e7eb; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="ubahQtyFormPesanan(${idx}, -1)">−</button>
+            <button type="button" class="qty-btn" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: #e5e7eb; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="ubahQtyFormPesanan(${idx}, -1)">&minus;</button>
             <strong style="min-width: 18px; text-align: center; font-size: 0.85rem;">${p.qty}</strong>
             <button type="button" class="qty-btn" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: #e5e7eb; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="ubahQtyFormPesanan(${idx}, 1)">+</button>
           </div>
@@ -1497,3 +1537,5 @@ function escapeHtmlWaitingList(text) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
+
