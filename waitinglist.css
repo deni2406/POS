@@ -1,0 +1,326 @@
+/* ==================================================
+   WAITING LIST MODAL & OVERLAY
+   ================================================== */
+
+.wl-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2500;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wl-modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.wl-modal-card {
+  background: #ffffff;
+  width: 90%;
+  max-width: 700px;
+  max-height: 85vh;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.95);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wl-modal-overlay.show .wl-modal-card {
+  transform: scale(1);
+}
+
+/* ==================================================
+   HEADER & ACTION BAR
+   ================================================== */
+
+.wl-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 12px;
+}
+
+.wl-modal-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.wl-modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #64748b;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.wl-modal-close-btn:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+.wl-action-bar {
+  margin-bottom: 16px;
+}
+
+.wl-add-btn {
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 18px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.15);
+}
+
+.wl-add-btn:hover:not(:disabled) {
+  background-color: #1d4ed8;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.25);
+}
+
+.wl-add-btn:disabled {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+  border: 1px solid #cbd5e1;
+  box-shadow: none;
+  opacity: 0.8;
+}
+
+/* ==================================================
+   CONTAINER & EMPTY STATE
+   ================================================== */
+
+.wl-list-container {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-right: 4px;
+}
+
+.wl-empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 0.95rem;
+  background: #f8fafc;
+  border: 2px dashed #e2e8f0;
+  border-radius: 10px;
+}
+
+/* ==================================================
+   BOOKING CARD DESIGN
+   ================================================== */
+
+.wl-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.wl-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+}
+
+.wl-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.wl-customer-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.wl-customer-wa {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 3px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+/* Status Badges */
+.wl-status-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.wl-status-waiting {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fef3c7;
+}
+
+.wl-status-confirmed {
+  background-color: #f0f9ff;
+  color: #0369a1;
+  border: 1px solid #e0f2fe;
+}
+
+.wl-status-seated {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #d1fae5;
+}
+
+.wl-status-cancelled {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fee2e2;
+}
+
+.wl-status-expired {
+  background-color: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* Info Grid */
+.wl-card-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.wl-info-box {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.wl-info-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.wl-info-value {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
+/* Meja Highlight Box */
+.wl-meja-box {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #1e40af;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* Pesanan Section */
+.wl-pesanan-section {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.wl-pesanan-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #475569;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+  border-bottom: 1px dashed #e2e8f0;
+  padding-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.wl-pesanan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wl-pesanan-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.wl-pesanan-empty {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* ==================================================
+   RESPONSIVE DESIGN
+   ================================================== */
+
+@media (max-width: 640px) {
+  .wl-modal-card {
+    width: 95%;
+    padding: 16px;
+    max-height: 90vh;
+  }
+
+  .wl-card-info-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}

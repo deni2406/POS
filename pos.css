@@ -1,0 +1,443 @@
+/* Modal / Popup Pilih Meja & Hasil Transaksi */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s ease-in-out;
+}
+
+.popup-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.popup-card {
+  background: #ffffff;
+  width: 90%;
+  max-width: 440px;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+  transform: scale(0.95);
+  transition: transform 0.25s ease-in-out;
+  position: relative;
+}
+
+.popup-overlay.show .popup-card {
+  transform: scale(1);
+}
+
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 10px;
+}
+
+.popup-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #111827;
+  margin: 0;
+}
+
+.popup-close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+}
+
+.popup-close-btn:hover {
+  color: #111827;
+}
+
+/* Grid Pilihan Meja di dalam Popup */
+.popup-table-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.popup-table-btn {
+  padding: 10px 2px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+}
+
+.popup-table-btn:active {
+  background: #e5e7eb;
+}
+
+.popup-table-btn.active-selected {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.popup-table-num {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: #111827;
+}
+
+.popup-table-status {
+  font-size: 0.6rem;
+  font-weight: bold;
+  color: #6b7280;
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+
+.popup-table-name {
+  font-size: 0.65rem;
+  color: #3b82f6;
+  font-weight: bold;
+  margin-top: 1px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tombol Simpan Pesanan */
+.save-order-btn {
+  width: 100%;
+  background-color: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  transition: background-color 0.2s;
+}
+
+.save-order-btn:hover {
+  background-color: #059669;
+}
+
+.save-order-btn:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Modal Hasil Transaksi */
+.receipt-modal-content {
+  text-align: center;
+}
+
+.receipt-success-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #10b981;
+  margin-bottom: 15px;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed #e5e7eb;
+  font-size: 0.95rem;
+}
+
+.receipt-row span:first-child {
+  color: #6b7280;
+  font-weight: 500;
+  text-align: left;
+}
+
+.receipt-row span:last-child {
+  color: #111827;
+  font-weight: bold;
+  text-align: right;
+}
+
+.receipt-ok-btn {
+  width: 100%;
+  background-color: #3b82f6;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: background-color 0.2s;
+}
+
+.receipt-ok-btn:hover {
+  background-color: #2563eb;
+}
+
+/* Z-index override agar popup batal transaksi selalu tampil di atas modal riwayat */
+#batalTransaksiPopup {
+  z-index: 99999 !important;
+}
+
+/* Z-index override untuk popup otorisasi pembatalan transaksi */
+#otorisasiBatalTransaksiPopup {
+  z-index: 100000 !important;
+}
+
+/* Styling Topbar & Hamburger Menu Overflow Fix */
+.topbar {
+  overflow: visible !important;
+  position: relative;
+  z-index: 100000;
+}
+
+.topbar-right {
+  overflow: visible !important;
+  position: relative;
+  z-index: 100001;
+}
+
+.hamburger-menu-container {
+  position: relative;
+  display: inline-block;
+  overflow: visible !important;
+  z-index: 100002;
+}
+
+.hamburger-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 100003;
+
+  display: none;
+  flex-direction: column;
+
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+
+  min-width: 180px;
+
+  overflow: hidden;
+}
+
+.hamburger-dropdown.show {
+  display: flex;
+}
+
+.hamburger-item {
+  background: none;
+  border: none;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s, color 0.2s;
+  border-bottom: 1px solid #f3f4f6;
+}
+.hamburger-item:last-child {
+  border-bottom: none;
+}
+.hamburger-item:hover {
+  background: #f9fafb;
+  color: #111827;
+}
+
+/* ==================================================
+   PERBAIKAN UKURAN TOMBOL PILIH MEJA (SEJAJAR DENGAN TOMBOL LAIN)
+   ================================================== */
+#mejaHeaderBtn {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 8px 16px !important;
+  font-size: 0.85rem !important;
+  border-radius: 6px !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+  height: auto !important;
+  max-height: 38px !important;
+  gap: 6px !important;
+  margin: 0 !important;
+}
+
+.meja-header-content {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.meja-header-left {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.btn-meja-label,
+.btn-pemesan-label,
+.meja-icon {
+  line-height: 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline-block !important;
+  font-size: inherit !important;
+}
+
+.btn-pemesan-label:not(:empty)::before {
+  content: " - ";
+  white-space: pre;
+}
+
+#mejaIndicator, .meja-indicator {
+  margin-left: 2px !important;
+  vertical-align: middle !important;
+}
+
+.meja-active-badge {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  margin-left: 5px;
+  margin-top: -5px !important;
+  margin-bottom: -5px !important;
+}
+
+/* ==================================================
+   FIX FINAL: ROOT LAYOUT & PAYMENT PANEL (ANDROID LANDSCAPE)
+   MENGGUNAKAN FLEXBOX MURNI, HANYA CART-ITEMS YANG BISA SCROLL
+   ================================================== */
+
+@media (max-width: 1024px) and (orientation: landscape) {
+  /* Kunci viewport utama agar tidak bisa discroll halamannya */
+  html, body {
+    height: 100dvh !important;
+    width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* #app menjadi flex container utama vertikal */
+  #app {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  /* Topbar mengambil tinggi natural, tidak boleh menyusut */
+  .topbar {
+    flex: 0 0 auto !important;
+  }
+
+  /* POS Layout mengisi sisa ruang tinggi secara otomatis */
+  .pos-layout {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: row !important;
+    min-height: 0 !important; /* Wajib agar flex child tidak overflow */
+    overflow: hidden !important;
+  }
+
+  /* Panel Kiri (Produk) dijaga di dalam batasan tinggi, TIDAK global scroll */
+  .products-panel {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Panel Kanan (Keranjang) ukuran lebar fix, flex column vertikal */
+  .cart-panel {
+    flex: 0 0 320px !important;
+    width: 320px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important; /* Wajib agar cart-panel patuh pada parent */
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  /* Area item pesanan menjadi SATU-SATUNYA area yang bisa discroll */
+  .cart-items {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+
+  /* Tombol simpan statis dan tidak ikut scroll */
+  .save-order-btn {
+    flex: 0 0 auto !important;
+    margin: 4px 0 !important;
+    padding: 6px !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Payment box statis di bagian paling bawah dan tidak ikut scroll */
+  .payment-box {
+    flex: 0 0 auto !important;
+    max-height: none !important;
+    padding: 6px !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Mengurangi jarak vertikal pada elemen payment box untuk space ekstra */
+  .payment-methods,
+  .cash-input,
+  .change-row {
+    margin-bottom: 4px !important;
+  }
+
+  /* Tombol BAYAR selalu terlihat dengan aman */
+  .pay-btn {
+    flex: 0 0 auto !important;
+    min-height: 40px !important;
+    padding: 6px !important;
+    font-size: 0.95rem !important;
+    margin-top: 4px !important;
+  }
+}

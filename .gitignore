@@ -1,0 +1,14 @@
+﻿node_modules/
+pos.db
+*.db
+*.backup*
+.pm2/
+android/.gradle/
+android/.idea/
+android/build/
+android/app/build/
+config.local.js
+.env
+*.pem
+
+config.js

@@ -1,0 +1,107 @@
+/* Styling Header Keranjang */
+.cart-title-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+/* Tombol Meja Profesional Modern POS */
+.meja-header-btn {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 180ms ease-in-out;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08);
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 130px;
+  height: 41px;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.meja-header-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.meja-header-btn:active {
+  transform: scale(0.98) translateY(0);
+}
+
+.meja-header-btn:has(.meja-indicator[style*="block"]) {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.meja-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.meja-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meja-icon {
+  font-size: 15px;
+  line-height: 1;
+  color: #475569;
+  transition: color 180ms ease;
+}
+
+.meja-header-btn:has(.meja-indicator[style*="block"]) .meja-icon {
+  color: #ffffff;
+}
+
+.meja-header-btn .btn-meja-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: 0.3px;
+  transition: color 180ms ease;
+}
+
+.meja-header-btn:has(.meja-indicator[style*="block"]) .btn-meja-label {
+  color: #ffffff;
+}
+
+.meja-indicator {
+  width: 6px;
+  height: 6px;
+  background-color: #ffffff;
+  border-radius: 50%;
+}
+
+.meja-header-btn .btn-pemesan-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #64748b;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  padding-left: 21px;
+  transition: color 180ms ease;
+}
+
+.meja-header-btn:has(.meja-indicator[style*="block"]) .btn-pemesan-label {
+  color: #e2e8f0;
+}
