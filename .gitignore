@@ -12,3 +12,7 @@ config.local.js
 *.pem
 
 config.js
+
+# Temporary backup and patch files
+PollarBilliard-POS-FULL-BACKUP-*.zip
+patch-*.ps1

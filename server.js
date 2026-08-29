@@ -4519,9 +4519,11 @@ async function reconcileLampState() {
       try {
         const shouldBeOn = activeTables.has(table);
 
-        const lampRes = shouldBeOn
-          ? await lampOn(table)
-          : await lampOff(table);
+        if (shouldBeOn) {
+          continue;
+        }
+
+        const lampRes = await lampOff(table);
 
         if (!lampRes || lampRes.success !== true) {
           writeLog(
@@ -4725,6 +4727,7 @@ server.listen(config.PORT, async () => {
 
   setInterval(checkExpiredTableSessions, 10 * 1000);
 });
+
 
 
 
