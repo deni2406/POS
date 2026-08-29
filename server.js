@@ -4478,6 +4478,11 @@ const server = https.createServer({
 
 let lampWatchdogRunning = false;
 
+// State terakhir command lampu yang berhasil diproses.
+// 0 = OFF
+// 1 = ON
+const lastLampCommandState = new Map();
+
 async function reconcileLampState() {
   if (lampWatchdogRunning) return;
 
@@ -4519,17 +4524,28 @@ async function reconcileLampState() {
       try {
         const shouldBeOn = activeTables.has(table);
 
+        // Meja aktif tidak disentuh oleh watchdog.
         if (shouldBeOn) {
+          continue;
+        }
+
+        // Jika OFF sudah pernah berhasil dikirim,
+        // tidak perlu mengirim OFF lagi.
+        if (lastLampCommandState.get(table) === 0) {
           continue;
         }
 
         const lampRes = await lampOff(table);
 
+        if (lampRes && lampRes.success === true) {
+          lastLampCommandState.set(table, 0);
+        }
+
         if (!lampRes || lampRes.success !== true) {
           writeLog(
             "WARN",
             "LAMP_WATCHDOG_FAILED",
-            "Watchdog gagal menyinkronkan lampu",
+            "Watchdog gagal mematikan lampu meja",
             {
               nomorMeja: table,
               databaseAktif: shouldBeOn,
@@ -4537,6 +4553,7 @@ async function reconcileLampState() {
             }
           );
         }
+
       } catch (lampError) {
         writeLog(
           "ERROR",
@@ -4617,6 +4634,8 @@ async function recoverLampStateAtStartup() {
         }
 
         if (lampRes && lampRes.success === true) {
+          lastLampCommandState.set(table, shouldBeOn ? 1 : 0);
+
           writeLog(
             "INFO",
             "LAMP_RECOVERY_SUCCESS",
@@ -4681,10 +4700,6 @@ server.listen(config.PORT, async () => {
 
   try {
     await recoverLampStateAtStartup();
-
-    setInterval(() => {
-      reconcileLampState();
-    }, 30000);
   } catch (error) {
     writeLog(
       "WARN",
