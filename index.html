@@ -646,7 +646,7 @@
         class="server-status"
         style="line-height: 1;"
       >
-        &#9679; ONLINE
+
       </div>
 
       <!-- Nama kasir disembunyikan agar tampilan rapi, tapi ID tetap ada agar JS tidak error -->
@@ -752,6 +752,14 @@
             "
           >
             MEJA KARYAWAN
+          </button>
+
+          <button
+            id="stockOpnameBtn"
+            class="hamburger-item"
+            onclick="if (window.StockOpname && typeof window.StockOpname.open === 'function') { window.StockOpname.open(); } else { alert('Modul Stock Opname belum siap. Silakan refresh aplikasi.'); } tutupHamburgerMenu();"
+          >
+            STOCK OPNAME
           </button>
 
           <button
@@ -1137,6 +1145,53 @@
 </div>
 
 <!-- ==================================================
+     MODAL PINDAH MEJA
+================================================== -->
+<div id="pindahMejaModal" class="popup-overlay" onclick="tutupModalPindahMejaLuar(event)">
+  <div class="popup-card" style="max-width: 440px; width: 90%;">
+    <div class="popup-header">
+      <div class="popup-header-title-wrapper">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="17 1 21 5 17 9"></polyline>
+          <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+          <polyline points="7 23 3 19 7 15"></polyline>
+          <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+        </svg>
+        <h3 class="popup-title">PINDAH MEJA</h3>
+      </div>
+      <button class="popup-close-btn" onclick="tutupModalPindahMeja()">&times;</button>
+    </div>
+
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 15px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem;">
+        <span style="color: #64748b; font-weight: 600;">Meja Asal:</span>
+        <strong id="pindahMejaAsalText" style="color: #0f172a; font-size: 1rem;">Meja --</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem;">
+        <span style="color: #64748b; font-weight: 600;">Customer / Member:</span>
+        <strong id="pindahNamaCustomerText" style="color: #2563eb;">-</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+        <span style="color: #64748b; font-weight: 600;">Sisa Waktu / Status:</span>
+        <strong id="pindahSisaWaktuText" style="color: #059669; font-family: monospace;">--:--:--</strong>
+      </div>
+    </div>
+
+    <label class="form-label" style="font-weight: 700; margin-bottom: 6px; display: block; color: #374151;">
+      Pilih Meja Tujuan (Hanya Meja Kosong)
+    </label>
+    <select id="pindahMejaTujuanSelect" class="form-input" style="cursor: pointer; font-weight: 700; font-size: 1rem; padding: 10px;">
+      <option value="">-- Pilih Meja Tujuan --</option>
+    </select>
+
+    <div style="display: flex; gap: 10px; margin-top: 18px;">
+      <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #f3f4f6; color: #374151; font-weight: bold; border-radius: 8px;" onclick="tutupModalPindahMeja()">BATAL</button>
+      <button id="konfirmasiPindahMejaBtn" class="popup-table-btn" style="flex: 1; padding: 10px; background: #2563eb; color: #ffffff; font-weight: bold; border-radius: 8px;" onclick="eksekusiPindahMeja()">KONFIRMASI PINDAH</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================
      MODAL HASIL TRANSAKSI
 ================================================== -->
 <div id="hasilTransaksiModal" class="popup-overlay">
@@ -1457,6 +1512,10 @@ const memberByMeja = new Map();
 
 // Global Loading Lock State untuk Stop Waktu Loss
 let isProcessingStopLoss = false;
+
+// State untuk Pindah Meja
+let targetPindahSessionId = null;
+let targetPindahMejaAsal = null;
 
 window.addEventListener("memberSelected", function (event) {
   const member = event.detail?.member || null;
@@ -2082,8 +2141,7 @@ async function cekServer() {
       )
       .textContent =
         result.success
-          ? "&#9679; ONLINE"
-          : "&#9679; OFFLINE";
+          ? "" : "";
 
   } catch {
 
@@ -2092,7 +2150,7 @@ async function cekServer() {
         "serverStatus"
       )
       .textContent =
-        "&#9679; OFFLINE";
+        "";
 
   }
 
@@ -2748,7 +2806,7 @@ function renderPopupMeja() {
     // jangan tampilkan badge BOOKING kedua di bawah MEJA.
     const bookingBadgeHtml = `<div class="meja-booking-container"${(!isBooking || bookingForTable) ? ' style="visibility: hidden;"' : ''}><span class="ribbon-booking">BOOKING</span></div>`;
 
-    // 5 & 6. TIMER & TOMBOL STOP LOSS
+    // 5 & 6. TIMER & TOMBOL STOP LOSS / PINDAH MEJA
     let timerHtml = "";
     if (session && session.status === "AKTIF") {
       if (isLoss) {
@@ -2756,13 +2814,21 @@ function renderPopupMeja() {
           <div class="meja-timer-box">
             <div class="meja-timer-label" style="color: #059669; font-weight: 800;">WAKTU LOSS</div>
             <div id="timer-meja-${i}" class="meja-timer-val" style="color: #059669 !important;">00:00:00</div>
-            <button 
-              class="btn-stop-loss" 
-              onclick="event.stopPropagation(); stopWaktuLoss('${session.sessionId}', this)"
-              style="margin-top: 4px; padding: 3px 8px; background: #dc2626; color: #ffffff; border: none; border-radius: 6px; font-size: 0.68rem; font-weight: 800; cursor: pointer; transition: background 0.15s;"
-            >
-              STOP WAKTU
-            </button>
+            <div style="display: flex; gap: 4px; margin-top: 4px;">
+              <button 
+                onclick="event.stopPropagation(); bukaModalPindahMeja(${i})"
+                style="padding: 3px 6px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-size: 0.65rem; font-weight: 800; cursor: pointer;"
+              >
+                PINDAH
+              </button>
+              <button 
+                class="btn-stop-loss" 
+                onclick="event.stopPropagation(); stopWaktuLoss('${session.sessionId}', this)"
+                style="padding: 3px 6px; background: #dc2626; color: #ffffff; border: none; border-radius: 6px; font-size: 0.65rem; font-weight: 800; cursor: pointer;"
+              >
+                STOP
+              </button>
+            </div>
           </div>
         `;
       } else {
@@ -2770,7 +2836,15 @@ function renderPopupMeja() {
           <div class="meja-timer-box">
             <div class="meja-timer-label">SISA WAKTU</div>
             <div id="timer-meja-${i}" class="meja-timer-val">00:00:00</div>
-            <div class="meja-timer-sub">Selesai: ${session.waktuSelesai ? window.MejaTimer.formatJam(session.waktuSelesai) : '-'}</div>
+            <div style="display: flex; gap: 4px; justify-content: center; align-items: center; margin-top: 2px;">
+              <span class="meja-timer-sub" style="margin-top:0;">Selesai: ${session.waktuSelesai ? window.MejaTimer.formatJam(session.waktuSelesai) : '-'}</span>
+              <button 
+                onclick="event.stopPropagation(); bukaModalPindahMeja(${i})"
+                style="padding: 2px 6px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-size: 0.65rem; font-weight: 800; cursor: pointer; flex-shrink: 0;"
+              >
+                PINDAH
+              </button>
+            </div>
           </div>
         `;
       }
@@ -2939,6 +3013,195 @@ async function stopWaktuLoss(sessionId, btnElement) {
 
 window.stopWaktuLoss = stopWaktuLoss;
 
+// ==================================================
+// LOGIKA FITUR PINDAH MEJA
+// ==================================================
+
+async function bukaModalPindahMeja(nomorAsal) {
+  const nomor = Number(nomorAsal);
+  if (!nomor || nomor < 1 || nomor > 10) {
+    alert("Nomor meja asal tidak valid.");
+    return;
+  }
+
+  const session = mejaSessions[nomor];
+  if (!session || session.status !== "AKTIF") {
+    alert("Meja " + (nomor < 10 ? "0" + nomor : nomor) + " tidak dalam status AKTIF.");
+    return;
+  }
+
+  targetPindahSessionId = session.sessionId;
+  targetPindahMejaAsal = nomor;
+
+  // Set teks meja asal & customer
+  document.getElementById("pindahMejaAsalText").textContent = "MEJA " + (nomor < 10 ? "0" + nomor : nomor);
+  document.getElementById("pindahNamaCustomerText").textContent = session.namaPemesan || "-";
+
+  // Hitung Sisa Waktu / Status
+  const timerEl = document.getElementById(`timer-meja-${nomor}`);
+  let sisaText = "--:--:--";
+  if (timerEl) {
+    sisaText = timerEl.textContent || "--:--:--";
+  } else {
+    const jenisSesiStr = String(session.jenisSesi || session.jenis_sesi || "").toUpperCase();
+    if (jenisSesiStr === "LOSS") {
+      sisaText = "WAKTU LOSS";
+    } else if (session.waktuSelesai) {
+      sisaText = window.MejaTimer ? window.MejaTimer.formatJam(session.waktuSelesai) : session.waktuSelesai;
+    }
+  }
+  document.getElementById("pindahSisaWaktuText").textContent = sisaText;
+
+  // Ambil data booking dari waiting list
+  const currentWaitingList = (typeof waitingListData !== "undefined" && Array.isArray(waitingListData))
+    ? waitingListData
+    : (typeof window !== "undefined" && Array.isArray(window.waitingListData) ? window.waitingListData : []);
+
+  // Filter meja yang benar-benar KOSONG
+  // Meja aktif, meja karyawan, atau meja booking TIDAK BISA dipilih sebagai tujuan.
+  const selectEl = document.getElementById("pindahMejaTujuanSelect");
+  selectEl.innerHTML = `<option value="">-- Pilih Meja Tujuan --</option>`;
+
+  let countKosong = 0;
+  for (let i = 1; i <= 10; i++) {
+    if (i === nomor) continue; // Skip meja asal
+
+    const sess = mejaSessions[i];
+    const isAktif = sess && sess.status === "AKTIF";
+    
+    // Check booking status
+    const isBooking = currentWaitingList.some(w => {
+      const mejaNo = Number(w?.nomorMeja || w?.nomor_meja);
+      const status = String(w?.status || "").toUpperCase();
+      return mejaNo === i && ["WAITING", "CONFIRMED", "BOOKING"].includes(status);
+    });
+
+    if (!isAktif && !isBooking) {
+      countKosong++;
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = `MEJA ${i < 10 ? '0' + i : i} (KOSONG)`;
+      selectEl.appendChild(option);
+    }
+  }
+
+  if (countKosong === 0) {
+    alert("Tidak ada meja lain yang kosong saat ini.");
+    return;
+  }
+
+  document.getElementById("pindahMejaModal").classList.add("show");
+}
+
+function tutupModalPindahMeja() {
+  const modal = document.getElementById("pindahMejaModal");
+  if (modal) modal.classList.remove("show");
+  targetPindahSessionId = null;
+  targetPindahMejaAsal = null;
+  const btn = document.getElementById("konfirmasiPindahMejaBtn");
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "KONFIRMASI PINDAH";
+  }
+}
+
+function tutupModalPindahMejaLuar(event) {
+  if (event.target.id === "pindahMejaModal") {
+    tutupModalPindahMeja();
+  }
+}
+
+async function eksekusiPindahMeja() {
+  const selectEl = document.getElementById("pindahMejaTujuanSelect");
+  const nomorTujuan = selectEl ? Number(selectEl.value) : 0;
+
+  if (!targetPindahSessionId || !targetPindahMejaAsal) {
+    alert("Data meja asal tidak valid.");
+    return;
+  }
+
+  if (!nomorTujuan || nomorTujuan < 1 || nomorTujuan > 10) {
+    alert("Silakan pilih meja tujuan yang kosong.");
+    return;
+  }
+
+  if (nomorTujuan === targetPindahMejaAsal) {
+    alert("Meja tujuan tidak boleh sama dengan meja asal.");
+    return;
+  }
+
+  // Simpan nilai asal dan sessionId ke variabel lokal SEBELUM memanggil tutupModalPindahMeja()
+  const sessionIdPindah = targetPindahSessionId;
+  const mejaAsalPindah = targetPindahMejaAsal;
+
+  const textAsal = mejaAsalPindah < 10 ? "0" + mejaAsalPindah : mejaAsalPindah;
+  const textTujuan = nomorTujuan < 10 ? "0" + nomorTujuan : nomorTujuan;
+
+  const konfirmasi = confirm(`Pindahkan dari Meja ${textAsal} ke Meja ${textTujuan}?`);
+  if (!konfirmasi) return;
+
+  const btn = document.getElementById("konfirmasiPindahMejaBtn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "MEMPROSES...";
+  }
+
+  try {
+    const response = await authenticatedFetch("/api/meja/pindah", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        sessionId: sessionIdPindah,
+        nomorMejaAsal: mejaAsalPindah,
+        nomorMejaTujuan: nomorTujuan
+      })
+    });
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.message || "Gagal memindahkan meja.");
+    }
+
+    tutupModalPindahMeja();
+
+    // Transfer member mapping jika ada
+    if (memberByMeja.has(String(mejaAsalPindah))) {
+      const m = memberByMeja.get(String(mejaAsalPindah));
+      memberByMeja.set(String(nomorTujuan), m);
+      memberByMeja.delete(String(mejaAsalPindah));
+    }
+
+    // Refresh data sesi meja
+    await fetchMejaSessions();
+
+    // Pindah UI activeMeja dan nomorMeja ke meja tujuan
+    activeMeja = nomorTujuan;
+    nomorMeja = nomorTujuan;
+
+    // Load detail sesi meja baru (menjaga cart & items utuh)
+    await fetchDetailSesi(result.sessionId, true);
+
+    updateMejaHeaderUI();
+    renderCart();
+    updateSaveOrderButton();
+
+    alert(`Berhasil memindahkan sesi ke Meja ${textTujuan}.`);
+
+  } catch (error) {
+    console.error("Error eksekusiPindahMeja:", error);
+    alert("Gagal memindahkan meja: " + error.message);
+    fetchMejaSessions().catch(() => {});
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "KONFIRMASI PINDAH";
+    }
+  }
+}
+
 async function klikMejaPopup(nomor) {
   // Jangan izinkan cart pembayaran LOSS yang sudah di-stop ditimpa
   // oleh pemilihan meja lain sampai transaksi tersebut selesai.
@@ -2968,9 +3231,6 @@ async function klikMejaPopup(nomor) {
   // ==================================================
   // PRIORITAS 1: SESI AKTIF
   // ==================================================
-  // Jika meja sedang digunakan customer lain, buka sesi
-  // tersebut terlebih dahulu. Booking tidak boleh mengambil
-  // alih pembayaran customer yang sedang bermain.
   const session = mejaSessions[nomor];
 
   if (session && session.status === "AKTIF") {
@@ -2985,7 +3245,6 @@ async function klikMejaPopup(nomor) {
   // ==================================================
   // PRIORITAS 2: BOOKING
   // ==================================================
-  // Booking hanya diperiksa jika meja tidak sedang aktif.
   const currentWaitingList = (typeof waitingListData !== "undefined" && Array.isArray(waitingListData))
     ? waitingListData
     : (typeof window !== "undefined" && Array.isArray(window.waitingListData) ? window.waitingListData : []);
@@ -3015,6 +3274,7 @@ async function klikMejaPopup(nomor) {
 
   window.MejaModal.buka(nomor);
 }
+
 // BRIDGE FUNCTION UNTUK MEJA-MODAL.JS & FITUR WAKTU LOSS
 let modeSesiDraft = "DURASI";
 
@@ -3114,17 +3374,11 @@ async function konfirmasiMulaiSesi(durasiJam = 1, draft = [], jenisSesiParam = n
 
   const finalJenisSesi = (selectedMode === "LOSS") ? "LOSS" : "BIASA";
 
-  let finalDurasiJam = durasiJam;
+  let finalDurasiJam = Number(durasiJam);
 
   if (selectedMode === "LOSS") {
     finalDurasiJam = 0;
   } else {
-    const durasiInput = document.getElementById("inputDurasiJam");
-    if (durasiInput && durasiInput.value) {
-      finalDurasiJam = Number(durasiInput.value);
-    } else {
-      finalDurasiJam = Number(durasiJam || 1);
-    }
     if (!Number.isInteger(finalDurasiJam) || finalDurasiJam < 1) {
       alert("Durasi meja tidak valid.");
       return false;
@@ -3743,7 +3997,7 @@ function renderCart() {
   let total = 0;
   let cartReady = true;
 
-  // Render Header Informasi Meja jika Aktif WAKTU LOSS
+  // Render Header Informasi Meja jika Aktif
   let lossBannerHtml = "";
   if (activeMeja && mejaSessions[activeMeja] && mejaSessions[activeMeja].status === "AKTIF") {
     const activeSession = mejaSessions[activeMeja];
@@ -3755,12 +4009,35 @@ function renderCart() {
             <div style="font-size: 0.75rem; font-weight: 800; color: #065f46; letter-spacing: 0.5px;">MEJA ${activeMeja < 10 ? '0' + activeMeja : activeMeja} &mdash; WAKTU LOSS</div>
             <div id="cartLossTimerVal" style="font-size: 1.15rem; font-weight: 800; color: #047857; font-family: monospace, monospace; margin-top: 2px;">00:00:00</div>
           </div>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button 
+              onclick="bukaModalPindahMeja(${activeMeja})"
+              style="padding: 8px 12px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"
+            >
+              PINDAH MEJA
+            </button>
+            <button 
+              class="btn-stop-loss-cart"
+              onclick="stopWaktuLoss('${activeSession.sessionId}', this)"
+              style="padding: 8px 14px; background: #dc2626; color: #ffffff; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 800; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"
+            >
+              STOP WAKTU
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      lossBannerHtml = `
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+          <div>
+            <div style="font-size: 0.75rem; font-weight: 800; color: #1e40af; letter-spacing: 0.5px;">MEJA ${activeMeja < 10 ? '0' + activeMeja : activeMeja} &mdash; ${escapeHtml(activeSession.namaPemesan || 'AKTIF')}</div>
+            <div style="font-size: 0.75rem; color: #3b82f6; font-weight: 600; margin-top: 2px;">Selesai: ${activeSession.waktuSelesai ? window.MejaTimer.formatJam(activeSession.waktuSelesai) : '-'}</div>
+          </div>
           <button 
-            class="btn-stop-loss-cart"
-            onclick="stopWaktuLoss('${activeSession.sessionId}', this)"
-            style="padding: 8px 14px; background: #dc2626; color: #ffffff; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 800; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"
+            onclick="bukaModalPindahMeja(${activeMeja})"
+            style="padding: 8px 14px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 800; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"
           >
-            STOP WAKTU
+            PINDAH MEJA
           </button>
         </div>
       `;
@@ -5305,6 +5582,14 @@ async function prosesBatalTransaksi() {
   </div>
 </div>
 
+
+  <!-- STOCK OPNAME MODULE -->
+  <link rel="stylesheet" href="/stock-opname.css">
+  <script src="/stock-opname.js"></script>
+
 </body>
 
 </html>
+
+
+

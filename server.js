@@ -109,6 +109,7 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS master_barang (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id_barang TEXT,
       nama TEXT NOT NULL,
       kategori TEXT NOT NULL DEFAULT 'Lainnya',
       hpp INTEGER NOT NULL DEFAULT 0,
@@ -446,7 +447,205 @@ db.serialize(() => {
     )
   `);
 
-});
+  // ==================================================
+  // STOCK OPNAME DATABASE
+  // ==================================================
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS stock_opname (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      so_id TEXT UNIQUE NOT NULL,
+      kategori TEXT NOT NULL,
+      petugas TEXT,
+      tanggal TEXT,
+      revisi_ke INTEGER NOT NULL DEFAULT 0,
+      is_final INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'DRAFT',
+      total_plus REAL NOT NULL DEFAULT 0,
+      total_minus REAL NOT NULL DEFAULT 0,
+      total_kerugian REAL NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
+
+  const stockOpnameSummaryMigrations = [
+    "ALTER TABLE stock_opname ADD COLUMN total_plus REAL NOT NULL DEFAULT 0",
+    "ALTER TABLE stock_opname ADD COLUMN total_minus REAL NOT NULL DEFAULT 0",
+    "ALTER TABLE stock_opname ADD COLUMN total_kerugian REAL NOT NULL DEFAULT 0"
+  ];
+
+  stockOpnameSummaryMigrations.forEach(migration => {
+    db.run(migration, error => {
+      if (error && !error.message.includes("duplicate column name")) {
+        writeLog(
+          "ERROR",
+          "DATABASE",
+          `Gagal menjalankan migration Stock Opname: ${migration}`,
+          { error: error.message }
+        );
+      }
+    });
+  });
+
+  // Jika database lama pernah memiliki kategori UNIQUE,
+  // migrasikan ke struktur yang benar: so_id UNIQUE, kategori tidak UNIQUE.
+  db.get(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='stock_opname'",
+    (err, row) => {
+      if (err) {
+        writeLog("ERROR", "DATABASE", "Gagal memeriksa schema stock_opname", {
+          error: err.message
+        });
+        return;
+      }
+
+      if (row && row.sql && row.sql.includes("kategori TEXT UNIQUE")) {
+        db.serialize(() => {
+          db.run(
+            "ALTER TABLE stock_opname RENAME TO stock_opname_old",
+            renameErr => {
+              if (renameErr) {
+                writeLog(
+                  "ERROR",
+                  "DATABASE",
+                  "Gagal memigrasikan stock_opname lama",
+                  { error: renameErr.message }
+                );
+                return;
+              }
+
+              db.run(
+                `
+                CREATE TABLE stock_opname (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  so_id TEXT UNIQUE NOT NULL,
+                  kategori TEXT NOT NULL,
+                  petugas TEXT,
+                  tanggal TEXT,
+                  revisi_ke INTEGER NOT NULL DEFAULT 0,
+                  is_final INTEGER NOT NULL DEFAULT 0,
+                  status TEXT NOT NULL DEFAULT 'DRAFT',
+                  total_plus REAL NOT NULL DEFAULT 0,
+                  total_minus REAL NOT NULL DEFAULT 0,
+                  total_kerugian REAL NOT NULL DEFAULT 0,
+                  created_at TEXT NOT NULL,
+                  updated_at TEXT NOT NULL
+                )
+                `,
+                createErr => {
+                  if (createErr) {
+                    writeLog(
+                      "ERROR",
+                      "DATABASE",
+                      "Gagal membuat schema stock_opname baru",
+                      { error: createErr.message }
+                    );
+                    return;
+                  }
+
+                  db.run(
+                    `
+                    INSERT INTO stock_opname
+                    (
+                      id,
+                      so_id,
+                      kategori,
+                      petugas,
+                      tanggal,
+                      revisi_ke,
+                      is_final,
+                      status,
+                      total_plus,
+                      total_minus,
+                      total_kerugian,
+                      created_at,
+                      updated_at
+                    )
+                    SELECT
+                      id,
+                      COALESCE(so_id, 'SO-MIGRATED-' || id),
+                      kategori,
+                      petugas,
+                      tanggal,
+                      revisi_ke,
+                      is_final,
+                      status,
+                      0,
+                      0,
+                      0,
+                      created_at,
+                      updated_at
+                    FROM stock_opname_old
+                    `,
+                    insertErr => {
+                      if (insertErr) {
+                        writeLog(
+                          "ERROR",
+                          "DATABASE",
+                          "Gagal memindahkan data stock_opname lama",
+                          { error: insertErr.message }
+                        );
+                        return;
+                      }
+
+                      db.run("DROP TABLE stock_opname_old", dropErr => {
+                        if (dropErr) {
+                          writeLog(
+                            "ERROR",
+                            "DATABASE",
+                            "Gagal menghapus stock_opname_old",
+                            { error: dropErr.message }
+                          );
+                        }
+                      });
+                    }
+                  );
+                }
+              );
+            }
+          );
+        });
+      }
+    }
+  );
+
+  // Detail hasil SO disimpan server-side.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS stock_opname_detail (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      so_id TEXT NOT NULL,
+      id_barang TEXT,
+      nama_barang TEXT,
+      area TEXT,
+      satuan TEXT,
+      jumlah_barang_aktual REAL NOT NULL DEFAULT 0,
+      jumlah_hasil_so REAL NOT NULL DEFAULT 0,
+      selisih_barang REAL NOT NULL DEFAULT 0,
+      kerugian_hpp REAL NOT NULL DEFAULT 0,
+      kerugian_harga_jual REAL NOT NULL DEFAULT 0,
+      nominal_plus REAL NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
+
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_stock_opname_detail_so_id ON stock_opname_detail(so_id)`,
+    error => {
+      if (error) {
+        writeLog(
+          "ERROR",
+          "DATABASE",
+          "Gagal membuat index stock_opname_detail",
+          { error: error.message }
+        );
+      }
+    }
+  );
+
+
+});;
 
 
 // ==================================================
@@ -962,12 +1161,21 @@ async function syncProduk() {
 
         const stmt = db.prepare(`
           INSERT INTO master_barang
-          (nama, kategori, hpp, harga_jual, stok_aktual, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?)
+          (
+            id_barang,
+            nama,
+            kategori,
+            hpp,
+            harga_jual,
+            stok_aktual,
+            updated_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
 
         for (const item of products) {
           stmt.run(
+            String(item.id || ""),
             String(item.nama || ""),
             String(item.kategori || "Lainnya"),
             Number(item.hpp || 0),
@@ -982,13 +1190,19 @@ async function syncProduk() {
             reject(finalizeError);
             return;
           }
+
           resolve();
         });
       });
     });
   });
 
-  writeLog("INFO", "SYNC_PRODUK_SUCCESS", `Master Barang tersimpan lokal: ${products.length} item`, { jumlah: products.length });
+  writeLog(
+    "INFO",
+    "SYNC_PRODUK_SUCCESS",
+    `Master Barang tersimpan lokal: ${products.length} item`,
+    { jumlah: products.length }
+  );
 
   return {
     success: true,
@@ -1490,6 +1704,37 @@ const server = https.createServer({
     }
   }
 
+  // STOCK OPNAME MODULE
+  if (req.method === "GET" && req.url === "/stock-opname.js") {
+    try {
+      const js = fs.readFileSync(path.join(__dirname, "stock-opname.js"), "utf8");
+      res.writeHead(200, {
+        "Content-Type": "application/javascript; charset=utf-8",
+        "Cache-Control": "no-cache"
+      });
+      return res.end(js);
+    } catch (error) {
+      writeLog("ERROR", "UI", "Gagal membuka stock-opname.js", { error: error.message });
+      res.writeHead(404);
+      return res.end("stock-opname.js tidak ditemukan");
+    }
+  }
+
+  if (req.method === "GET" && req.url === "/stock-opname.css") {
+    try {
+      const css = fs.readFileSync(path.join(__dirname, "stock-opname.css"), "utf8");
+      res.writeHead(200, {
+        "Content-Type": "text/css; charset=utf-8",
+        "Cache-Control": "no-cache"
+      });
+      return res.end(css);
+    } catch (error) {
+      writeLog("ERROR", "UI", "Gagal membuka stock-opname.css", { error: error.message });
+      res.writeHead(404);
+      return res.end("stock-opname.css tidak ditemukan");
+    }
+  }
+
   if (req.method === "GET" && req.url === "/meja-timer.js") {
     try {
       const js = fs.readFileSync(path.join(__dirname, "meja-timer.js"), "utf8");
@@ -1887,7 +2132,7 @@ const server = https.createServer({
 
       if (!Number.isInteger(table) || table < 1 || table > 10) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-        return res.end(JSON.stringify({ success: false, message: "Table must be 1â€“10." }));
+        return res.end(JSON.stringify({ success: false, message: "Table must be 1–10." }));
       }
 
       let result;
@@ -3632,6 +3877,134 @@ const server = https.createServer({
   }
 
   // ==================================================
+  // POST /api/meja/pindah (FITUR PINDAH MEJA)
+  // ==================================================
+  if (req.method === "POST" && req.url === "/api/meja/pindah") {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+
+    try {
+      const data = await getJsonBody(req);
+      const sessionId = data.sessionId ? String(data.sessionId).trim() : "";
+      const nomorMejaAsal = Number(data.nomorMejaAsal);
+      const nomorMejaTujuan = Number(data.nomorMejaTujuan);
+
+      if (!sessionId) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: "Session ID wajib diisi." }));
+      }
+
+      if (!Number.isInteger(nomorMejaAsal) || nomorMejaAsal < 1 || nomorMejaAsal > 10) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: "Nomor meja asal harus 1-10." }));
+      }
+
+      if (!Number.isInteger(nomorMejaTujuan) || nomorMejaTujuan < 1 || nomorMejaTujuan > 10) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: "Nomor meja tujuan harus 1-10." }));
+      }
+
+      if (nomorMejaAsal === nomorMejaTujuan) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: "Meja asal dan meja tujuan tidak boleh sama." }));
+      }
+
+      await runAsync("BEGIN IMMEDIATE TRANSACTION");
+
+      try {
+        const sesiAsal = await new Promise((resolve, reject) => {
+          db.get(
+            `SELECT * FROM sesi_meja WHERE session_id = ? AND status = 'AKTIF'`,
+            [sessionId],
+            (err, row) => {
+              if (err) reject(err);
+              else resolve(row);
+            }
+          );
+        });
+
+        if (!sesiAsal) {
+          await runAsync("ROLLBACK");
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: "Sesi tidak ditemukan atau tidak aktif." }));
+        }
+
+        if (sesiAsal.nomor_meja !== nomorMejaAsal) {
+          await runAsync("ROLLBACK");
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: `Sesi tidak berada di meja asal (${nomorMejaAsal}).` }));
+        }
+
+        const sesiTujuan = await getActiveSessionByTable(nomorMejaTujuan);
+        if (sesiTujuan) {
+          await runAsync("ROLLBACK");
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: "Meja tujuan sedang digunakan." }));
+        }
+
+        const updateRes = await runAsync(
+          `UPDATE sesi_meja SET nomor_meja = ? WHERE session_id = ? AND status = 'AKTIF' AND NOT EXISTS (SELECT 1 FROM sesi_meja WHERE nomor_meja = ? AND status = 'AKTIF')`,
+          [nomorMejaTujuan, sessionId, nomorMejaTujuan]
+        );
+
+        if (updateRes.changes === 0) {
+          await runAsync("ROLLBACK");
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: "Gagal memperbarui meja sesi. Meja tujuan mungkin sudah terisi." }));
+        }
+
+        await runAsync("COMMIT");
+
+        writeLog("INFO", "MOVE_TABLE", `Berhasil memindahkan meja dari Meja ${nomorMejaAsal} ke Meja ${nomorMejaTujuan}`, {
+          sessionId,
+          nomorMejaAsal,
+          nomorMejaTujuan,
+          kasir: session.username
+        });
+
+        try {
+          const lampOffRes = await lampOff(nomorMejaAsal);
+          if (!lampOffRes || lampOffRes.success !== true) {
+            writeLog("WARN", "LAMP_OFF_FAILED", `Gagal mematikan lampu meja asal ${nomorMejaAsal} saat pindah meja`, { lampOffRes });
+          }
+        } catch (lampErr) {
+          writeLog("ERROR", "LAMP_OFF_ERROR", `Error saat mematikan lampu meja asal ${nomorMejaAsal} saat pindah meja`, { error: lampErr.message });
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        try {
+          const lampOnRes = await lampOn(nomorMejaTujuan);
+          if (!lampOnRes || lampOnRes.success !== true) {
+            writeLog("WARN", "LAMP_ON_FAILED", `Gagal menyalakan lampu meja tujuan ${nomorMejaTujuan} saat pindah meja`, { lampOnRes });
+          }
+        } catch (lampErr) {
+          writeLog("ERROR", "LAMP_ON_ERROR", `Error saat menyalakan lampu meja tujuan ${nomorMejaTujuan} saat pindah meja`, { error: lampErr.message });
+        }
+
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({
+          success: true,
+          sessionId: sessionId,
+          nomorMejaAsal: nomorMejaAsal,
+          nomorMejaTujuan: nomorMejaTujuan
+        }));
+
+      } catch (txErr) {
+        await runAsync("ROLLBACK");
+        writeLog("ERROR", "MOVE_TABLE_ERROR", txErr.message);
+        res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: txErr.message }));
+      }
+
+    } catch (error) {
+      writeLog("ERROR", "MOVE_TABLE_ERROR", error.message);
+      res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ success: false, message: error.message }));
+    }
+  }
+
+  // ==================================================
   // POST /api/meja/loss/stop (STRICT ATOMIC TRANSACTION)
   // ==================================================
   if (req.method === "POST" && req.url === "/api/meja/loss/stop") {
@@ -3679,6 +4052,8 @@ const server = https.createServer({
 
       await runAsync("BEGIN TRANSACTION");
 
+      let transactionCommitted = false;
+
       try {
         const updateRes = await runAsync(
           `UPDATE sesi_meja SET status = 'SELESAI', waktu_selesai = ? WHERE session_id = ? AND status = 'AKTIF' AND jenis_sesi = 'LOSS'`,
@@ -3697,48 +4072,50 @@ const server = https.createServer({
         }
 
         const nowIso = new Date().toISOString();
+
         await runAsync(
           `INSERT INTO pesanan_meja (session_id, nama_barang, qty, harga_jual, hpp, subtotal, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [sessionId, "Billiard Waktu Loss", durasiMenit, tarifPerMenit, 0, totalWaktuLoss, nowIso, nowIso]
         );
 
         await runAsync("COMMIT");
+        transactionCommitted = true;
 
-        if (tableSession) {
+      } catch (txErr) {
+
+        if (!transactionCommitted) {
           try {
-            const lampRes = await lampOff(tableSession.nomor_meja);
-
-            if (!lampRes || lampRes.success !== true) {
-              writeLog(
-                "WARN",
-                "LAMP_OFF_FAILED_AFTER_PAYMENT",
-                "Pembayaran berhasil tetapi lampu gagal dimatikan",
-                {
-                  nomorMeja: tableSession.nomor_meja,
-                  sessionId: tableSession.session_id,
-                  lampRes
-                }
-              );
-            }
-          } catch (lampErr) {
+            await runAsync("ROLLBACK");
+          } catch (rollbackErr) {
             writeLog(
               "ERROR",
-              "LAMP_OFF_ERROR_AFTER_PAYMENT",
-              "Pembayaran berhasil tetapi terjadi error saat mematikan lampu",
+              "STOP_LOSS_ROLLBACK_FAILED",
+              "Rollback gagal",
               {
-                nomorMeja: tableSession.nomor_meja,
-                sessionId: tableSession.session_id,
-                error: lampErr.message
+                sessionId,
+                error: rollbackErr.message
               }
             );
           }
         }
 
-      } catch (txErr) {
-        await runAsync("ROLLBACK");
-        writeLog("ERROR", "STOP_LOSS_ROLLBACK", `Rollback executed: ${txErr.message}`, { sessionId, error: txErr.message });
+        writeLog(
+          "ERROR",
+          "STOP_LOSS_TRANSACTION_FAILED",
+          `Transaksi Stop Loss gagal: ${txErr.message}`,
+          {
+            sessionId,
+            error: txErr.message
+          }
+        );
+
         res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-        return res.end(JSON.stringify({ success: false, code: "STOP_LOSS_TRANSACTION_FAILED", message: txErr.message }));
+
+        return res.end(JSON.stringify({
+          success: false,
+          code: "STOP_LOSS_TRANSACTION_FAILED",
+          message: txErr.message
+        }));
       }
 
       try {
@@ -4454,6 +4831,1051 @@ const server = https.createServer({
     }
   }
 
+  // ==================================================
+  // ==================================================
+  // STOCK OPNAME (SO) API ENDPOINTS
+  // ==================================================
+
+  function generateStockOpnameId() {
+    const now = new Date();
+    const stamp =
+      now.getFullYear().toString() +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      String(now.getDate()).padStart(2, "0") +
+      "-" +
+      String(now.getHours()).padStart(2, "0") +
+      String(now.getMinutes()).padStart(2, "0") +
+      String(now.getSeconds()).padStart(2, "0") +
+      "-" +
+      String(now.getMilliseconds()).padStart(3, "0");
+
+    return `SO-${stamp}`;
+  }
+
+  function getLatestStockOpnameByCategory(category) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        `
+        SELECT *
+        FROM stock_opname
+        WHERE kategori = ?
+        ORDER BY id DESC
+        LIMIT 1
+        `,
+        [category],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row || null);
+        }
+      );
+    });
+  }
+
+  function getStockOpnameDetails(soId) {
+    return new Promise((resolve, reject) => {
+      db.all(
+        `
+        SELECT
+          id_barang AS idBarang,
+          nama_barang AS namaBarang,
+          area,
+          satuan,
+          jumlah_barang_aktual AS jumlahBarangAktual,
+          jumlah_hasil_so AS jumlahHasilSO,
+          selisih_barang AS selisihBarang,
+          kerugian_hpp AS kerugianHPP,
+          kerugian_harga_jual AS kerugianHargaJual,
+          nominal_plus AS nominalPlus
+        FROM stock_opname_detail
+        WHERE so_id = ?
+        ORDER BY id ASC
+        `,
+        [soId],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        }
+      );
+    });
+  }
+
+  function normalizeStockOpnameItems(items) {
+    if (!Array.isArray(items)) return [];
+
+    return items.map(item => ({
+      idBarang:
+        item?.idBarang ??
+        item?.id_barang ??
+        item?.id ??
+        "",
+      namaBarang:
+        item?.namaBarang ??
+        item?.nama_barang ??
+        item?.nama ??
+        "",
+      area: item?.area ?? "",
+      satuan: item?.satuan ?? "",
+      jumlahBarangAktual: Number(
+        item?.jumlahBarangAktual ??
+        item?.jumlah_barang_aktual ??
+        item?.jumlahAktual ??
+        0
+      ),
+      jumlahHasilSO: Number(
+        item?.jumlahHasilSO ??
+        item?.jumlah_hasil_so ??
+        item?.hasilSO ??
+        0
+      ),
+      selisihBarang: Number(
+        item?.selisihBarang ??
+        item?.selisih_barang ??
+        item?.selisih ??
+        0
+      ),
+      kerugianHPP: Number(
+        item?.kerugianHPP ??
+        item?.kerugian_hpp ??
+        0
+      ),
+      kerugianHargaJual: Number(
+        item?.kerugianHargaJual ??
+        item?.kerugian_harga_jual ??
+        0
+      ),
+      nominalPlus: Number(
+        item?.nominalPlus ??
+        item?.nominal_plus ??
+        0
+      )
+    }));
+  }
+
+  function normalizeStockOpnameSummary(summary) {
+    const data = summary && typeof summary === "object" ? summary : {};
+
+    const totalPlus = Number(
+      data.totalPlus !== undefined
+        ? data.totalPlus
+        : data.total_plus !== undefined
+          ? data.total_plus
+          : 0
+    );
+
+    const totalMinus = Number(
+      data.totalMinus !== undefined
+        ? data.totalMinus
+        : data.total_minus !== undefined
+          ? data.total_minus
+          : 0
+    );
+
+    const totalKerugian = Number(
+      data.totalKerugian !== undefined
+        ? data.totalKerugian
+        : data.total_kerugian !== undefined
+          ? data.total_kerugian
+          : 0
+    );
+
+    if (
+      !Number.isFinite(totalPlus) ||
+      !Number.isFinite(totalMinus) ||
+      !Number.isFinite(totalKerugian)
+    ) {
+      throw new Error("Summary hasil Stock Opname dari Apps Script tidak valid.");
+    }
+
+    return {
+      totalPlus,
+      totalMinus,
+      totalKerugian
+    };
+  }
+
+  // ==================================================
+  // 1. GET /api/stock-opname/status
+  // ==================================================
+  if (req.method === "GET" && req.url.startsWith("/api/stock-opname/status")) {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+
+    try {
+      const url = new URL(req.url, `http://localhost:${config.PORT}`);
+      const category = String(
+        url.searchParams.get("category") || ""
+      ).trim().toUpperCase();
+
+      if (!category) {
+        res.writeHead(400, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            message: "Parameter category wajib diisi"
+          })
+        );
+      }
+
+      const row = await getLatestStockOpnameByCategory(category);
+
+      if (!row || row.is_final === 1 || row.status === "FINAL") {
+        res.writeHead(200, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: true,
+            soId: null,
+            revisiKe: 0,
+            isFinal: false,
+            status: null
+          })
+        );
+      }
+
+      res.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8"
+      });
+      return res.end(
+        JSON.stringify({
+          success: true,
+          soId: row.so_id,
+          revisiKe: Number(row.revisi_ke || 0),
+          isFinal: Boolean(row.is_final),
+          status: row.status
+        })
+      );
+    } catch (error) {
+      writeLog("ERROR", "SO_STATUS_ERROR", error.message);
+      res.writeHead(500, {
+        "Content-Type": "application/json; charset=utf-8"
+      });
+      return res.end(
+        JSON.stringify({
+          success: false,
+          message: error.message
+        })
+      );
+    }
+  }
+
+  // ==================================================
+  // 2. POST /api/stock-opname/simpan
+  // ==================================================
+  if (req.method === "POST" && req.url === "/api/stock-opname/simpan") {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+
+    try {
+      const data = await getJsonBody(req);
+
+      const category = String(data.category || "").trim().toUpperCase();
+      const petugas = String(data.petugas || "").trim();
+      const items = data.items;
+      const mode = String(data.mode || "").trim().toUpperCase();
+      const requestedSoId = String(data.soId || "").trim();
+
+      if (!category) {
+        res.writeHead(400, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            message: "Category wajib diisi"
+          })
+        );
+      }
+
+      if (!petugas) {
+        res.writeHead(400, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            message: "Petugas wajib diisi"
+          })
+        );
+      }
+
+      if (!Array.isArray(items) || items.length === 0) {
+        res.writeHead(400, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            message: "Items harus berupa array dan tidak boleh kosong"
+          })
+        );
+      }
+
+      const seenItemIds = new Set();
+
+      for (const item of items) {
+        const idBarang = String(
+          item?.idBarang ??
+          item?.id_barang ??
+          ""
+        ).trim();
+
+        if (!idBarang) {
+          res.writeHead(400, {
+            "Content-Type": "application/json; charset=utf-8"
+          });
+          return res.end(
+            JSON.stringify({
+              success: false,
+              message: "Setiap item wajib memiliki idBarang"
+            })
+          );
+        }
+
+        if (seenItemIds.has(idBarang)) {
+          res.writeHead(400, {
+            "Content-Type": "application/json; charset=utf-8"
+          });
+          return res.end(
+            JSON.stringify({
+              success: false,
+              message: `Barang duplikat dalam Stock Opname: ${idBarang}`
+            })
+          );
+        }
+
+        seenItemIds.add(idBarang);
+
+        const qty = Number(
+          item?.jumlahHasilSO ??
+          item?.jumlah_hasil_so
+        );
+
+        if (!Number.isFinite(qty) || qty < 0) {
+          res.writeHead(400, {
+            "Content-Type": "application/json; charset=utf-8"
+          });
+          return res.end(
+            JSON.stringify({
+              success: false,
+              message: "jumlahHasilSO harus berupa angka non-negatif"
+            })
+          );
+        }
+      }
+
+      const currentSO = await getLatestStockOpnameByCategory(category);
+      const currentIsActive =
+        Boolean(currentSO) &&
+        Number(currentSO.is_final || 0) !== 1 &&
+        String(currentSO.status || "").toUpperCase() !== "FINAL";
+
+      let isNewSO = false;
+      let targetSoId = "";
+      let targetRevisiKe = 0;
+
+      if (mode === "NEW") {
+        if (currentIsActive) {
+          res.writeHead(409, {
+            "Content-Type": "application/json; charset=utf-8"
+          });
+          return res.end(
+            JSON.stringify({
+              success: false,
+              code: "SO_STILL_ACTIVE",
+              message:
+                "Masih ada Stock Opname aktif untuk kategori ini. Gunakan mode revisi."
+            })
+          );
+        }
+
+        isNewSO = true;
+        targetSoId = generateStockOpnameId();
+        targetRevisiKe = 0;
+      } else if (mode === "REVISION") {
+        if (!currentIsActive) {
+          res.writeHead(409, {
+            "Content-Type": "application/json; charset=utf-8"
+          });
+          return res.end(
+            JSON.stringify({
+              success: false,
+              code: "NO_ACTIVE_SO",
+              message:
+                "Tidak ada Stock Opname aktif untuk direvisi."
+            })
+          );
+        }
+
+        if (Number(currentSO.revisi_ke || 0) >= 1) {
+          res.writeHead(409, {
+            "Content-Type": "application/json; charset=utf-8"
+          });
+          return res.end(
+            JSON.stringify({
+              success: false,
+              code: "REVISION_LIMIT",
+              message:
+                "Jatah revisi sudah habis. Revisi maksimal hanya 1 kali."
+            })
+          );
+        }
+
+        if (
+          requestedSoId &&
+          requestedSoId !== String(currentSO.so_id)
+        ) {
+          res.writeHead(409, {
+            "Content-Type": "application/json; charset=utf-8"
+          });
+          return res.end(
+            JSON.stringify({
+              success: false,
+              code: "SO_ID_MISMATCH",
+              message:
+                "soId revisi tidak sesuai dengan Stock Opname aktif."
+            })
+          );
+        }
+
+        isNewSO = false;
+        targetSoId = currentSO.so_id;
+        targetRevisiKe = 1;
+      } else {
+        res.writeHead(400, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            code: "INVALID_SO_MODE",
+            message:
+              "Mode Stock Opname harus NEW atau REVISION."
+          })
+        );
+      }
+
+      const tanggalSO =
+        data.tanggalSO || new Date().toISOString();
+
+      // Google Apps Script adalah sumber semua perhitungan SO.
+      const gasResult = await callGas({
+        action: "proses_stock_opname",
+        soId: targetSoId,
+        category,
+        petugas,
+        tanggalSO,
+        revisiKe: targetRevisiKe,
+        items
+      });
+
+      if (!gasResult || gasResult.success !== true) {
+        res.writeHead(400, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            code: "GAS_STOCK_OPNAME_FAILED",
+            message:
+              gasResult?.message ||
+              gasResult?.error ||
+              "Gagal memproses Stock Opname di Google Apps Script"
+          })
+        );
+      }
+
+      const gasData = gasResult.data || gasResult;
+      const resultItems = normalizeStockOpnameItems(
+        gasData.items || gasResult.items
+      );
+      const resultSummary = normalizeStockOpnameSummary(
+        gasData.summary || gasResult.summary
+      );
+
+      if (resultItems.length === 0) {
+        throw new Error(
+          "Apps Script tidak mengembalikan detail hasil Stock Opname."
+        );
+      }
+
+      const nowIso = new Date().toISOString();
+
+      // Simpan hasil GAS secara atomic.
+      await runAsync("BEGIN TRANSACTION");
+
+      try {
+        if (isNewSO) {
+          await runAsync(
+            `
+            INSERT INTO stock_opname
+            (
+              so_id,
+              kategori,
+              petugas,
+              tanggal,
+              revisi_ke,
+              is_final,
+              status,
+              total_plus,
+              total_minus,
+              total_kerugian,
+              created_at,
+              updated_at
+            )
+            VALUES (?, ?, ?, ?, 0, 0, 'HASIL', ?, ?, ?, ?, ?)
+            `,
+            [
+              targetSoId,
+              category,
+              petugas,
+              tanggalSO,
+              resultSummary.totalPlus,
+              resultSummary.totalMinus,
+              resultSummary.totalKerugian,
+              nowIso,
+              nowIso
+            ]
+          );
+        } else {
+          await runAsync(
+            `
+            UPDATE stock_opname
+            SET
+              petugas = ?,
+              tanggal = ?,
+              revisi_ke = 1,
+              is_final = 0,
+              status = 'HASIL',
+              total_plus = ?,
+              total_minus = ?,
+              total_kerugian = ?,
+              updated_at = ?
+            WHERE
+              so_id = ?
+              AND is_final = 0
+              AND status != 'FINAL'
+            `,
+            [
+              petugas,
+              tanggalSO,
+              resultSummary.totalPlus,
+              resultSummary.totalMinus,
+              resultSummary.totalKerugian,
+              nowIso,
+              targetSoId
+            ]
+          );
+        }
+
+        if (!isNewSO) {
+          await runAsync(
+            `DELETE FROM stock_opname_detail WHERE so_id = ?`,
+            [targetSoId]
+          );
+        }
+
+        for (const item of resultItems) {
+          await runAsync(
+            `
+            INSERT INTO stock_opname_detail
+            (
+              so_id,
+              id_barang,
+              nama_barang,
+              area,
+              satuan,
+              jumlah_barang_aktual,
+              jumlah_hasil_so,
+              selisih_barang,
+              kerugian_hpp,
+              kerugian_harga_jual,
+              nominal_plus,
+              created_at,
+              updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
+              targetSoId,
+              String(item.idBarang || ""),
+              String(item.namaBarang || ""),
+              String(item.area || ""),
+              String(item.satuan || ""),
+              Number(item.jumlahBarangAktual || 0),
+              Number(item.jumlahHasilSO || 0),
+              Number(item.selisihBarang || 0),
+              Number(item.kerugianHPP || 0),
+              Number(item.kerugianHargaJual || 0),
+              Number(item.nominalPlus || 0),
+              nowIso,
+              nowIso
+            ]
+          );
+        }
+
+        await runAsync("COMMIT");
+      } catch (dbError) {
+        try {
+          await runAsync("ROLLBACK");
+        } catch (_) {}
+        throw dbError;
+      }
+
+      // Arsip cepat server-side. Arsip selalu bersumber dari data hasil GAS.
+      const folderPathSO = path.join(
+        __dirname,
+        "data",
+        "stock-opname"
+      );
+
+      if (!fs.existsSync(folderPathSO)) {
+        fs.mkdirSync(folderPathSO, { recursive: true });
+      }
+
+      const cacheContent = {
+        soId: targetSoId,
+        kategori: category,
+        petugas,
+        tanggal: tanggalSO,
+        revisiKe: targetRevisiKe,
+        isFinal: false,
+        status: "HASIL",
+        summary: resultSummary,
+        items: resultItems
+      };
+
+      const internalCachePath = path.join(
+        folderPathSO,
+        `so-${targetSoId}.json`
+      );
+
+      fs.writeFileSync(
+        internalCachePath,
+        JSON.stringify(cacheContent, null, 2),
+        "utf8"
+      );
+
+      writeLog(
+        "INFO",
+        "SO_SIMPAN_SUCCESS",
+        `Stock Opname ${targetSoId} berhasil disimpan`,
+        {
+          category,
+          revisiKe: targetRevisiKe,
+          jumlahItem: resultItems.length
+        }
+      );
+
+      res.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8"
+      });
+
+      return res.end(
+        JSON.stringify({
+          success: true,
+          soId: targetSoId,
+          revisiKe: targetRevisiKe,
+          data: {
+            soId: targetSoId,
+            category,
+            items: resultItems,
+            summary: resultSummary
+          }
+        })
+      );
+    } catch (error) {
+      writeLog("ERROR", "SO_SIMPAN_ERROR", error.message);
+      res.writeHead(500, {
+        "Content-Type": "application/json; charset=utf-8"
+      });
+      return res.end(
+        JSON.stringify({
+          success: false,
+          message: error.message
+        })
+      );
+    }
+  }
+
+  // ==================================================
+  // 3. POST /api/stock-opname/snapshot
+  // ==================================================
+  if (req.method === "POST" && req.url === "/api/stock-opname/snapshot") {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+
+    try {
+      const data = await getJsonBody(req);
+      const soId = String(
+        data.soId || data.so_id || ""
+      ).trim();
+
+      if (!soId) {
+        res.writeHead(400, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            message: "soId wajib diisi"
+          })
+        );
+      }
+
+      const currentSO = await new Promise((resolve, reject) => {
+        db.get(
+          `SELECT * FROM stock_opname WHERE so_id = ?`,
+          [soId],
+          (err, row) => {
+            if (err) reject(err);
+            else resolve(row || null);
+          }
+        );
+      });
+
+      if (!currentSO) {
+        res.writeHead(404, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            message:
+              "Stock Opname tidak ditemukan di database server"
+          })
+        );
+      }
+
+      const items = await getStockOpnameDetails(
+        currentSO.so_id
+      );
+
+      if (items.length === 0) {
+        res.writeHead(409, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            message:
+              "Detail hasil Stock Opname belum tersimpan di server"
+          })
+        );
+      }
+
+      const folderPath = path.join(
+        __dirname,
+        "data",
+        "stock-opname"
+      );
+
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+      }
+
+      const now = new Date();
+      const dateStr =
+        now.getFullYear().toString() +
+        String(now.getMonth() + 1).padStart(2, "0") +
+        String(now.getDate()).padStart(2, "0");
+
+      const timeStr =
+        String(now.getHours()).padStart(2, "0") +
+        String(now.getMinutes()).padStart(2, "0") +
+        String(now.getSeconds()).padStart(2, "0");
+
+      const fileName =
+        `${currentSO.so_id}-${dateStr}-${timeStr}.json`;
+
+      const filePath = path.join(folderPath, fileName);
+
+      const snapshotContent = {
+        soId: currentSO.so_id,
+        kategori: currentSO.kategori,
+        petugas: currentSO.petugas,
+        tanggal: currentSO.tanggal,
+        revisiKe: Number(currentSO.revisi_ke || 0),
+        isFinal: Boolean(currentSO.is_final),
+        status: currentSO.status,
+        createdAt: currentSO.created_at,
+        updatedAt: currentSO.updated_at,
+        summary: {
+          totalPlus: Number(currentSO.total_plus || 0),
+          totalMinus: Number(currentSO.total_minus || 0),
+          totalKerugian: Number(currentSO.total_kerugian || 0)
+        },
+        items
+      };
+
+      fs.writeFileSync(
+        filePath,
+        JSON.stringify(snapshotContent, null, 2),
+        "utf8"
+      );
+
+      writeLog(
+        "INFO",
+        "SO_SNAPSHOT",
+        `Snapshot SO disimpan di ${fileName}`
+      );
+
+      res.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8"
+      });
+
+      return res.end(
+        JSON.stringify({
+          success: true,
+          message: "Snapshot berhasil disimpan",
+          soId: currentSO.so_id,
+          fileName
+        })
+      );
+    } catch (error) {
+      writeLog(
+        "ERROR",
+        "SO_SNAPSHOT_ERROR",
+        error.message
+      );
+
+      res.writeHead(500, {
+        "Content-Type": "application/json; charset=utf-8"
+      });
+
+      return res.end(
+        JSON.stringify({
+          success: false,
+          message: error.message
+        })
+      );
+    }
+  }
+
+  // ==================================================
+  // 4. POST /api/stock-opname/finalize
+  // ==================================================
+  if (req.method === "POST" && req.url === "/api/stock-opname/finalize") {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+
+    try {
+      const data = await getJsonBody(req);
+      const category = String(
+        data.category || ""
+      ).trim().toUpperCase();
+      const soIdInput = String(
+        data.soId || data.so_id || ""
+      ).trim();
+
+      let currentSO = null;
+
+      if (soIdInput) {
+        currentSO = await new Promise((resolve, reject) => {
+          db.get(
+            `SELECT * FROM stock_opname WHERE so_id = ?`,
+            [soIdInput],
+            (err, row) => {
+              if (err) reject(err);
+              else resolve(row || null);
+            }
+          );
+        });
+      } else if (category) {
+        currentSO = await getLatestStockOpnameByCategory(
+          category
+        );
+      } else {
+        res.writeHead(400, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            message: "soId atau category wajib diisi"
+          })
+        );
+      }
+
+      if (!currentSO) {
+        res.writeHead(404, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            message: "Data Stock Opname belum ditemukan"
+          })
+        );
+      }
+
+      if (
+        Number(currentSO.is_final || 0) === 1 ||
+        String(currentSO.status || "").toUpperCase() === "FINAL"
+      ) {
+        res.writeHead(409, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            code: "SO_ALREADY_FINAL",
+            message:
+              "Stock Opname sudah difinalisasi sebelumnya."
+          })
+        );
+      }
+
+      const detailRows = await getStockOpnameDetails(
+        currentSO.so_id
+      );
+
+      if (detailRows.length === 0) {
+        res.writeHead(409, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            code: "SO_RESULT_NOT_READY",
+            message:
+              "Hasil Stock Opname belum tersedia di server."
+          })
+        );
+      }
+
+      const gasResult = await callGas({
+        action: "finalize_stock_opname",
+        soId: currentSO.so_id,
+        category: currentSO.kategori,
+        petugas: String(
+          data.petugas || currentSO.petugas || ""
+        ).trim(),
+        statusApprove: "APPROVED"
+      });
+
+      if (!gasResult || gasResult.success !== true) {
+        res.writeHead(400, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            code: "GAS_FINALIZE_FAILED",
+            message:
+              gasResult?.message ||
+              gasResult?.error ||
+              "Finalisasi Stock Opname di Google Apps Script gagal"
+          })
+        );
+      }
+
+      const nowIso = new Date().toISOString();
+
+      const finalizeRes = await runAsync(
+        `
+        UPDATE stock_opname
+        SET
+          is_final = 1,
+          status = 'FINAL',
+          updated_at = ?
+        WHERE
+          so_id = ?
+          AND is_final = 0
+          AND status != 'FINAL'
+        `,
+        [nowIso, currentSO.so_id]
+      );
+
+      if (finalizeRes.changes !== 1) {
+        throw new Error(
+          "Gagal mengunci Stock Opname di database server."
+        );
+      }
+
+      const folderPathSO = path.join(
+        __dirname,
+        "data",
+        "stock-opname"
+      );
+
+      if (!fs.existsSync(folderPathSO)) {
+        fs.mkdirSync(folderPathSO, { recursive: true });
+      }
+
+      const internalCachePath = path.join(
+        folderPathSO,
+        `so-${currentSO.so_id}.json`
+      );
+
+      if (fs.existsSync(internalCachePath)) {
+        try {
+          const cached = JSON.parse(
+            fs.readFileSync(
+              internalCachePath,
+              "utf8"
+            )
+          );
+
+          cached.isFinal = true;
+          cached.status = "FINAL";
+          cached.updatedAt = nowIso;
+
+          fs.writeFileSync(
+            internalCachePath,
+            JSON.stringify(cached, null, 2),
+            "utf8"
+          );
+        } catch (cacheError) {
+          writeLog(
+            "WARN",
+            "SO_CACHE_UPDATE_FAILED",
+            `Gagal memperbarui cache SO ${currentSO.so_id}`,
+            { error: cacheError.message }
+          );
+        }
+      }
+
+      writeLog(
+        "INFO",
+        "SO_FINALIZE_SUCCESS",
+        `SO ${currentSO.so_id} kategori ${currentSO.kategori} berhasil difinalisasi`
+      );
+
+      res.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8"
+      });
+
+      return res.end(
+        JSON.stringify({
+          success: true,
+          message:
+            "Stock Opname berhasil difinalisasi",
+          soId: currentSO.so_id
+        })
+      );
+    } catch (error) {
+      writeLog(
+        "ERROR",
+        "SO_FINALIZE_ERROR",
+        error.message
+      );
+
+      res.writeHead(500, {
+        "Content-Type": "application/json; charset=utf-8"
+      });
+
+      return res.end(
+        JSON.stringify({
+          success: false,
+          message: error.message
+        })
+      );
+    }
+  }
+
   // FAVICON & FALLBACK
   if (req.method === "GET" && req.url === "/favicon.ico") {
     res.writeHead(204);
@@ -4471,7 +5893,7 @@ const server = https.createServer({
 // SERVER START
 // ==================================================
 
- 
+
 // ==================================================
 // STARTUP LAMP RECOVERY
 // ==================================================
@@ -4529,218 +5951,51 @@ async function reconcileLampState() {
           continue;
         }
 
-        // Jika OFF sudah pernah berhasil dikirim,
-        // tidak perlu mengirim OFF lagi.
-        if (lastLampCommandState.get(table) === 0) {
+        const desiredState = shouldBeOn ? 1 : 0;
+        const lastState = lastLampCommandState.get(table);
+
+        if (lastState === desiredState) {
           continue;
         }
 
-        const lampRes = await lampOff(table);
+        const lampRes = shouldBeOn
+          ? await lampOn(table)
+          : await lampOff(table);
 
         if (lampRes && lampRes.success === true) {
-          lastLampCommandState.set(table, 0);
+          lastLampCommandState.set(table, desiredState);
         }
-
-        if (!lampRes || lampRes.success !== true) {
-          writeLog(
-            "WARN",
-            "LAMP_WATCHDOG_FAILED",
-            "Watchdog gagal mematikan lampu meja",
-            {
-              nomorMeja: table,
-              databaseAktif: shouldBeOn,
-              lampRes
-            }
-          );
-        }
-
-      } catch (lampError) {
+      } catch (tableErr) {
         writeLog(
           "ERROR",
-          "LAMP_WATCHDOG_ERROR",
-          "Watchdog error saat sinkronisasi lampu",
-          {
-            nomorMeja: table,
-            databaseAktif: activeTables.has(table),
-            error: lampError.message
-          }
+          "LAMP_WATCHDOG_TABLE_ERROR",
+          `Gagal mematikan lampu meja ${table}`,
+          { error: tableErr.message }
         );
       }
     }
-
-    writeLog(
-      "INFO",
-      "LAMP_WATCHDOG_COMPLETE",
-      "Watchdog lampu selesai"
-    );
-
   } catch (error) {
     writeLog(
       "ERROR",
-      "LAMP_WATCHDOG_FATAL",
-      "Watchdog gagal membaca status sesi",
-      {
-        error: error.message
-      }
+      "LAMP_WATCHDOG_ERROR",
+      "Error pada watchdog lampu",
+      { error: error.message }
     );
   } finally {
     lampWatchdogRunning = false;
   }
 }
-async function recoverLampStateAtStartup() {
+
+server.listen(config.PORT, () => {
   writeLog(
     "INFO",
-    "LAMP_RECOVERY_START",
-    "Memulai sinkronisasi status lampu dengan database"
+    "SERVER_START",
+    `Server POS POLAR berjalan pada port ${config.PORT}`
   );
-
-  try {
-    const rows = await new Promise((resolve, reject) => {
-      db.all(
-        `SELECT nomor_meja FROM sesi_meja WHERE status = 'AKTIF'`,
-        [],
-        (error, result) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-
-          resolve(result || []);
-        }
-      );
-    });
-
-    const activeTables = new Set(
-      rows
-        .map(row => Number(row.nomor_meja))
-        .filter(
-          table =>
-            Number.isInteger(table) &&
-            table >= 1 &&
-            table <= 10
-        )
-    );
-
-    for (let table = 1; table <= 10; table++) {
-      try {
-        const shouldBeOn = activeTables.has(table);
-
-        let lampRes;
-
-        if (shouldBeOn) {
-          lampRes = await lampOn(table);
-        } else {
-          lampRes = await lampOff(table);
-        }
-
-        if (lampRes && lampRes.success === true) {
-          lastLampCommandState.set(table, shouldBeOn ? 1 : 0);
-
-          writeLog(
-            "INFO",
-            "LAMP_RECOVERY_SUCCESS",
-            `Startup: lampu meja ${table} disinkronkan menjadi ${shouldBeOn ? "ON" : "OFF"}`,
-            {
-              nomorMeja: table,
-              databaseAktif: shouldBeOn
-            }
-          );
-        } else {
-          writeLog(
-            "WARN",
-            "LAMP_RECOVERY_FAILED",
-            `Startup: gagal menyinkronkan lampu meja ${table}`,
-            {
-              nomorMeja: table,
-              databaseAktif: shouldBeOn,
-              lampRes
-            }
-          );
-        }
-      } catch (lampError) {
-        writeLog(
-          "ERROR",
-          "LAMP_RECOVERY_ERROR",
-          `Startup: error saat menyinkronkan lampu meja ${table}`,
-          {
-            nomorMeja: table,
-            databaseAktif: activeTables.has(table),
-            error: lampError.message
-          }
-        );
-      }
-    }
-
-    writeLog(
-      "INFO",
-      "LAMP_RECOVERY_COMPLETE",
-      "Sinkronisasi status lampu dengan database selesai",
-      {
-        activeTables: [...activeTables].sort((a, b) => a - b)
-      }
-    );
-  } catch (error) {
-    writeLog(
-      "ERROR",
-      "LAMP_RECOVERY_FATAL",
-      "Gagal mengambil status sesi untuk recovery lampu saat startup",
-      {
-        error: error.message
-      }
-    );
-  }
-}
-server.on("error", error => {
-  writeLog("ERROR", "SERVER", "Server error", { code: error.code, message: error.message });
-});
-
-server.listen(config.PORT, async () => {
-  console.log(`POS POLAR SERVER berjalan di https://192.168.1.140:${config.PORT}`);
-  writeLog("INFO", "SERVER_START", `POS POLAR SERVER berjalan di port ${config.PORT}`);
-
-  try {
-    await recoverLampStateAtStartup();
-  } catch (error) {
-    writeLog(
-      "WARN",
-      "STARTUP_LAMP_RECOVERY",
-      "Recovery lampu saat startup gagal",
-      {
-        error: error.message
-      }
-    );
-  }
-
-  try {
-    console.log("[MEMBER] Database member siap");
-    writeLog("INFO", "MEMBER_INIT", "[MEMBER] Database member siap");
-    await cekStatusMemberHarian();
-
-    syncMemberCacheFromGas().catch(err => {
-      writeLog("WARN", "STARTUP_MEMBER_SYNC", "Sync member cache saat startup gagal", { error: err.message });
-    });
-  } catch (error) {
-    writeLog("WARN", "MEMBER_INIT_ERROR", "Terjadi kesalahan saat inisialisasi member", { error: error.message });
-  }
-
-  try {
-    await syncHargaMemberCache();
-  } catch (error) {
-    writeLog("WARN", "STARTUP_HARGA_MEMBER_SYNC", "Sync harga member cache saat startup gagal", { error: error.message });
-  }
-
-  try {
-    const pending = await getPendingTransactions();
-
-    if (pending.length > 0) {
-      writeLog("INFO", "STARTUP", "Ditemukan transaksi pending, melakukan sync otomatis...");
-      await syncPendingTransactions();
-    }
-  } catch (error) {
-    writeLog("WARN", "STARTUP_SYNC_PENDING", "Sync transaksi pending saat startup gagal", { error: error.message });
-  }
-
-  setInterval(checkExpiredTableSessions, 10 * 1000);
+  cekStatusMemberHarian();
+  setInterval(checkExpiredTableSessions, 5000);
+  setInterval(syncPendingTransactions, 10000);
+  setInterval(reconcileLampState, 10000);
 });
 
 
