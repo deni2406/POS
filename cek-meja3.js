@@ -1,1 +1,0 @@
-const s=require("sqlite3").verbose();const d=new s.Database("./pos.db");d.all("SELECT sm.session_id,sm.nomor_meja,sm.status,sm.durasi_jam,pm.nama_barang,pm.qty,pm.harga_jual,pm.subtotal FROM sesi_meja sm LEFT JOIN pesanan_meja pm ON pm.session_id=sm.session_id WHERE sm.status='AKTIF' AND sm.nomor_meja=3",(e,r)=>{if(e)console.error(e);else console.table(r);d.close()})
