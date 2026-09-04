@@ -1,0 +1,1 @@
+const s=require("sqlite3").verbose();const d=new s.Database("./pos.db");d.run("UPDATE sesi_meja SET durasi_jam=2,waktu_selesai=datetime(waktu_selesai,\"-2 hours\") WHERE nomor_meja=5 AND status=\"AKTIF\"",e=>{if(e)console.error(e);else console.log("Meja 5 berhasil diubah menjadi 2 jam");d.close()});

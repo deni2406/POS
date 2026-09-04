@@ -165,20 +165,39 @@ async function sendLampCommand(table, stat) {
         );
 
         await new Promise((resolve, reject) => {
+            let settled = false;
+            const finish = (err) => {
+                if (settled) return;
+                settled = true;
+                if (err) reject(err);
+                else resolve();
+            };
+
             serialPort.write(command, (err) => {
                 if (err) {
-                    reject(err);
+                    finish(err);
                     return;
                 }
 
-                serialPort.drain((drainErr) => {
-                    if (drainErr) {
-                        reject(drainErr);
-                        return;
-                    }
+                // COM3 controller sudah menerima command setelah write sukses.
+                // Jangan menahan HTTP response menunggu drain() terlalu lama.
+                finish();
 
-                    resolve();
-                });
+                try {
+                    serialPort.drain((drainErr) => {
+                        if (drainErr) {
+                            console.warn(
+                                `[LAMP CONTROLLER] Serial drain warning ${rawCommand}:`,
+                                drainErr.message
+                            );
+                        }
+                    });
+                } catch (drainError) {
+                    console.warn(
+                        `[LAMP CONTROLLER] Serial drain warning ${rawCommand}:`,
+                        drainError.message
+                    );
+                }
             });
         });
 

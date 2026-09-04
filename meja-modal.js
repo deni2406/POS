@@ -553,7 +553,8 @@
       const jenisSesiKirim = (modeSesiModal === "LOSS") ? "LOSS" : "BIASA";
       const durasiKirim = (modeSesiModal === "LOSS") ? 0 : durasiJamDraft;
 
-      const hasilBridge = await window.bukaMejaDariModalBaru(
+      // 1. Definisikan bridgePromise tanpa ditunggu (await) terlebih dahulu
+      const bridgePromise = window.bukaMejaDariModalBaru(
         nomorMejaAktif,
         namaPemesan,
         durasiKirim,
@@ -561,15 +562,36 @@
         jenisSesiKirim
       );
 
-      // Jika bridge mengembalikan true, tutup modal
+      // 2. Buat promise timeout 15 detik
+      const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({
+            success: false,
+            timeout: true,
+            message: "Proses buka meja terlalu lama"
+          });
+        }, 1000);
+      
+      });
+
+      // 3. Gunakan Promise.race untuk bertarung mana yang selesai duluan
+      const hasilBridge = await Promise.race([
+        bridgePromise,
+        timeoutPromise
+      ]);
+
       if (hasilBridge === true) {
         tutup();
+      } else if (hasilBridge && hasilBridge.timeout === true) {
+        console.warn("Bridge buka meja timeout setelah 15 detik.");
+        tutup();
       }
+
     } catch (error) {
-      console.error("Gagal membuka meja melalui bridge:", error);
-      alert("Meja gagal dibuka. Silakan coba lagi.");
+      console.error("Gagal MULAI MAIN:", error);
+      alert(error.message || "Gagal membuka meja.");
     } finally {
-      // Kembalikan tombol ke keadaan semula jika gagal atau selesai
+      // 4. Pastikan blok finally mengembalikan tombol ke sedia kala
       if (btnMulai) {
         btnMulai.disabled = false;
         btnMulai.textContent = "MULAI MAIN";

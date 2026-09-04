@@ -279,22 +279,9 @@
   function mulaiMejaBaru() {
     draftItems = [];
 
-    const master = Array.isArray(masterBarang)
-      ? masterBarang.find(
-          item =>
-            String(item.nama || "").trim().toLowerCase() ===
-            "meja billiard"
-        )
-      : null;
-
-    if (master) {
-      draftItems.push({
-        nama: master.nama,
-        qty: 1,
-        kategori: master.kategori || ""
-      });
-    }
-
+    // Sesi meja baru sudah menentukan durasi dari input sesi.
+    // Jangan memasukkan "Meja Billiard" ke draft karena draft
+    // akan disimpan kembali ke pesanan_meja dan menyebabkan qty dobel.
     renderDraft();
   }
 

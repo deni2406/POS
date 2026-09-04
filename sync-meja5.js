@@ -1,0 +1,1 @@
+const s=require("sqlite3").verbose();const d=new s.Database("./pos.db");d.run("UPDATE pesanan_meja SET qty=2,subtotal=harga_jual*2 WHERE session_id=? AND LOWER(TRIM(nama_barang))=\"meja billiard\"","SES-20260902-213752-648",e=>{if(e)console.error(e);else console.log("Meja 5 berhasil disinkron ke 2 jam / Rp60.000");d.close()});

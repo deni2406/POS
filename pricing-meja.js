@@ -1,4 +1,4 @@
-/**
+﻿/**
  * pricing-meja.js
  * Modul mandiri:
  * - State meja

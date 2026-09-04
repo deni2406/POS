@@ -1,4 +1,4 @@
-﻿const https = require("https");
+const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -7,6 +7,31 @@ const { callGas } = require("./gas");
 const { callMemberGas, callMemberGasGet } = require("./gas-member");
 const { callHargaGasGet } = require("./gas-harga");
 const sqlite3 = require("sqlite3").verbose();
+
+// ==================================================
+// NOMINAL PARSER
+// ==================================================
+// Accept numeric values and Indonesian formatted values such as
+// "50.000" or "1.000.000" while keeping backend calculations numeric.
+function parseNominal(value) {
+  if (value === null || value === undefined || value === "") return 0;
+
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return 0;
+    return Math.round(value);
+  }
+
+  const normalized = String(value)
+    .trim()
+    .replace(/\./g, "")
+    .replace(/,/g, "");
+
+  if (!normalized) return 0;
+
+  const numberValue = Number(normalized);
+  return Number.isFinite(numberValue) ? Math.round(numberValue) : 0;
+}
+
 const { verify } = require("otplib");
 const { lampSet, lampOn, lampOff, lampBlink15Minute } = require('./lamp-controlle/lamp-controller');
 
@@ -274,6 +299,30 @@ db.serialize(() => {
     error => {
       if (error && !error.message.includes("duplicate column name")) {
         writeLog("ERROR", "DATABASE", "Gagal menambahkan jenis_sesi pada sesi_meja", { error: error.message });
+      }
+    }
+  );
+
+  db.run(
+    `
+    ALTER TABLE sesi_meja
+    ADD COLUMN member_id TEXT
+    `,
+    error => {
+      if (error && !error.message.includes("duplicate column name")) {
+        writeLog("ERROR", "DATABASE", "Gagal menambahkan member_id pada sesi_meja", { error: error.message });
+      }
+    }
+  );
+
+  db.run(
+    `
+    ALTER TABLE sesi_meja
+    ADD COLUMN kategori_member TEXT
+    `,
+    error => {
+      if (error && !error.message.includes("duplicate column name")) {
+        writeLog("ERROR", "DATABASE", "Gagal menambahkan kategori_member pada sesi_meja", { error: error.message });
       }
     }
   );
@@ -644,6 +693,27 @@ db.serialize(() => {
     }
   );
 
+  // CART DRAFT BUKAN TRANSAKSI.
+  // Setiap server start/restart, draft lama wajib dibuang agar
+  // barang yang belum pernah ditransaksikan tidak muncul kembali.
+  db.run(`DELETE FROM cart_draft`, error => {
+    if (error) {
+      writeLog(
+        "ERROR",
+        "CART_DRAFT_STARTUP_CLEAR_ERROR",
+        "Gagal menghapus cart draft saat server start",
+        { error: error.message }
+      );
+    } else {
+      writeLog(
+        "INFO",
+        "CART_DRAFT_STARTUP_CLEARED",
+        "Cart draft lama dibersihkan saat server start"
+      );
+    }
+  });
+
+
 
 });;
 
@@ -841,6 +911,135 @@ function getSessionById(sessionId) {
       }
     );
   });
+}
+
+// Membaca aturan harga member secara langsung dari database SQLite (tabel harga_member_cache)
+async function getHargaMemberDariCache(kategoriInput, durasiJamInput, waktuMulaiInput = null) {
+  const kategori = String(kategoriInput || "").trim().toUpperCase();
+  const durasiJam = Number(durasiJamInput);
+
+  if (!kategori || !Number.isInteger(durasiJam) || durasiJam < 1) {
+    return null;
+  }
+
+  const rows = await new Promise((resolve, reject) => {
+    db.all(
+      `SELECT kategori, jam, jam_selesai, durasi_jam, harga_per_jam, total
+       FROM harga_member_cache
+       WHERE UPPER(TRIM(kategori)) = ?
+       ORDER BY id DESC`,
+      [kategori],
+      (err, data) => err ? reject(err) : resolve(data || [])
+    );
+  });
+
+  if (!rows.length) return null;
+
+  let jam = "";
+  if (waktuMulaiInput) {
+    const d = new Date(waktuMulaiInput);
+    if (!Number.isNaN(d.getTime())) {
+      jam = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Makassar",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).format(d);
+    }
+  }
+
+  if (!jam) return null;
+
+  const matchedRules = rows.filter(r => {
+    const mulai = String(r.jam || "").trim();
+    const selesai = String(r.jam_selesai || "").trim();
+
+    if (!mulai || !selesai) return false;
+
+    if (mulai < selesai) {
+      return jam >= mulai && jam < selesai;
+    }
+
+    return jam >= mulai || jam < selesai;
+  });
+
+  if (!matchedRules.length) return null;
+
+  const bestRule = matchedRules[0];
+
+  const hargaPerJam = Number(bestRule.harga_per_jam);
+  if (!Number.isFinite(hargaPerJam) || hargaPerJam <= 0) return null;
+
+  const totalCalculated = hargaPerJam * durasiJam;
+  const total = totalCalculated;
+
+  return {
+    kategori,
+    durasiJam,
+    hargaPerJam,
+    total,
+    jam
+  };
+}
+
+async function sinkronHargaMejaBilliard(sessionRow, durasiJam) {
+  if (!sessionRow || !Number.isInteger(Number(durasiJam)) || Number(durasiJam) < 1) return;
+
+  const durasi = Number(durasiJam);
+  const nowIso = new Date().toISOString();
+
+  const kategori = String(sessionRow.kategori_member || "").trim().toUpperCase();
+
+  // Selalu sinkronkan QTY berdasarkan durasi terbaru.
+  // Jangan hentikan proses hanya karena sesi bukan member.
+  if (!kategori) {
+    await runAsync(
+      `UPDATE pesanan_meja
+       SET qty = ?,
+           subtotal = harga_jual * ?,
+           updated_at = ?
+       WHERE session_id = ?
+         AND LOWER(TRIM(nama_barang)) = 'meja billiard'`,
+      [durasi, durasi, nowIso, sessionRow.session_id]
+    );
+    return;
+  }
+
+  const hasil = await getHargaMemberDariCache(
+    kategori,
+    durasi,
+    sessionRow.waktu_mulai
+  );
+
+  if (!hasil) {
+    await runAsync(
+      `UPDATE pesanan_meja
+       SET qty = ?,
+           subtotal = harga_jual * ?,
+           updated_at = ?
+       WHERE session_id = ?
+         AND LOWER(TRIM(nama_barang)) = 'meja billiard'`,
+      [durasi, durasi, nowIso, sessionRow.session_id]
+    );
+    return;
+  }
+
+  await runAsync(
+    `UPDATE pesanan_meja
+     SET qty = ?,
+         harga_jual = ?,
+         subtotal = ?,
+         updated_at = ?
+     WHERE session_id = ?
+       AND LOWER(TRIM(nama_barang)) = 'meja billiard'`,
+    [
+      durasi,
+      hasil.hargaPerJam,
+      hasil.total,
+      nowIso,
+      sessionRow.session_id
+    ]
+  );
 }
 
 function getSessionItems(sessionId) {
@@ -1671,6 +1870,29 @@ const server = https.createServer({
     }
   }
 
+  if (req.method === "GET" && req.url === "/printer-bluetooth.js") {
+    try {
+      const js = fs.readFileSync(
+        path.join(__dirname, "www", "printer-bluetooth.js"),
+        "utf8"
+      );
+      res.writeHead(200, {
+        "Content-Type": "application/javascript; charset=utf-8",
+        "Cache-Control": "no-cache"
+      });
+      return res.end(js);
+    } catch (error) {
+      writeLog(
+        "ERROR",
+        "UI",
+        "printer-bluetooth.js tidak ditemukan",
+        { error: error.message }
+      );
+      res.writeHead(404);
+      return res.end("printer-bluetooth.js tidak ditemukan");
+    }
+  }
+
   if (req.method === "GET" && req.url === "/waitinglist.js") {
     try {
       const js = fs.readFileSync(path.join(__dirname, "waitinglist.js"), "utf8");
@@ -1990,12 +2212,40 @@ const server = https.createServer({
             record.failures++;
 
             res.writeHead(401);
-            return res.end(JSON.stringify({ success: false, message: "Kasir ID atau PIN salah" }));
+            return res.end(JSON.stringify({ success: false, message: "PIN salah" }));
           }
 
           loginRateLimitMap.delete(clientIp);
 
-          const now = Date.now();
+          // Tolak login jika kasir sudah menutup shift pada hari kalender Makassar.
+          db.get(
+            `
+            SELECT id, tutup_at
+            FROM shift_kasir
+            WHERE kasir_id = ?
+              AND status = 'CLOSED'
+              AND tutup_at IS NOT NULL
+              AND date(tutup_at, '+8 hours') = date('now', '+8 hours')
+            ORDER BY id DESC
+            LIMIT 1
+            `,
+            [kasir.id],
+            (closedShiftError, closedShift) => {
+              if (closedShiftError) {
+                res.writeHead(500);
+                return res.end(JSON.stringify({ success: false, message: closedShiftError.message }));
+              }
+
+              if (closedShift) {
+                res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+                return res.end(JSON.stringify({
+                  success: false,
+                  code: "SHIFT_ALREADY_CLOSED_TODAY",
+                  message: "Kasir sudah melakukan Tutup Kasir hari ini. Silakan login kembali besok."
+                }));
+              }
+
+              const now = Date.now();
           if (activeLoginSessions.has(kasir.id)) {
             const existingSession = activeLoginSessions.get(kasir.id);
             if (now < existingSession.expiresAt) {
@@ -2008,7 +2258,12 @@ const server = https.createServer({
                 }));
               } else {
                 db.get(
-                  `SELECT * FROM shift_kasir WHERE kasir_id = ? AND status = 'OPEN' ORDER BY id DESC LIMIT 1`,
+                  `SELECT * FROM shift_kasir
+                   WHERE kasir_id = ?
+                   AND status = 'OPEN'
+                   AND date(buka_at, '+8 hours') = date('now', '+8 hours')
+                   ORDER BY id DESC
+                   LIMIT 1`,
                   [kasir.id],
                   (shiftError, shift) => {
                     if (shiftError) {
@@ -2071,7 +2326,12 @@ const server = https.createServer({
           });
 
           db.get(
-            `SELECT * FROM shift_kasir WHERE kasir_id = ? AND status = 'OPEN' ORDER BY id DESC LIMIT 1`,
+            `SELECT * FROM shift_kasir
+             WHERE kasir_id = ?
+             AND status = 'OPEN'
+             AND date(buka_at, '+8 hours') = date('now', '+8 hours')
+             ORDER BY id DESC
+             LIMIT 1`,
             [kasir.id],
             (shiftError, shift) => {
               if (shiftError) {
@@ -2109,6 +2369,8 @@ const server = https.createServer({
                     expiresAt
                   }));
                 }
+              );
+            }
               );
             }
           );
@@ -2485,7 +2747,12 @@ const server = https.createServer({
             throw new Error(`Stok tidak mencukupi untuk barang: ${barang.nama}`);
           }
 
-          const hargaJual = Number(barang.hargaJual || 0);
+          const hargaMaster = Number(barang.hargaJual || 0);
+          const hargaClient = Number(item.hargaJual);
+          const hargaJual =
+            Number.isFinite(hargaClient) && hargaClient === hargaMaster
+              ? hargaClient
+              : hargaMaster;
           const hpp = Number(barang.hpp || 0);
           const subtotal = hargaJual * clientQty;
 
@@ -2502,12 +2769,12 @@ const server = https.createServer({
           total += subtotal;
         }
 
-        let cashAmount = Number(data.cashAmount || 0);
-        let qrisAmount = Number(data.qrisAmount || 0);
+        let cashAmount = parseNominal(data.cashAmount);
+        let qrisAmount = parseNominal(data.qrisAmount);
         let bayar = cashAmount + qrisAmount;
 
         if (data.metodePembayaran === "CASH") {
-          cashAmount = Number(data.bayar || 0);
+          cashAmount = parseNominal(data.bayar);
           qrisAmount = 0;
           bayar = cashAmount;
         }
@@ -2525,8 +2792,12 @@ const server = https.createServer({
           }
         }
 
+        if (cashAmount < 0 || qrisAmount < 0 || bayar < 0) {
+          throw new Error("Nominal pembayaran tidak valid");
+        }
+
         if (data.metodePembayaran === "CASH" && bayar < total) {
-          throw new Error("Nominal Cash kurang");
+          throw new Error(`Nominal Cash kurang. Total ${total}, dibayar ${bayar}`);
         }
 
         const kembalian = Math.max(0, bayar - total);
@@ -2571,10 +2842,10 @@ const server = https.createServer({
 
         await runAsync("COMMIT");
 
+        // Matikan lampu setelah pembayaran berhasil dan sesi meja menjadi DIBAYAR.
         if (tableSession) {
           try {
             const lampRes = await lampOff(tableSession.nomor_meja);
-
             if (!lampRes || lampRes.success !== true) {
               writeLog(
                 "WARN",
@@ -2690,16 +2961,61 @@ const server = https.createServer({
         return res.end(JSON.stringify({ success: false, message: "Transaksi sudah dibatalkan" }));
       }
 
-      await new Promise((resolve, reject) => {
-        db.run(
-          `UPDATE transaksi SET status_sync = 'BATAL', sync_at = ? WHERE id = ?`,
-          [new Date().toISOString(), transaksi.id],
-          (err) => {
-            if (err) reject(err);
-            else resolve();
+      // Kembalikan stok dan tandai transaksi BATAL secara atomik.
+      const detailBatal = await getTransactionDetails(transaksi.id);
+
+      await runAsync("BEGIN TRANSACTION");
+      try {
+        for (const item of detailBatal) {
+          const namaBarang = String(item.nama_barang || "").trim();
+          if (!namaBarang) continue;
+
+          const namaLower = namaBarang.toLowerCase();
+          const isService =
+            namaLower === "billiard waktu loss" ||
+            namaLower === "meja billiard" ||
+            namaLower === "1 jam";
+
+          if (isService) continue;
+
+          const master = await new Promise((resolve, reject) => {
+            db.get(
+              `SELECT id FROM master_barang WHERE LOWER(TRIM(nama)) = LOWER(TRIM(?)) LIMIT 1`,
+              [namaBarang],
+              (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+              }
+            );
+          });
+
+          if (!master) {
+            throw new Error(`Master barang tidak ditemukan saat rollback stok: ${namaBarang}`);
           }
+
+          const qty = Number(item.qty || 0);
+          if (!Number.isInteger(qty) || qty <= 0) {
+            throw new Error(`Qty rollback tidak valid untuk barang: ${namaBarang}`);
+          }
+
+          await runAsync(
+            `UPDATE master_barang SET stok_aktual = stok_aktual + ? WHERE id = ?`,
+            [qty, master.id]
+          );
+        }
+
+        await runAsync(
+          `UPDATE transaksi SET status_sync = 'BATAL', sync_at = ? WHERE id = ?`,
+          [new Date().toISOString(), transaksi.id]
         );
-      });
+
+        await runAsync("COMMIT");
+      } catch (rollbackErr) {
+        try {
+          await runAsync("ROLLBACK");
+        } catch (_) {}
+        throw rollbackErr;
+      }
 
       writeLog("INFO", "TRANSAKSI_BATAL", `Transaksi ${nomorTransaksi} dibatalkan oleh Manager`, {
         nomorTransaksi: transaksi.nomor_transaksi,
@@ -2872,6 +3188,15 @@ const server = https.createServer({
       `;
 
       const params = [];
+
+      // Riwayat hanya boleh menampilkan transaksi milik kasir yang sedang login.
+      const currentKasir = String(session.username || "").trim();
+      if (!currentKasir) {
+        res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: "Identitas kasir tidak ditemukan." }));
+      }
+      sql += ` AND LOWER(TRIM(t.kasir)) = LOWER(TRIM(?))`;
+      params.push(currentKasir);
 
       if (query) {
         sql += ` AND (t.nomor_transaksi LIKE ? OR t.kasir LIKE ?)`;
@@ -3298,18 +3623,10 @@ const server = https.createServer({
     try {
       const data = await getJsonBody(req);
       const namaBarang = String(data.namaBarang || "").trim();
-      const code = String(data.code || "").trim();
 
-      if (!namaBarang || !code) {
+      if (!namaBarang) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-        return res.end(JSON.stringify({ success: false, message: "namaBarang dan code wajib diisi" }));
-      }
-
-      const totpRes = await verifyManagerTotpOnce(code);
-      if (!totpRes.success) {
-        const statusCode = totpRes.code === "TOTP_CONFIG_ERROR" ? 500 : 401;
-        res.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
-        return res.end(JSON.stringify({ success: false, code: totpRes.code, message: totpRes.message }));
+        return res.end(JSON.stringify({ success: false, message: "namaBarang wajib diisi" }));
       }
 
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -3348,7 +3665,9 @@ const server = https.createServer({
             waktuMulai: activeSession.waktu_mulai,
             durasiJam: activeSession.durasi_jam || 0,
             waktuSelesai: activeSession.waktu_selesai || null,
-            jenisSesi: activeSession.jenis_sesi || "NORMAL"
+            jenisSesi: activeSession.jenis_sesi || "NORMAL",
+            memberId: activeSession.member_id || null,
+            kategoriMember: activeSession.kategori_member || null
           });
         } else {
           result.push({
@@ -3414,10 +3733,10 @@ const server = https.createServer({
         db.run(
           `
           INSERT INTO sesi_meja
-          (session_id, nomor_meja, nama_pemesan, kasir, waktu_mulai, durasi_jam, waktu_selesai, jenis_sesi, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'AKTIF')
+          (session_id, nomor_meja, nama_pemesan, kasir, waktu_mulai, durasi_jam, waktu_selesai, jenis_sesi, member_id, kategori_member, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTIF')
           `,
-          [sessionId, nomorMeja, namaPemesan, session.username, waktuMulai, durasiJam, waktuSelesai, jenisSesi],
+          [sessionId, nomorMeja, namaPemesan, session.username, waktuMulai, durasiJam, waktuSelesai, jenisSesi, memberIdInput, kategoriMember],
           (error) => {
             if (error) reject(error);
             else resolve();
@@ -3489,9 +3808,9 @@ const server = https.createServer({
 
     try {
       const data = await getJsonBody(req);
+      const rawSessionId = data.sessionId;
       const rawKategori = data.kategori;
       const rawDurasiJam = data.durasiJam;
-      const rawJam = data.jam;
 
       if (!rawKategori || String(rawKategori).trim() === "") {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
@@ -3509,79 +3828,64 @@ const server = https.createServer({
         return res.end(JSON.stringify({ success: false, message: "durasiJam harus integer >= 1" }));
       }
 
-      const jam = String(rawJam || "").trim();
-      if (!jam || !/^([01]\d|2[0-3]):[0-5]\d$/.test(jam)) {
-        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-        return res.end(JSON.stringify({ success: false, message: "Jam harus format HH:mm" }));
-      }
-
       const kategori = String(rawKategori).trim().toUpperCase();
       if (!["PLATINUM", "UMUM", "PELAJAR"].includes(kategori)) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         return res.end(JSON.stringify({ success: false, message: "Kategori member tidak valid" }));
       }
 
-      const rows = await new Promise((resolve, reject) => {
-        db.all(`SELECT * FROM harga_member_cache WHERE kategori = ?`, [kategori], (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        });
-      });
+      // Ambil harga langsung dari database SQLite (tabel harga_member_cache)
+      const nowIso = new Date().toISOString();
+      const cacheHarga = await getHargaMemberDariCache(kategori, durasiJam, nowIso);
 
-      if (!rows || rows.length === 0) {
+      if (!cacheHarga) {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         return res.end(JSON.stringify({
           success: false,
-          message: "Harga member belum tersedia di cache. Silakan lakukan Sync Produk."
+          message: `Harga ${kategori} untuk durasi ${durasiJam} jam tidak tersedia di database SQLite.`
         }));
       }
 
-      let matchedRules = [];
-      if (kategori === "PELAJAR") {
-        matchedRules = rows.filter(r => {
-          const jamMulai = r.jam;
-          const jamSelesai = r.jam_selesai;
-          if (!jamMulai || !jamSelesai) return false;
+      const hargaPerJam = cacheHarga.hargaPerJam;
+      const total = cacheHarga.total;
+      const nowJam = cacheHarga.jam || new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Makassar",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).format(new Date());
 
-          if (jamMulai < jamSelesai) {
-            return jam >= jamMulai && jam < jamSelesai;
-          } else {
-            return jam >= jamMulai || jam < jamSelesai;
-          }
+      // Simpan tarif FINAL hasil pembacaan database lokal ke sesi yang sama.
+      // Qty mengikuti durasi sesi dan tidak ditambah.
+      if (rawSessionId) {
+        await new Promise((resolve, reject) => {
+          db.run(
+            `UPDATE pesanan_meja
+             SET qty = ?,
+                 harga_jual = ?,
+                 subtotal = ?,
+                 updated_at = datetime('now')
+             WHERE session_id = ?
+               AND LOWER(TRIM(nama_barang)) = 'meja billiard'`,
+            [durasiJam, hargaPerJam, total, String(rawSessionId)],
+            function(err) {
+              if (err) return reject(err);
+              resolve(this.changes);
+            }
+          );
         });
-      } else {
-        matchedRules = rows;
       }
-
-      const validDurationRules = matchedRules.filter(r => Number(r.durasi_jam) <= durasiJam);
-
-      let bestRule = null;
-      if (validDurationRules.length > 0) {
-        bestRule = validDurationRules.reduce((prev, current) => (Number(current.durasi_jam) > Number(prev.durasi_jam) ? current : prev));
-      }
-
-      if (!bestRule) {
-        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-        return res.end(JSON.stringify({
-          success: false,
-          message: "Harga untuk durasi tersebut tidak tersedia."
-        }));
-      }
-
-      const hargaPerJam = Number(bestRule.harga_per_jam);
-      const total = hargaPerJam * durasiJam;
 
       writeLog(
         "INFO",
-        "MEJA_HITUNG_HARGA_CACHE",
-        "Harga meja berhasil diambil dari SQLite cache",
+        "HARGA_MEJA_FINAL",
+        `Harga meja ${kategori} diambil langsung dari database SQLite`,
         {
-          kategori,
-          jam,
+          sessionId: rawSessionId || null,
           durasiJam,
+          jamSekarang: nowJam,
           hargaPerJam,
-          total,
-          source: "SQLITE_CACHE"
+          total
         }
       );
 
@@ -3589,15 +3893,24 @@ const server = https.createServer({
       return res.end(JSON.stringify({
         success: true,
         kategori,
-        hargaPerJam,
         durasiJam,
-        total
+        jam: nowJam,
+        hargaPerJam,
+        total,
+        source: "SQLITE_DB"
       }));
 
     } catch (error) {
-      writeLog("ERROR", "MEJA_HITUNG_HARGA_ERROR", error.message);
-      res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-      return res.end(JSON.stringify({ success: false, message: error.message }));
+      writeLog("ERROR", "HITUNG_HARGA_MEJA", error.message, {
+        error: error.stack
+      });
+
+      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({
+        success: false,
+        message: "Gagal menghitung harga meja.",
+        error: error.message
+      }));
     }
   }
 
@@ -3651,6 +3964,8 @@ const server = https.createServer({
           durasiJam: mejaSession.durasi_jam || 0,
           waktuSelesai: mejaSession.waktu_selesai || null,
           jenisSesi: mejaSession.jenis_sesi || "NORMAL",
+          memberId: mejaSession.member_id || null,
+          kategoriMember: mejaSession.kategori_member || null,
           status: mejaSession.status
         },
         items,
@@ -3724,61 +4039,26 @@ const server = https.createServer({
         memberInfo = foundMember;
         kategoriMember = String(foundMember.kategori || foundMember.kategoriId || "").trim().toUpperCase();
 
-        const nowObj = new Date();
-        const jam = String(nowObj.getHours()).padStart(2, "0") + ":" + String(nowObj.getMinutes()).padStart(2, "0");
+        const waktuMulaiHarga = new Date().toISOString();
+        const cacheHarga = await getHargaMemberDariCache(kategoriMember, durasiJam, waktuMulaiHarga);
 
-        let gasResult = null;
-        try {
-          if (kategoriMember === "PLATINUM") {
-            gasResult = await callHargaGasGet({
-              action: "harga_platinum",
-              jam,
-              durasiJam
-            });
-          } else if (kategoriMember === "UMUM") {
-            gasResult = await callHargaGasGet({
-              action: "harga_umum",
-              jam,
-              durasiJam
-            });
-          } else if (kategoriMember === "PELAJAR") {
-            gasResult = await callHargaGasGet({
-              action: "harga_pelajar",
-              jam,
-              durasiJam
-            });
-          } else {
-            throw new Error("Kategori member tidak valid.");
-          }
-
-          writeLog("INFO", "MEMBER_PRICE_CHECK", "Pemeriksaan harga member berhasil", {
-            memberId: memberIdInput,
-            kategori: kategoriMember,
-            jam,
-            durasiJam,
-            hargaPerJam: gasResult?.hargaPerJam
-          });
-        } catch (gasErr) {
-          writeLog("ERROR", "MEMBER_PRICE_ERROR", "Error saat memanggil GAS harga member", { error: gasErr.message });
-          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-          return res.end(JSON.stringify({ success: false, message: gasErr.message || "Aturan harga member tidak ditemukan." }));
-        }
-
-        if (!gasResult || gasResult.success !== true) {
+        if (!cacheHarga) {
           res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
           return res.end(JSON.stringify({
             success: false,
-            message: gasResult?.message || "Aturan harga member tidak ditemukan."
+            message: `Harga ${kategoriMember} untuk durasi ${durasiJam} jam tidak tersedia di database SQLite.`
           }));
         }
 
-        const parsedHarga = Number(gasResult.hargaPerJam);
-        if (isNaN(parsedHarga) || parsedHarga <= 0) {
-          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-          return res.end(JSON.stringify({ success: false, message: "Aturan harga member tidak valid." }));
-        }
+        hargaPerJam = cacheHarga.hargaPerJam;
 
-        hargaPerJam = parsedHarga;
+        writeLog("INFO", "MEMBER_PRICE_CHECK", "Harga member diambil langsung dari database SQLite", {
+          memberId: memberIdInput,
+          kategori: kategoriMember,
+          jam: cacheHarga.jam,
+          durasiJam,
+          hargaPerJam
+        });
       }
 
       const sessionId = generateSessionId();
@@ -3790,10 +4070,10 @@ const server = https.createServer({
         db.run(
           `
           INSERT INTO sesi_meja
-          (session_id, nomor_meja, nama_pemesan, kasir, waktu_mulai, durasi_jam, waktu_selesai, jenis_sesi, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'AKTIF')
+          (session_id, nomor_meja, nama_pemesan, kasir, waktu_mulai, durasi_jam, waktu_selesai, jenis_sesi, member_id, kategori_member, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTIF')
           `,
-          [sessionId, nomorMeja, namaPemesan, session.username, waktuMulai, durasiJam, waktuSelesai, jenisSesi],
+          [sessionId, nomorMeja, namaPemesan, session.username, waktuMulai, durasiJam, waktuSelesai, jenisSesi, memberIdInput, kategoriMember],
           (error) => {
             if (error) reject(error);
             else resolve();
@@ -3817,9 +4097,9 @@ const server = https.createServer({
         const hppItem = barangBilliard ? Number(barangBilliard.hpp || 0) : 0;
         const normalHargaJual = barangBilliard ? Number(barangBilliard.hargaJual || 0) : 0;
 
-        const hargaJualFinal = (hargaPerJam !== null && hargaPerJam !== undefined && !isNaN(hargaPerJam))
-          ? hargaPerJam
-          : normalHargaJual;
+        // Saat buka meja, selalu simpan harga normal.
+        // Harga member hanya diterapkan ketika kasir menekan CEK HARGA MEJA.
+        const hargaJualFinal = normalHargaJual;
 
         const subtotalFinal = hargaJualFinal * durasiJam;
         const nowIso = new Date().toISOString();
@@ -4206,6 +4486,9 @@ const server = https.createServer({
         );
       });
 
+      const sessionAfterDuration = await getSessionById(sessionId);
+      await sinkronHargaMejaBilliard(sessionAfterDuration, durasiJamBaru);
+
       if (wasExpired) {
         const nomorMeja = mejaSession.nomor_meja;
         try {
@@ -4303,6 +4586,9 @@ const server = https.createServer({
         );
       });
 
+      const sessionAfterDuration = await getSessionById(sessionId);
+      await sinkronHargaMejaBilliard(sessionAfterDuration, durasiJamBaru);
+
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
       return res.end(JSON.stringify({
         success: true,
@@ -4329,18 +4615,10 @@ const server = https.createServer({
       const data = await getJsonBody(req);
       const sessionId = String(data.sessionId || "").trim();
       const namaBarang = String(data.namaBarang || "").trim();
-      const code = String(data.code || "").trim();
 
-      if (!sessionId || !namaBarang || !code) {
+      if (!sessionId || !namaBarang) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-        return res.end(JSON.stringify({ success: false, message: "sessionId, namaBarang, dan code wajib diisi" }));
-      }
-
-      const totpRes = await verifyManagerTotpOnce(code);
-      if (!totpRes.success) {
-        const statusCode = totpRes.code === "TOTP_CONFIG_ERROR" ? 500 : 401;
-        res.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
-        return res.end(JSON.stringify({ success: false, code: totpRes.code, message: totpRes.message }));
+        return res.end(JSON.stringify({ success: false, message: "sessionId dan namaBarang wajib diisi" }));
       }
 
       const mejaSession = await getSessionById(sessionId);
@@ -4379,36 +4657,6 @@ const server = https.createServer({
         }
 
         await runAsync("COMMIT");
-
-        if (tableSession) {
-          try {
-            const lampRes = await lampOff(tableSession.nomor_meja);
-
-            if (!lampRes || lampRes.success !== true) {
-              writeLog(
-                "WARN",
-                "LAMP_OFF_FAILED_AFTER_PAYMENT",
-                "Pembayaran berhasil tetapi lampu gagal dimatikan",
-                {
-                  nomorMeja: tableSession.nomor_meja,
-                  sessionId: tableSession.session_id,
-                  lampRes
-                }
-              );
-            }
-          } catch (lampErr) {
-            writeLog(
-              "ERROR",
-              "LAMP_OFF_ERROR_AFTER_PAYMENT",
-              "Pembayaran berhasil tetapi terjadi error saat mematikan lampu",
-              {
-                nomorMeja: tableSession.nomor_meja,
-                sessionId: tableSession.session_id,
-                error: lampErr.message
-              }
-            );
-          }
-        }
 
         writeLog("INFO", "MEJA_QTY_REDUCE", "Qty produk berhasil dikurangi", { sessionId, namaBarang, qtyLama, qtyBaru: qtyBaru <= 0 ? 0 : qtyBaru });
 
@@ -4464,6 +4712,17 @@ const server = https.createServer({
       const now = new Date().toISOString();
 
       if (existingItem) {
+        if (namaBarang.toLowerCase() === "meja billiard") {
+          const durasiJam = Number(mejaSession.durasi_jam || 0);
+          if (durasiJam < 1) {
+            throw new Error("Durasi sesi Meja Billiard tidak valid");
+          }
+
+          await sinkronHargaMejaBilliard(mejaSession, durasiJam);
+           // jangan lanjut ke newQty = existingItem.qty + qty
+        return;
+    }
+
         const newQty = existingItem.qty + qty;
         const newSubtotal = newQty * barang.hargaJual;
 
@@ -4516,6 +4775,25 @@ const server = https.createServer({
       const mejaSession = await getSessionById(sessionId);
       if (!mejaSession || mejaSession.status !== "AKTIF") {
         throw new Error("Sesi tidak AKTIF atau tidak ditemukan");
+      }
+
+      // Meja Billiard: qty wajib mengikuti durasi sesi.
+      // Abaikan qty dari frontend agar tidak menimpa nilai server yang authoritative.
+      if (namaBarang.toLowerCase() === "meja billiard") {
+        const durasiJam = Number(mejaSession.durasi_jam || 0);
+
+        if (durasiJam < 1) {
+          throw new Error("Durasi sesi Meja Billiard tidak valid");
+        }
+
+        await sinkronHargaMejaBilliard(mejaSession, durasiJam);
+
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({
+          success: true,
+          message: "Qty Meja Billiard mengikuti durasi sesi",
+          durasiJam
+        }));
       }
 
       const items = await getSessionItems(sessionId);
@@ -4576,36 +4854,6 @@ const server = https.createServer({
         }
 
         await runAsync("COMMIT");
-
-        if (tableSession) {
-          try {
-            const lampRes = await lampOff(tableSession.nomor_meja);
-
-            if (!lampRes || lampRes.success !== true) {
-              writeLog(
-                "WARN",
-                "LAMP_OFF_FAILED_AFTER_PAYMENT",
-                "Pembayaran berhasil tetapi lampu gagal dimatikan",
-                {
-                  nomorMeja: tableSession.nomor_meja,
-                  sessionId: tableSession.session_id,
-                  lampRes
-                }
-              );
-            }
-          } catch (lampErr) {
-            writeLog(
-              "ERROR",
-              "LAMP_OFF_ERROR_AFTER_PAYMENT",
-              "Pembayaran berhasil tetapi terjadi error saat mematikan lampu",
-              {
-                nomorMeja: tableSession.nomor_meja,
-                sessionId: tableSession.session_id,
-                error: lampErr.message
-              }
-            );
-          }
-        }
 
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         if (namaBarang === "1 Jam") {
@@ -5997,7 +6245,3 @@ server.listen(config.PORT, () => {
   setInterval(syncPendingTransactions, 10000);
   setInterval(reconcileLampState, 10000);
 });
-
-
-
-
