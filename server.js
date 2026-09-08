@@ -11,8 +11,6 @@ const sqlite3 = require("sqlite3").verbose();
 // ==================================================
 // NOMINAL PARSER
 // ==================================================
-// Accept numeric values and Indonesian formatted values such as
-// "50.000" or "1.000.000" while keeping backend calculations numeric.
 function parseNominal(value) {
   if (value === null || value === undefined || value === "") return 0;
 
@@ -537,8 +535,6 @@ db.serialize(() => {
     });
   });
 
-  // Jika database lama pernah memiliki kategori UNIQUE,
-  // migrasikan ke struktur yang benar: so_id UNIQUE, kategori tidak UNIQUE.
   db.get(
     "SELECT sql FROM sqlite_master WHERE type='table' AND name='stock_opname'",
     (err, row) => {
@@ -659,7 +655,6 @@ db.serialize(() => {
     }
   );
 
-  // Detail hasil SO disimpan server-side.
   db.run(`
     CREATE TABLE IF NOT EXISTS stock_opname_detail (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -693,9 +688,6 @@ db.serialize(() => {
     }
   );
 
-  // CART DRAFT BUKAN TRANSAKSI.
-  // Setiap server start/restart, draft lama wajib dibuang agar
-  // barang yang belum pernah ditransaksikan tidak muncul kembali.
   db.run(`DELETE FROM cart_draft`, error => {
     if (error) {
       writeLog(
@@ -713,9 +705,7 @@ db.serialize(() => {
     }
   });
 
-
-
-});;
+});
 
 
 // ==================================================
@@ -913,7 +903,6 @@ function getSessionById(sessionId) {
   });
 }
 
-// Membaca aturan harga member secara langsung dari database SQLite (tabel harga_member_cache)
 async function getHargaMemberDariCache(kategoriInput, durasiJamInput, waktuMulaiInput = null) {
   const kategori = String(kategoriInput || "").trim().toUpperCase();
   const durasiJam = Number(durasiJamInput);
@@ -990,8 +979,6 @@ async function sinkronHargaMejaBilliard(sessionRow, durasiJam) {
 
   const kategori = String(sessionRow.kategori_member || "").trim().toUpperCase();
 
-  // Selalu sinkronkan QTY berdasarkan durasi terbaru.
-  // Jangan hentikan proses hanya karena sesi bukan member.
   if (!kategori) {
     await runAsync(
       `UPDATE pesanan_meja
@@ -1753,10 +1740,19 @@ setInterval(() => {
 }, 60 * 1000);
 
 function validateLoginSession(req, res) {
-  const sessionId = req.headers["x-session-id"];
-  const deviceId = req.headers["x-device-id"];
+  const rawSessionId = req.headers["x-session-id"];
+  const rawDeviceId = req.headers["x-device-id"];
 
-  if (!sessionId || !deviceId) {
+  if (!rawSessionId || !rawDeviceId) {
+    res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ success: false, code: "SESSION_NOT_FOUND", message: "Session ID dan DeviceId wajib diisi" }));
+    return null;
+  }
+
+  const trimmedSessionId = String(rawSessionId).trim();
+  const trimmedDeviceId = String(rawDeviceId).trim();
+
+  if (!trimmedSessionId || !trimmedDeviceId) {
     res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
     res.end(JSON.stringify({ success: false, code: "SESSION_NOT_FOUND", message: "Session ID dan DeviceId wajib diisi" }));
     return null;
@@ -1764,7 +1760,7 @@ function validateLoginSession(req, res) {
 
   let foundSession = null;
   for (const session of activeLoginSessions.values()) {
-    if (session.sessionId === sessionId) {
+    if (session.sessionId === trimmedSessionId) {
       foundSession = session;
       break;
     }
@@ -1776,17 +1772,17 @@ function validateLoginSession(req, res) {
     return null;
   }
 
-  if (foundSession.deviceId !== deviceId.trim()) {
-    res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
-    res.end(JSON.stringify({ success: false, code: "DEVICE_MISMATCH", message: "Device tidak sesuai dengan session" }));
-    return null;
-  }
-
   const now = Date.now();
   if (now >= foundSession.expiresAt) {
     activeLoginSessions.delete(foundSession.kasirId);
     res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
     res.end(JSON.stringify({ success: false, code: "SESSION_EXPIRED", message: "Session sudah expired" }));
+    return null;
+  }
+
+  if (foundSession.deviceId !== trimmedDeviceId) {
+    res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ success: false, code: "DEVICE_MISMATCH", message: "Device tidak sesuai dengan session" }));
     return null;
   }
 
@@ -1926,7 +1922,6 @@ const server = https.createServer({
     }
   }
 
-  // STOCK OPNAME MODULE
   if (req.method === "GET" && req.url === "/stock-opname.js") {
     try {
       const js = fs.readFileSync(path.join(__dirname, "stock-opname.js"), "utf8");
@@ -1968,6 +1963,16 @@ const server = https.createServer({
     }
   }
 
+  if (req.method === "GET" && req.url === "/meja-bubble.js") {
+    try {
+      const js = fs.readFileSync(path.join(__dirname, "meja-bubble.js"), "utf8");
+      res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8" });
+      return res.end(js);
+    } catch (error) {
+      res.writeHead(404);
+      return res.end("meja-bubble.js tidak ditemukan");
+    }
+  }
   if (req.method === "GET" && req.url === "/meja-modal.js") {
     try {
       const js = fs.readFileSync(path.join(__dirname, "meja-modal.js"), "utf8");
@@ -2056,17 +2061,20 @@ const server = https.createServer({
   if (req.method === "POST" && req.url === "/api/session") {
     try {
       const data = await getJsonBody(req);
-      const sessionId = data.sessionId;
-      const deviceId = data.deviceId;
+      const rawSessionId = data.sessionId;
+      const rawDeviceId = data.deviceId;
 
-      if (!sessionId || !deviceId || typeof deviceId !== "string" || !deviceId.trim()) {
+      if (!rawSessionId || !rawDeviceId || typeof rawSessionId !== "string" || typeof rawDeviceId !== "string" || !rawSessionId.trim() || !rawDeviceId.trim()) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         return res.end(JSON.stringify({ success: false, valid: false, code: "INVALID_REQUEST", message: "sessionId dan deviceId wajib diisi" }));
       }
 
+      const trimmedSessionId = rawSessionId.trim();
+      const trimmedDeviceId = rawDeviceId.trim();
+
       let foundSession = null;
       for (const session of activeLoginSessions.values()) {
-        if (session.sessionId === sessionId) {
+        if (session.sessionId === trimmedSessionId) {
           foundSession = session;
           break;
         }
@@ -2077,16 +2085,16 @@ const server = https.createServer({
         return res.end(JSON.stringify({ success: false, valid: false, code: "SESSION_NOT_FOUND" }));
       }
 
-      if (foundSession.deviceId !== deviceId.trim()) {
-        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-        return res.end(JSON.stringify({ success: false, valid: false, code: "DEVICE_MISMATCH", message: "Session bukan milik device ini." }));
-      }
-
       const now = Date.now();
       if (now >= foundSession.expiresAt) {
         activeLoginSessions.delete(foundSession.kasirId);
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         return res.end(JSON.stringify({ success: false, valid: false, code: "SESSION_EXPIRED", message: "Session login sudah expired." }));
+      }
+
+      if (foundSession.deviceId !== trimmedDeviceId) {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, valid: false, code: "DEVICE_MISMATCH", message: "Session bukan milik device ini." }));
       }
 
       db.get(`SELECT aktif FROM kasir WHERE id = ?`, [foundSession.kasirId], (err, kasirRow) => {
@@ -2121,17 +2129,20 @@ const server = https.createServer({
   if (req.method === "POST" && req.url === "/api/logout") {
     try {
       const data = await getJsonBody(req);
-      const sessionId = data.sessionId;
-      const deviceId = data.deviceId;
+      const rawSessionId = data.sessionId;
+      const rawDeviceId = data.deviceId;
 
-      if (!sessionId || !deviceId) {
+      if (!rawSessionId || !rawDeviceId || typeof rawSessionId !== "string" || typeof rawDeviceId !== "string" || !rawSessionId.trim() || !rawDeviceId.trim()) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         return res.end(JSON.stringify({ success: false, message: "sessionId dan deviceId wajib diisi" }));
       }
 
+      const trimmedSessionId = rawSessionId.trim();
+      const trimmedDeviceId = rawDeviceId.trim();
+
       let targetKasirId = null;
       for (const [kasirId, session] of activeLoginSessions.entries()) {
-        if (session.sessionId === sessionId && session.deviceId === deviceId) {
+        if (session.sessionId === trimmedSessionId && session.deviceId === trimmedDeviceId) {
           targetKasirId = kasirId;
           break;
         }
@@ -2217,7 +2228,6 @@ const server = https.createServer({
 
           loginRateLimitMap.delete(clientIp);
 
-          // Tolak login jika kasir sudah menutup shift pada hari kalender Makassar.
           db.get(
             `
             SELECT id, tutup_at
@@ -2246,131 +2256,131 @@ const server = https.createServer({
               }
 
               const now = Date.now();
-          if (activeLoginSessions.has(kasir.id)) {
-            const existingSession = activeLoginSessions.get(kasir.id);
-            if (now < existingSession.expiresAt) {
-              if (existingSession.deviceId !== trimmedDeviceId) {
-                res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
-                return res.end(JSON.stringify({
-                  success: false,
-                  code: "SESSION_ACTIVE_OTHER_DEVICE",
-                  message: "AKUN SEDANG DIGUNAKAN DI DEVICE LAIN."
-                }));
-              } else {
-                db.get(
-                  `SELECT * FROM shift_kasir
-                   WHERE kasir_id = ?
-                   AND status = 'OPEN'
-                   AND date(buka_at, '+8 hours') = date('now', '+8 hours')
-                   ORDER BY id DESC
-                   LIMIT 1`,
-                  [kasir.id],
-                  (shiftError, shift) => {
-                    if (shiftError) {
-                      res.writeHead(500);
-                      return res.end(JSON.stringify({ success: false, message: shiftError.message }));
-                    }
-                    if (shift) {
+              if (activeLoginSessions.has(kasir.id)) {
+                const existingSession = activeLoginSessions.get(kasir.id);
+                if (now < existingSession.expiresAt) {
+                  if (existingSession.deviceId !== trimmedDeviceId) {
+                    res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
+                    return res.end(JSON.stringify({
+                      success: false,
+                      code: "SESSION_ACTIVE_OTHER_DEVICE",
+                      message: "AKUN SEDANG DIGUNAKAN DI DEVICE LAIN."
+                    }));
+                  } else {
+                    db.get(
+                      `SELECT * FROM shift_kasir
+                       WHERE kasir_id = ?
+                       AND status = 'OPEN'
+                       AND date(buka_at, '+8 hours') = date('now', '+8 hours')
+                       ORDER BY id DESC
+                       LIMIT 1`,
+                      [kasir.id],
+                      (shiftError, shift) => {
+                        if (shiftError) {
+                          res.writeHead(500);
+                          return res.end(JSON.stringify({ success: false, message: shiftError.message }));
+                        }
+                        if (shift) {
+                          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+                          return res.end(JSON.stringify({
+                            success: true,
+                            kasirId: kasir.id,
+                            nama: kasir.nama,
+                            shiftId: shift.id,
+                            sessionId: existingSession.sessionId,
+                            loginAt: existingSession.loginAt,
+                            expiresAt: existingSession.expiresAt
+                          }));
+                        }
+                        db.run(
+                          `INSERT INTO shift_kasir (kasir_id, buka_at, saldo_awal, status) VALUES (?, ?, 0, 'OPEN')`,
+                          [kasir.id, new Date().toISOString()],
+                          function (openError) {
+                            if (openError) {
+                              res.writeHead(500);
+                              return res.end(JSON.stringify({ success: false, message: openError.message }));
+                            }
+                            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+                            return res.end(JSON.stringify({
+                              success: true,
+                              kasirId: kasir.id,
+                              nama: kasir.nama,
+                              shiftId: this.lastID,
+                              sessionId: existingSession.sessionId,
+                              loginAt: existingSession.loginAt,
+                              expiresAt: existingSession.expiresAt
+                            }));
+                          }
+                        );
+                      }
+                    );
+                    return;
+                  }
+                } else {
+                  activeLoginSessions.delete(kasir.id);
+                }
+              }
+
+              const loginAt = now;
+              const expiresAt = loginAt + 5 * 60 * 1000;
+              const sessionId = crypto.randomUUID();
+
+              activeLoginSessions.set(kasir.id, {
+                sessionId,
+                kasirId: kasir.id,
+                username: kasir.username,
+                nama: kasir.nama,
+                deviceId: trimmedDeviceId,
+                loginAt,
+                expiresAt
+              });
+
+              db.get(
+                `SELECT * FROM shift_kasir
+                 WHERE kasir_id = ?
+                 AND status = 'OPEN'
+                 AND date(buka_at, '+8 hours') = date('now', '+8 hours')
+                 ORDER BY id DESC
+                 LIMIT 1`,
+                [kasir.id],
+                (shiftError, shift) => {
+                  if (shiftError) {
+                    res.writeHead(500);
+                    return res.end(JSON.stringify({ success: false, message: shiftError.message }));
+                  }
+                  if (shift) {
+                    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+                    return res.end(JSON.stringify({
+                      success: true,
+                      kasirId: kasir.id,
+                      nama: kasir.nama,
+                      shiftId: shift.id,
+                      sessionId,
+                      loginAt,
+                      expiresAt
+                    }));
+                  }
+                  db.run(
+                    `INSERT INTO shift_kasir (kasir_id, buka_at, saldo_awal, status) VALUES (?, ?, 0, 'OPEN')`,
+                    [kasir.id, new Date().toISOString()],
+                    function (openError) {
+                      if (openError) {
+                        res.writeHead(500);
+                        return res.end(JSON.stringify({ success: false, message: openError.message }));
+                      }
                       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
                       return res.end(JSON.stringify({
                         success: true,
                         kasirId: kasir.id,
                         nama: kasir.nama,
-                        shiftId: shift.id,
-                        sessionId: existingSession.sessionId,
-                        loginAt: existingSession.loginAt,
-                        expiresAt: existingSession.expiresAt
+                        shiftId: this.lastID,
+                        sessionId,
+                        loginAt,
+                        expiresAt
                       }));
                     }
-                    db.run(
-                      `INSERT INTO shift_kasir (kasir_id, buka_at, saldo_awal, status) VALUES (?, ?, 0, 'OPEN')`,
-                      [kasir.id, new Date().toISOString()],
-                      function (openError) {
-                        if (openError) {
-                          res.writeHead(500);
-                          return res.end(JSON.stringify({ success: false, message: openError.message }));
-                        }
-                        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-                        return res.end(JSON.stringify({
-                          success: true,
-                          kasirId: kasir.id,
-                          nama: kasir.nama,
-                          shiftId: this.lastID,
-                          sessionId: existingSession.sessionId,
-                          loginAt: existingSession.loginAt,
-                          expiresAt: existingSession.expiresAt
-                        }));
-                      }
-                    );
-                  }
-                );
-                return;
-              }
-            } else {
-              activeLoginSessions.delete(kasir.id);
-            }
-          }
-
-          const loginAt = now;
-          const expiresAt = loginAt + 5 * 60 * 1000;
-          const sessionId = crypto.randomUUID();
-
-          activeLoginSessions.set(kasir.id, {
-            sessionId,
-            kasirId: kasir.id,
-            username: kasir.username,
-            nama: kasir.nama,
-            deviceId: trimmedDeviceId,
-            loginAt,
-            expiresAt
-          });
-
-          db.get(
-            `SELECT * FROM shift_kasir
-             WHERE kasir_id = ?
-             AND status = 'OPEN'
-             AND date(buka_at, '+8 hours') = date('now', '+8 hours')
-             ORDER BY id DESC
-             LIMIT 1`,
-            [kasir.id],
-            (shiftError, shift) => {
-              if (shiftError) {
-                res.writeHead(500);
-                return res.end(JSON.stringify({ success: false, message: shiftError.message }));
-              }
-              if (shift) {
-                res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-                return res.end(JSON.stringify({
-                  success: true,
-                  kasirId: kasir.id,
-                  nama: kasir.nama,
-                  shiftId: shift.id,
-                  sessionId,
-                  loginAt,
-                  expiresAt
-                }));
-              }
-              db.run(
-                `INSERT INTO shift_kasir (kasir_id, buka_at, saldo_awal, status) VALUES (?, ?, 0, 'OPEN')`,
-                [kasir.id, new Date().toISOString()],
-                function (openError) {
-                  if (openError) {
-                    res.writeHead(500);
-                    return res.end(JSON.stringify({ success: false, message: openError.message }));
-                  }
-                  res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-                  return res.end(JSON.stringify({
-                    success: true,
-                    kasirId: kasir.id,
-                    nama: kasir.nama,
-                    shiftId: this.lastID,
-                    sessionId,
-                    loginAt,
-                    expiresAt
-                  }));
+                  );
                 }
-              );
-            }
               );
             }
           );
@@ -2609,7 +2619,6 @@ const server = https.createServer({
           const isLossItem = (nama === "billiard waktu loss");
           const isTableServiceItem = (nama === "meja billiard" || nama === "1 jam");
 
-          // 1. BILLIARD WAKTU LOSS VALIDATION (STRICT DATABASE AUTHORITATIVE)
           if (isLossItem) {
             if (!sessionIdInput || !tableSession) {
               res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
@@ -2695,7 +2704,6 @@ const server = https.createServer({
             continue;
           }
 
-          // 2. MEJA BILLIARD & 1 JAM SERVICE ITEMS
           if (isTableServiceItem) {
             let serviceQty = clientQty;
             let serviceHarga = Number(item.hargaJual || item.harga_jual || 0);
@@ -2733,7 +2741,6 @@ const server = https.createServer({
             continue;
           }
 
-          // 3. PHYSICAL PRODUCTS (STRICT MASTER BARANG VALIDATION)
           if (!Number.isInteger(clientQty) || clientQty <= 0) {
             throw new Error(`Qty barang tidak valid: ${item.nama}`);
           }
@@ -2842,7 +2849,6 @@ const server = https.createServer({
 
         await runAsync("COMMIT");
 
-        // Matikan lampu setelah pembayaran berhasil dan sesi meja menjadi DIBAYAR.
         if (tableSession) {
           try {
             const lampRes = await lampOff(tableSession.nomor_meja);
@@ -2961,7 +2967,6 @@ const server = https.createServer({
         return res.end(JSON.stringify({ success: false, message: "Transaksi sudah dibatalkan" }));
       }
 
-      // Kembalikan stok dan tandai transaksi BATAL secara atomik.
       const detailBatal = await getTransactionDetails(transaksi.id);
 
       await runAsync("BEGIN TRANSACTION");
@@ -3189,7 +3194,6 @@ const server = https.createServer({
 
       const params = [];
 
-      // Riwayat hanya boleh menampilkan transaksi milik kasir yang sedang login.
       const currentKasir = String(session.username || "").trim();
       if (!currentKasir) {
         res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
@@ -3258,7 +3262,9 @@ const server = https.createServer({
     }
   }
 
+  // ==================================================
   // WAITING LIST API
+  // ==================================================
   if (req.method === "GET" && req.url === "/api/waiting-list") {
     const session = validateLoginSession(req, res);
     if (!session) return;
@@ -3337,7 +3343,7 @@ const server = https.createServer({
         throw new Error("nomorMeja harus integer 1 sampai 10");
       }
 
-      const validStatuses = ["WAITING", "CONFIRMED", "SEATED", "CANCELLED", "EXPIRED"];
+      const validStatuses = ["WAITING", "CONFIRMED", "SEATED", "CANCELLED", "EXPIRED", "SERVED", "BATAL"];
       if (!validStatuses.includes(status)) {
         throw new Error("Status tidak valid");
       }
@@ -3418,7 +3424,7 @@ const server = https.createServer({
             throw new Error("nomorMeja harus integer 1 sampai 10");
           }
 
-          const validStatuses = ["WAITING", "CONFIRMED", "SEATED", "CANCELLED", "EXPIRED"];
+          const validStatuses = ["WAITING", "CONFIRMED", "SEATED", "CANCELLED", "EXPIRED", "SERVED", "BATAL"];
           if (data.status !== undefined && !validStatuses.includes(status)) {
             throw new Error("Status tidak valid");
           }
@@ -3736,7 +3742,7 @@ const server = https.createServer({
           (session_id, nomor_meja, nama_pemesan, kasir, waktu_mulai, durasi_jam, waktu_selesai, jenis_sesi, member_id, kategori_member, status)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTIF')
           `,
-          [sessionId, nomorMeja, namaPemesan, session.username, waktuMulai, durasiJam, waktuSelesai, jenisSesi, memberIdInput, kategoriMember],
+          [sessionId, nomorMeja, namaPemesan, session.username, waktuMulai, durasiJam, waktuSelesai, jenisSesi, null, null],
           (error) => {
             if (error) reject(error);
             else resolve();
@@ -3834,7 +3840,6 @@ const server = https.createServer({
         return res.end(JSON.stringify({ success: false, message: "Kategori member tidak valid" }));
       }
 
-      // Ambil harga langsung dari database SQLite (tabel harga_member_cache)
       const nowIso = new Date().toISOString();
       const cacheHarga = await getHargaMemberDariCache(kategori, durasiJam, nowIso);
 
@@ -3855,8 +3860,6 @@ const server = https.createServer({
         hour12: false
       }).format(new Date());
 
-      // Simpan tarif FINAL hasil pembacaan database lokal ke sesi yang sama.
-      // Qty mengikuti durasi sesi dan tidak ditambah.
       if (rawSessionId) {
         await new Promise((resolve, reject) => {
           db.run(
@@ -4097,10 +4100,7 @@ const server = https.createServer({
         const hppItem = barangBilliard ? Number(barangBilliard.hpp || 0) : 0;
         const normalHargaJual = barangBilliard ? Number(barangBilliard.hargaJual || 0) : 0;
 
-        // Saat buka meja, selalu simpan harga normal.
-        // Harga member hanya diterapkan ketika kasir menekan CEK HARGA MEJA.
         const hargaJualFinal = normalHargaJual;
-
         const subtotalFinal = hargaJualFinal * durasiJam;
         const nowIso = new Date().toISOString();
 
@@ -4719,9 +4719,8 @@ const server = https.createServer({
           }
 
           await sinkronHargaMejaBilliard(mejaSession, durasiJam);
-           // jangan lanjut ke newQty = existingItem.qty + qty
-        return;
-    }
+          return;
+        }
 
         const newQty = existingItem.qty + qty;
         const newSubtotal = newQty * barang.hargaJual;
@@ -4777,8 +4776,6 @@ const server = https.createServer({
         throw new Error("Sesi tidak AKTIF atau tidak ditemukan");
       }
 
-      // Meja Billiard: qty wajib mengikuti durasi sesi.
-      // Abaikan qty dari frontend agar tidak menimpa nilai server yang authoritative.
       if (namaBarang.toLowerCase() === "meja billiard") {
         const durasiJam = Number(mejaSession.durasi_jam || 0);
 
@@ -5080,7 +5077,6 @@ const server = https.createServer({
   }
 
   // ==================================================
-  // ==================================================
   // STOCK OPNAME (SO) API ENDPOINTS
   // ==================================================
 
@@ -5241,9 +5237,7 @@ const server = https.createServer({
     };
   }
 
-  // ==================================================
   // 1. GET /api/stock-opname/status
-  // ==================================================
   if (req.method === "GET" && req.url.startsWith("/api/stock-opname/status")) {
     const session = validateLoginSession(req, res);
     if (!session) return;
@@ -5309,9 +5303,7 @@ const server = https.createServer({
     }
   }
 
-  // ==================================================
   // 2. POST /api/stock-opname/simpan
-  // ==================================================
   if (req.method === "POST" && req.url === "/api/stock-opname/simpan") {
     const session = validateLoginSession(req, res);
     if (!session) return;
@@ -5508,7 +5500,6 @@ const server = https.createServer({
       const tanggalSO =
         data.tanggalSO || new Date().toISOString();
 
-      // Google Apps Script adalah sumber semua perhitungan SO.
       const gasResult = await callGas({
         action: "proses_stock_opname",
         soId: targetSoId,
@@ -5551,7 +5542,6 @@ const server = https.createServer({
 
       const nowIso = new Date().toISOString();
 
-      // Simpan hasil GAS secara atomic.
       await runAsync("BEGIN TRANSACTION");
 
       try {
@@ -5672,7 +5662,6 @@ const server = https.createServer({
         throw dbError;
       }
 
-      // Arsip cepat server-side. Arsip selalu bersumber dari data hasil GAS.
       const folderPathSO = path.join(
         __dirname,
         "data",
@@ -5748,9 +5737,7 @@ const server = https.createServer({
     }
   }
 
-  // ==================================================
   // 3. POST /api/stock-opname/snapshot
-  // ==================================================
   if (req.method === "POST" && req.url === "/api/stock-opname/snapshot") {
     const session = validateLoginSession(req, res);
     if (!session) return;
@@ -5902,9 +5889,7 @@ const server = https.createServer({
     }
   }
 
-  // ==================================================
   // 4. POST /api/stock-opname/finalize
-  // ==================================================
   if (req.method === "POST" && req.url === "/api/stock-opname/finalize") {
     const session = validateLoginSession(req, res);
     if (!session) return;
@@ -6141,16 +6126,7 @@ const server = https.createServer({
 // SERVER START
 // ==================================================
 
-
-// ==================================================
-// STARTUP LAMP RECOVERY
-// ==================================================
-
 let lampWatchdogRunning = false;
-
-// State terakhir command lampu yang berhasil diproses.
-// 0 = OFF
-// 1 = ON
 const lastLampCommandState = new Map();
 
 async function reconcileLampState() {
@@ -6194,11 +6170,6 @@ async function reconcileLampState() {
       try {
         const shouldBeOn = activeTables.has(table);
 
-        // Meja aktif tidak disentuh oleh watchdog.
-        if (shouldBeOn) {
-          continue;
-        }
-
         const desiredState = shouldBeOn ? 1 : 0;
         const lastState = lastLampCommandState.get(table);
 
@@ -6217,31 +6188,25 @@ async function reconcileLampState() {
         writeLog(
           "ERROR",
           "LAMP_WATCHDOG_TABLE_ERROR",
-          `Gagal mematikan lampu meja ${table}`,
+          `Gagal mengontrol lampu meja ${table}`,
           { error: tableErr.message }
         );
       }
     }
   } catch (error) {
-    writeLog(
-      "ERROR",
-      "LAMP_WATCHDOG_ERROR",
-      "Error pada watchdog lampu",
-      { error: error.message }
-    );
+    writeLog("ERROR", "LAMP_WATCHDOG_ERROR", error.message);
   } finally {
     lampWatchdogRunning = false;
   }
 }
 
+setInterval(reconcileLampState, 30 * 1000);
+setInterval(checkExpiredTableSessions, 10 * 1000);
+
+cekStatusMemberHarian().catch(err => {
+  writeLog("ERROR", "MEMBER_CHECK_STARTUP", err.message);
+});
+
 server.listen(config.PORT, () => {
-  writeLog(
-    "INFO",
-    "SERVER_START",
-    `Server POS POLAR berjalan pada port ${config.PORT}`
-  );
-  cekStatusMemberHarian();
-  setInterval(checkExpiredTableSessions, 5000);
-  setInterval(syncPendingTransactions, 10000);
-  setInterval(reconcileLampState, 10000);
+  writeLog("INFO", "SERVER_START", `Server POS POLAR berjalan di port ${config.PORT}`);
 });

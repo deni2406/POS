@@ -9,9 +9,9 @@ body {
   padding: 0;
   width: 100%;
   height: 100%;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #f1f5f9;
-  color: #111827;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
   overflow: hidden;
 }
 
@@ -20,7 +20,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font-family: inherit;
 }
 
@@ -44,60 +45,77 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #111827;
+  background: #0f172a;
   z-index: 1000;
 }
 
 .login-card {
   width: 380px;
   max-width: 90%;
-  background: #fff;
-  border-radius: 18px;
+  background: #ffffff;
+  border-radius: 16px;
   padding: 32px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .login-title {
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 900;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
+  color: #0f172a;
+  letter-spacing: -0.5px;
 }
 
 .login-subtitle {
-  color: #6b7280;
-  margin-bottom: 25px;
+  color: #64748b;
+  margin-bottom: 24px;
+  font-size: 14px;
 }
 
 .form-label {
   display: block;
-  font-size: 15px;
-  font-weight: 800;
-  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .form-input {
   width: 100%;
-  height: 52px;
-  border: 1px solid #d1d5db;
+  height: 48px;
+  border: 1px solid #cbd5e1;
   border-radius: 10px;
-  padding: 0 15px;
+  padding: 0 14px;
   margin-bottom: 16px;
-  font-size: 17px;
+  font-size: 16px;
   outline: none;
+  background: #ffffff;
+  color: #0f172a;
+  transition: border-color 0.15s ease;
 }
 
 .form-input:focus {
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .primary-btn {
   width: 100%;
-  height: 54px;
+  height: 50px;
   border: 0;
   border-radius: 10px;
   background: #2563eb;
-  color: #fff;
-  font-size: 17px;
-  font-weight: 900;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  transition: background-color 0.15s ease;
+}
+
+.primary-btn:hover {
+  background: #1d4ed8;
 }
 
 .error-message {
@@ -105,8 +123,9 @@ button {
   border: 1px solid #fecaca;
   color: #dc2626;
   border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 14px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -129,53 +148,65 @@ button {
 ========================================================= */
 
 .topbar {
-  height: 58px;
-  min-height: 58px;
-  background: #111827;
-  color: #fff;
+  height: 56px;
+  min-height: 56px;
+  background: #0f172a;
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
+  padding: 0 16px;
   flex-shrink: 0;
+  border-bottom: 1px solid #1e293b;
 }
 
 .brand {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #ffffff;
 }
 
 .sync-info {
   color: #94a3b8;
   font-size: 11px;
-  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .server-status {
   color: #22c55e;
   font-weight: 800;
-  font-size: 14px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
 }
 
 .cashier-name {
-  font-weight: 800;
-  font-size: 15px;
+  font-weight: 700;
+  font-size: 14px;
 }
 
 .sync-produk-btn {
-  height: 38px;
+  height: 36px;
   padding: 0 14px;
   border: 0;
   border-radius: 8px;
   background: #2563eb;
-  color: #fff;
-  font-weight: 900;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 13px;
+  transition: background-color 0.15s ease;
+}
+
+.sync-produk-btn:hover {
+  background: #1d4ed8;
 }
 
 .sync-produk-btn:active {
@@ -183,58 +214,85 @@ button {
 }
 
 .close-cashier-btn {
-  height: 38px;
+  height: 36px;
   padding: 0 14px;
   border: 0;
   border-radius: 8px;
   background: #dc2626;
-  color: #fff;
-  font-weight: 900;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 13px;
+  transition: background-color 0.15s ease;
+}
+
+.close-cashier-btn:hover {
+  background: #b91c1c;
 }
 
 
 /* =========================================================
-   LAYOUT
+   POS LAYOUT
 ========================================================= */
 
 .pos-layout {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 60% 40%;
+  grid-template-columns: 62% 38%;
   overflow: hidden;
+  background: #f8fafc;
 }
 
 
 /* =========================================================
-   PRODUK PANEL
+   PRODUK PANEL & SEARCH
 ========================================================= */
 
 .products-panel {
   min-width: 0;
   min-height: 0;
-  padding: 10px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: #f8fafc;
+}
+
+.search-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.search-wrapper .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .search-box {
   width: 100%;
-  height: 45px;
-  min-height: 45px;
-  border: 1px solid #d1d5db;
+  height: 44px;
+  min-height: 44px;
+  border: 1px solid #cbd5e1;
   border-radius: 10px;
-  background: #fff;
-  padding: 0 14px;
-  font-size: 17px;
+  background: #ffffff;
+  padding: 0 14px 0 38px;
+  font-size: 15px;
   outline: none;
-  margin-bottom: 8px;
-  flex-shrink: 0;
+  margin-bottom: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.15s ease;
 }
 
 .search-box:focus {
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 
@@ -244,12 +302,12 @@ button {
 
 .category-bar {
   width: 100%;
-  min-height: 44px;
+  min-height: 42px;
   display: flex;
-  gap: 7px;
+  gap: 8px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 7px;
+  padding-bottom: 8px;
   flex-shrink: 0;
 }
 
@@ -264,22 +322,32 @@ button {
 
 .category-btn {
   flex: 0 0 auto;
-  min-width: 86px;
-  height: 38px;
+  min-width: 80px;
+  height: 36px;
   padding: 0 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 9px;
-  background: #fff;
-  color: #374151;
-  font-size: 14px;
-  font-weight: 900;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
   white-space: nowrap;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.category-btn svg {
+  flex-shrink: 0;
 }
 
 .category-btn.active {
   background: #2563eb;
   border-color: #2563eb;
-  color: #fff;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
 }
 
 .category-btn:active {
@@ -288,7 +356,7 @@ button {
 
 
 /* =========================================================
-   PRODUCTS
+   PRODUCTS GRID
 ========================================================= */
 
 .products {
@@ -298,13 +366,14 @@ button {
   overflow-x: hidden;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
   align-content: start;
   padding-right: 2px;
+  padding-top: 2px;
 }
 
 .products::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .products::-webkit-scrollbar-thumb {
@@ -313,15 +382,22 @@ button {
 }
 
 .product-card {
-  min-height: 88px;
-  border: 1px solid #e5e7eb;
-  border-radius: 11px;
-  background: #fff;
-  padding: 10px;
+  min-height: 85px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   text-align: left;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.product-card:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
 .product-card:active {
@@ -330,60 +406,70 @@ button {
 }
 
 .product-name {
-  font-size: 14px;
-  line-height: 1.25;
-  font-weight: 900;
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 800;
+  color: #0f172a;
 }
 
 .product-price {
   color: #2563eb;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 900;
+  margin-top: 6px;
 }
 
 .empty-product {
-  padding: 30px;
-  color: #9ca3af;
+  padding: 40px;
+  color: #94a3b8;
   text-align: center;
   grid-column: 1 / -1;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 
 /* =========================================================
-   CART
+   CART PANEL
 ========================================================= */
 
 .cart-panel {
   min-width: 0;
   min-height: 0;
   height: 100%;
-  background: #fff;
-  border-left: 1px solid #d1d5db;
+  background: #ffffff;
+  border-left: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.02);
 }
 
 .cart-title {
-  height: 50px;
-  min-height: 50px;
+  height: 48px;
+  min-height: 48px;
   display: flex;
   align-items: center;
-  padding: 0 15px;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 20px;
+  padding: 0 16px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 15px;
   font-weight: 900;
+  color: #0f172a;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: #ffffff;
+  flex-shrink: 0;
 }
 
 .cart-items {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 14px;
+  padding: 0 16px;
 }
 
 .cart-items::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .cart-items::-webkit-scrollbar-thumb {
@@ -396,125 +482,187 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .cart-item {
-  min-height: 75px;
-  padding: 9px 0;
-  border-bottom: 1px solid #e5e7eb;
+  min-height: 68px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 10px;
+  gap: 12px;
+  align-items: center;
 }
 
 .cart-item-name {
-  font-weight: 900;
-  font-size: 15px;
+  font-weight: 800;
+  font-size: 14px;
+  color: #0f172a;
+  line-height: 1.2;
 }
 
 .cart-item-price {
-  color: #6b7280;
+  color: #64748b;
   font-size: 12px;
   margin-top: 2px;
+  font-weight: 600;
 }
 
 .cart-subtotal {
   font-weight: 900;
   font-size: 15px;
+  color: #0f172a;
   white-space: nowrap;
+  text-align: right;
 }
 
 .qty-row {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   margin-top: 6px;
 }
 
 .qty-btn {
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 8px;
-  background: #e5e7eb;
-  font-size: 19px;
-  font-weight: 900;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  font-size: 16px;
+  font-weight: 800;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.qty-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+.qty-btn:active {
+  transform: scale(0.95);
 }
 
 
 /* =========================================================
-   PAYMENT
+   PAYMENT SECTION
 ========================================================= */
 
 .payment-box {
   flex-shrink: 0;
-  border-top: 2px solid #d1d5db;
-  background: #fff;
-  padding: 8px 14px 9px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 12px 16px 16px;
 }
 
 .total-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
-  font-size: 24px;
+  margin-bottom: 10px;
+  font-size: 20px;
   font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.3px;
 }
 
+/* SEGMENTED CONTROL METODE PEMBAYARAN */
 .payment-methods {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 4px;
+  margin-bottom: 10px;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 10px;
 }
 
 .payment-btn {
-  height: 37px;
-  border: 2px solid #d1d5db;
-  border-radius: 8px;
-  background: #fff;
-  color: #374151;
-  font-size: 13px;
-  font-weight: 900;
+  height: 36px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.payment-btn svg {
+  flex-shrink: 0;
 }
 
 .payment-btn.active {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border: none;
+  background: #ffffff;
   color: #2563eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .cash-input {
   width: 100%;
-  height: 40px;
-  border: 1px solid #d1d5db;
+  height: 42px;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  padding: 0 11px;
-  font-size: 18px;
+  padding: 0 12px;
+  font-size: 16px;
   font-weight: 800;
+  color: #0f172a;
   outline: none;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  background: #ffffff;
+  transition: border-color 0.15s ease;
+}
+
+.cash-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .change-row {
   display: flex;
   justify-content: space-between;
-  font-size: 15px;
-  font-weight: 900;
-  margin-bottom: 5px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #475569;
+  margin-bottom: 12px;
 }
 
 .pay-btn {
   width: 100%;
-  height: 47px;
+  height: 48px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 8px;
   background: #16a34a;
-  color: #fff;
-  font-size: 19px;
+  color: #ffffff;
+  font-size: 18px;
   font-weight: 900;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+  transition: background-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pay-btn:hover {
+  background: #15803d;
+}
+
+.pay-btn:active {
+  transform: scale(0.99);
 }
 
 
@@ -525,7 +673,8 @@ button {
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.65);
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -536,57 +685,62 @@ button {
 .modal-card {
   width: 520px;
   max-width: 100%;
-  max-height: 95vh;
+  max-height: 90vh;
   overflow-y: auto;
-  background: #fff;
+  background: #ffffff;
   border-radius: 16px;
   padding: 24px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 .modal-title {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 900;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
+  color: #0f172a;
 }
 
 .modal-note {
-  color: #6b7280;
+  color: #64748b;
   margin-bottom: 18px;
+  font-size: 14px;
 }
 
 .locked-box {
-  background: #f3f4f6;
-  border-radius: 11px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   padding: 20px;
   text-align: center;
   margin-bottom: 15px;
 }
 
 .locked-icon {
-  font-size: 36px;
+  font-size: 32px;
   margin-bottom: 8px;
 }
 
 .actual-input {
   width: 100%;
-  height: 56px;
+  height: 50px;
   border: 2px solid #2563eb;
-  border-radius: 9px;
+  border-radius: 8px;
   padding: 0 14px;
-  font-size: 23px;
+  font-size: 20px;
   font-weight: 900;
   margin-bottom: 12px;
+  color: #0f172a;
 }
 
 .confirm-close-btn {
   width: 100%;
-  height: 52px;
+  height: 48px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 8px;
   background: #dc2626;
-  color: #fff;
-  font-size: 17px;
-  font-weight: 900;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .report {
@@ -596,13 +750,15 @@ button {
 .report-row {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
 }
 
 .report-total {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 900;
+  color: #0f172a;
 }
 
 .difference-positive {
@@ -615,191 +771,22 @@ button {
 
 .close-finish-btn {
   width: 100%;
-  height: 50px;
+  height: 48px;
   margin-top: 18px;
   border: 0;
-  border-radius: 9px;
-  background: #111827;
-  color: #fff;
-  font-weight: 900;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 800;
 }
 
 
 /* =========================================================
-   LANDSCAPE TABLET
+   RESPONSIVE TABLET LANDSCAPE (OPTIMIZED)
 ========================================================= */
 
-@media (orientation: landscape) and (max-height: 750px) {
+@media (orientation: landscape) and (max-height: 800px) {
 
-  .topbar {
-    height: 52px;
-    min-height: 52px;
-  }
-
-  .brand {
-    font-size: 20px;
-  }
-
-  .sync-produk-btn,
-  .close-cashier-btn {
-    height: 35px;
-    font-size: 12px;
-    padding: 0 11px;
-  }
-
-  .products-panel {
-    padding: 8px;
-  }
-
-  .search-box {
-    height: 42px;
-    min-height: 42px;
-  }
-
-  .category-bar {
-    min-height: 40px;
-  }
-
-  .category-btn {
-    height: 35px;
-  }
-
-  .product-card {
-    min-height: 80px;
-  }
-
-  .product-name {
-    font-size: 13px;
-  }
-
-  .product-price {
-    font-size: 16px;
-  }
-
-  .cart-title {
-    height: 44px;
-    min-height: 44px;
-  }
-
-  .payment-box {
-    padding: 6px 12px 7px;
-  }
-
-  .total-row {
-    font-size: 21px;
-    margin-bottom: 4px;
-  }
-
-  .payment-btn {
-    height: 34px;
-    font-size: 12px;
-  }
-
-  .cash-input {
-    height: 36px;
-    font-size: 16px;
-  }
-
-  .pay-btn {
-    height: 43px;
-    font-size: 17px;
-  }
-}
-
-@media (orientation: landscape) and (max-height: 600px) {
-
-  .topbar {
-    height: 44px;
-    min-height: 44px;
-  }
-
-  .brand {
-    font-size: 18px;
-  }
-
-  .products-panel {
-    padding: 6px;
-  }
-
-  .search-box {
-    height: 37px;
-    min-height: 37px;
-    margin-bottom: 5px;
-  }
-
-  .category-bar {
-    min-height: 35px;
-    padding-bottom: 4px;
-  }
-
-  .category-btn {
-    height: 31px;
-    font-size: 11px;
-  }
-
-  .product-card {
-    min-height: 68px;
-    padding: 7px;
-  }
-
-  .product-name {
-    font-size: 12px;
-  }
-
-  .product-price {
-    font-size: 14px;
-  }
-
-  .cart-title {
-    height: 38px;
-    min-height: 38px;
-    font-size: 17px;
-  }
-
-  .cart-item {
-    min-height: 58px;
-    padding: 5px 0;
-  }
-
-  .qty-btn {
-    width: 28px;
-    height: 28px;
-  }
-
-  .payment-box {
-    padding: 4px 9px 5px;
-  }
-
-  .total-row {
-    font-size: 18px;
-  }
-
-  .payment-btn {
-    height: 29px;
-    font-size: 10px;
-  }
-
-  .cash-input {
-    height: 31px;
-    font-size: 14px;
-  }
-
-  .change-row {
-    font-size: 12px;
-  }
-
-  .pay-btn {
-    height: 36px;
-    font-size: 15px;
-  }
-}
-
-
-/* =========================================================
-   SAMSUNG GALAXY TAB A11 SM-X135G LANDSCAPE (1340 x 800)
-========================================================= */
-
-@media (orientation: landscape) and (min-width: 1200px) and (max-width: 1400px) {
   .topbar {
     height: 52px;
     min-height: 52px;
@@ -807,136 +794,109 @@ button {
   }
 
   .brand {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .pos-layout {
-    flex: 1;
-    min-height: 0;
+    grid-template-columns: 60% 40%;
   }
 
   .products-panel {
     padding: 8px;
   }
 
+  .search-wrapper {
+    margin-bottom: 6px;
+  }
+
   .search-box {
     height: 40px;
     min-height: 40px;
-    margin-bottom: 6px;
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .category-bar {
     min-height: 38px;
-    margin-bottom: 6px;
+    padding-bottom: 6px;
   }
 
   .category-btn {
-    height: 34px;
-    font-size: 13px;
-    min-width: 78px;
-    padding: 0 10px;
+    height: 32px;
+    font-size: 12px;
+    padding: 0 12px;
   }
 
   .products {
-    gap: 6px;
+    gap: 8px;
   }
 
   .product-card {
-    min-height: 74px;
-    padding: 8px;
+    min-height: 76px;
+    padding: 10px;
   }
 
   .product-name {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .product-price {
-    font-size: 16px;
+    font-size: 14px;
   }
 
-  .cart-panel {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
+  .cart-title {
+    height: 42px;
+    min-height: 42px;
+    font-size: 14px;
+    padding: 0 12px;
   }
 
   .cart-items {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 0 10px;
+    padding: 0 12px;
   }
 
   .cart-item {
-    min-height: 62px;
-    padding: 6px 0;
-  }
-
-  .cart-item-name {
-    font-size: 14px;
-  }
-
-  .cart-item-price {
-    font-size: 12px;
-  }
-
-  .cart-subtotal {
-    font-size: 14px;
-  }
-
-  .qty-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 16px;
+    min-height: 60px;
+    padding: 8px 0;
   }
 
   .payment-box {
-    flex-shrink: 0;
-    padding: 6px 12px 8px;
-    background: #fff;
-    border-top: 2px solid #d1d5db;
+    padding: 8px 12px 12px;
   }
 
   .total-row {
-    font-size: 21px;
-    margin-bottom: 4px;
+    font-size: 18px;
+    margin-bottom: 6px;
   }
 
   .payment-methods {
-    gap: 5px;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
   }
 
   .payment-btn {
-    height: 34px;
-    font-size: 12px;
+    height: 32px;
+    font-size: 11px;
   }
 
   .cash-input {
     height: 36px;
-    font-size: 16px;
-    margin-bottom: 4px;
+    font-size: 15px;
+    margin-bottom: 6px;
   }
 
   .change-row {
-    font-size: 14px;
-    margin-bottom: 4px;
+    font-size: 13px;
+    margin-bottom: 8px;
   }
 
   .pay-btn {
-    height: 43px;
-    font-size: 18px;
+    height: 42px;
+    font-size: 16px;
   }
 }
 
 
 /* =========================================================
    MOBILE LANDSCAPE ABSOLUTE ANCHORING FIX (ANDROID)
-   Memastikan payment-box & tombol BAYAR selalu menempel 
-   di bagian bawah cart-panel tanpa meluber ke luar layar.
 ========================================================= */
 
 @media (orientation: landscape) and (max-width: 1024px) {
@@ -950,7 +910,7 @@ button {
   .cart-items {
     flex: 1 1 auto !important;
     overflow-y: auto !important;
-    padding-bottom: 240px !important;
+    padding-bottom: 220px !important;
   }
 
   .payment-box {
@@ -959,14 +919,14 @@ button {
     left: 0 !important;
     right: 0 !important;
     z-index: 10 !important;
-    background: #fff !important;
-    border-top: 2px solid #d1d5db !important;
-    padding: 6px 12px 8px !important;
+    background: #ffffff !important;
+    border-top: 1px solid #cbd5e1 !important;
+    padding: 8px 12px 10px !important;
     box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
   }
 
   .total-row {
-    font-size: 18px !important;
+    font-size: 17px !important;
     margin-bottom: 4px !important;
   }
 
@@ -975,83 +935,23 @@ button {
   }
 
   .payment-btn {
-    height: 32px !important;
+    height: 30px !important;
     font-size: 11px !important;
   }
 
   .cash-input {
     height: 34px !important;
-    font-size: 15px !important;
-    margin-bottom: 3px !important;
+    font-size: 14px !important;
+    margin-bottom: 4px !important;
   }
 
   .change-row {
-    margin-bottom: 3px !important;
-    font-size: 13px !important;
+    margin-bottom: 4px !important;
+    font-size: 12px !important;
   }
 
   .pay-btn {
     height: 38px !important;
-    font-size: 16px !important;
-  }
-}
-
-
-/* =========================================================
-   TOPBAR TABLET LANDSCAPE
-========================================================= */
-
-.topbar {
-  min-width: 0;
-  overflow: hidden;
-}
-
-.topbar > div:first-child {
-  min-width: 0;
-  flex-shrink: 1;
-}
-
-.brand {
-  white-space: nowrap;
-}
-
-.topbar-right {
-  min-width: 0;
-  flex-shrink: 0;
-  gap: 5px;
-  display: flex;
-  align-items: center;
-}
-
-.topbar-right .sync-produk-btn,
-.topbar-right .close-cashier-btn {
-  flex-shrink: 0;
-  white-space: nowrap;
-  padding-left: 9px;
-  padding-right: 9px;
-}
-
-@media (orientation: landscape) and (max-height: 750px) {
-
-  .topbar {
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-
-  .topbar-right {
-    gap: 4px;
-  }
-
-  .topbar-right .sync-produk-btn,
-  .topbar-right .close-cashier-btn {
-    height: 34px;
-    padding-left: 7px;
-    padding-right: 7px;
-    font-size: 11px;
-  }
-
-  .cashier-name {
-    font-size: 12px;
-    white-space: nowrap;
+    font-size: 15px !important;
   }
 }

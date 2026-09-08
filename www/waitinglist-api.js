@@ -3,7 +3,7 @@
 // ==================================================
 
 async function getWaitingList() {
-  const response = await fetch("/api/waiting-list");
+  const response = await authenticatedFetch("/api/waiting-list");
   const result = await response.json();
   if (result.success) {
     return result.data || [];
@@ -13,7 +13,7 @@ async function getWaitingList() {
 }
 
 async function createWaitingList(payload) {
-  const response = await fetch("/api/waiting-list", {
+  const response = await authenticatedFetch("/api/waiting-list", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
@@ -39,7 +39,7 @@ async function updateWaitingList(id, payload) {
 }
 
 async function updateStatusWaitingList(id, status) {
-  const response = await fetch(`/api/waiting-list/${id}`, {
+  const response = await authenticatedFetch(`/api/waiting-list/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status: status })
@@ -52,7 +52,7 @@ async function updateStatusWaitingList(id, status) {
 }
 
 async function bukaSesiMejaWaitingList(nomorMeja, namaPemesan, kasir, durasiJam) {
-  const response = await fetch("/api/meja/buka", {
+  const response = await authenticatedFetch("/api/meja/buka", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -70,7 +70,7 @@ async function bukaSesiMejaWaitingList(nomorMeja, namaPemesan, kasir, durasiJam)
 }
 
 async function tambahDurasiSesiWaitingList(sessionId, durasiTambahJam) {
-  const response = await fetch("/api/meja/tambah-durasi", {
+  const response = await authenticatedFetch("/api/meja/tambah-durasi", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -86,7 +86,7 @@ async function tambahDurasiSesiWaitingList(sessionId, durasiTambahJam) {
 }
 
 async function tambahPaketBilliardWaitingList(sessionId, durasiJam) {
-  const response = await fetch("/api/meja/pesanan", {
+  const response = await authenticatedFetch("/api/meja/pesanan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -103,7 +103,7 @@ async function tambahPaketBilliardWaitingList(sessionId, durasiJam) {
 }
 
 async function tambahPesananSesiWaitingList(sessionId, namaBarang, qty) {
-  const response = await fetch("/api/meja/pesanan", {
+  const response = await authenticatedFetch("/api/meja/pesanan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -120,7 +120,7 @@ async function tambahPesananSesiWaitingList(sessionId, namaBarang, qty) {
 }
 
 async function getSesiMejaWaitingList() {
-  const response = await fetch("/api/meja/sesi");
+  const response = await authenticatedFetch("/api/meja/sesi");
   
   let result;
   try {

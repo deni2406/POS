@@ -105,3 +105,239 @@
 .meja-header-btn:has(.meja-indicator[style*="block"]) .btn-pemesan-label {
   color: #e2e8f0;
 }
+
+/* ==================================================
+   LAYOUT MODUL MEJA & KARTU MEJA DIPERBESAR (POS POLAR)
+   ================================================== */
+
+.meja-grid,
+.grid-meja,
+.table-grid,
+#mejaGridContainer,
+.meja-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  padding: 20px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.meja-card,
+.card-meja,
+.table-card,
+.meja-item {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 220px;
+  position: relative;
+  transition: all 0.2s ease-in-out;
+  box-sizing: border-box;
+}
+
+.meja-card:hover,
+.card-meja:hover,
+.table-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  transform: translateY(-2px);
+  border-color: #94a3b8;
+}
+
+/* Judul / Nama Meja (MEJA 01 dst) */
+.meja-card-title,
+.meja-name,
+.meja-card h3,
+.meja-card h4 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+  letter-spacing: 0.5px;
+}
+
+/* Timer Aktif / Waktu */
+.meja-timer,
+.timer-display,
+[data-timer] {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #2563eb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  margin: 12px 0;
+  letter-spacing: 1px;
+}
+
+/* Status Normal / Aktif */
+.meja-status,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  width: fit-content;
+}
+
+/* Status Kosong */
+.meja-card.kosong .meja-status,
+.meja-status.kosong {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e1;
+}
+
+/* ==================================================
+   STATUS WAKTU HABIS (PROFESSIONAL POS BADGE & THIN BORDER)
+   ================================================== */
+
+.meja-card.habis,
+.card-meja.habis,
+.table-card.habis,
+.meja-item.habis,
+.meja-card:has(.timer-habis),
+.card-meja:has(.timer-habis),
+.table-card:has(.timer-habis),
+.meja-item:has(.timer-habis) {
+  border: 1px solid #ef4444 !important;
+  position: relative;
+}
+
+/* Badge WAKTU HABIS kecil di pojok kanan atas kartu */
+.meja-card.habis::before,
+.card-meja.habis::before,
+.table-card.habis::before,
+.meja-item.habis::before,
+.meja-card:has(.timer-habis)::before,
+.card-meja:has(.timer-habis)::before,
+.table-card:has(.timer-habis)::before,
+.meja-item:has(.timer-habis)::before {
+  content: "WAKTU HABIS";
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.25);
+  animation: pulse-subtle 2s infinite ease-in-out;
+  z-index: 2;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+.timer-habis,
+[data-status-waktu="HABIS"] {
+  color: #dc2626 !important;
+  font-weight: 800 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  animation: none !important;
+  width: auto !important;
+  display: inline-block !important;
+}
+
+/* ==================================================
+   STATUS HAMPIR HABIS (15 MENIT Kuning/Orange)
+   ================================================== */
+
+.meja-card.hampir-habis,
+.card-meja.hampir-habis,
+.table-card.hampir-habis,
+.meja-item.hampir-habis,
+.meja-card:has(.timer-hampir-habis),
+.card-meja:has(.timer-hampir-habis),
+.table-card:has(.timer-hampir-habis),
+.meja-item:has(.timer-hampir-habis) {
+  border: 1px solid #f59e0b !important;
+  position: relative;
+}
+
+.meja-card.hampir-habis::before,
+.card-meja.hampir-habis::before,
+.table-card.hampir-habis::before,
+.meja-item.hampir-habis::before,
+.meja-card:has(.timer-hampir-habis)::before,
+.card-meja:has(.timer-hampir-habis)::before,
+.table-card:has(.timer-hampir-habis)::before,
+.meja-item:has(.timer-hampir-habis)::before {
+  content: "HAMPIR HABIS";
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.25);
+  z-index: 2;
+}
+
+.timer-hampir-habis,
+[data-status-waktu="HAMPIR_HABIS"] {
+  color: #d97706 !important;
+  font-weight: 800 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  animation: none !important;
+  width: auto !important;
+  display: inline-block !important;
+}
+
+/* Tombol Utama pada Kartu Meja */
+.meja-card button,
+.meja-card .btn,
+.meja-btn-action {
+  padding: 14px 20px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  width: 100%;
+  margin-top: 14px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .meja-grid,
+  .grid-meja,
+  .table-grid,
+  #mejaGridContainer,
+  .meja-container {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+}

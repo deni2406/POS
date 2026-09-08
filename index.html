@@ -1887,6 +1887,7 @@
 <script src="/promo.js"></script>
 <script src="/pricing-meja.js"></script>
 <script src="/meja-timer.js"></script>
+<script src="/meja-bubble.js"></script>
 
 <!-- LOAD MODAL PRODUK -->
 <script src="/meja-produk-modal.js"></script>
@@ -1990,6 +1991,9 @@ let selectedTrxIndex = null;
 
 function getOrCreateDeviceId() {
   let deviceId = localStorage.getItem("pbms_device_id");
+  if (deviceId) {
+    deviceId = deviceId.trim();
+  }
   if (!deviceId) {
     try {
       if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -2006,14 +2010,16 @@ function getOrCreateDeviceId() {
       alert("Error: Browser/Device tidak mendukung secure random UUID.");
       throw e;
     }
+    deviceId = deviceId.trim();
     localStorage.setItem("pbms_device_id", deviceId);
   }
   return deviceId;
 }
 
 async function authenticatedFetch(url, options = {}) {
-  const deviceId = getOrCreateDeviceId();
-  const sessionId = sessionStorage.getItem("pbms_session_id");
+  const deviceId = getOrCreateDeviceId().trim();
+  const rawSessionId = sessionStorage.getItem("pbms_session_id");
+  const sessionId = rawSessionId ? rawSessionId.trim() : "";
 
   const headers = {
     ...(options.headers || {})
@@ -2026,17 +2032,22 @@ async function authenticatedFetch(url, options = {}) {
     headers["X-Device-Id"] = deviceId;
   }
 
-  const response = await fetch(apiUrl(url), {
-    ...options,
-    headers
-  });
+  let response;
+  try {
+    response = await fetch(apiUrl(url), {
+      ...options,
+      headers
+    });
+  } catch (e) {
+    throw e;
+  }
 
   if (response.status === 401 || response.status === 403) {
     try {
       const clone = response.clone();
       const json = await clone.json();
       if (json && json.code && ["SESSION_EXPIRED", "SESSION_NOT_FOUND", "INVALID_SESSION", "DEVICE_MISMATCH"].includes(json.code)) {
-        handleSessionExpired(json.message || "Session login sudah berakhir. Silakan login kembali.");
+        handleSessionExpired(json.message || "Session berakhir");
         throw new Error(json.message || "Session berakhir");
       }
     } catch (e) {
@@ -2058,25 +2069,19 @@ function startSessionTimer(expiresAt) {
   const expTime = Number(expiresAt);
   if (!expTime || isNaN(expTime)) return;
 
-  // Tampilkan/kelola session berdasarkan waktu kedaluwarsa terakhir dari server.
   sessionTimerInterval = setInterval(() => {
     const currentExpiresAt =
       Number(sessionStorage.getItem("pbms_expires_at")) || expTime;
 
     if (!currentExpiresAt) return;
 
-    // Jangan logout hanya karena timer lokal terlambat sebentar.
-    // Beri kesempatan heartbeat melakukan refresh session.
     if (Date.now() >= currentExpiresAt) {
       cekSessionLogin().then(valid => {
-        if (!valid) {
-          handleSessionExpired(
-            "Session login sudah berakhir. Silakan login kembali."
-          );
-        } else {
-          startSessionTimer(
-            sessionStorage.getItem("pbms_expires_at")
-          );
+        if (valid) {
+          const newExp = sessionStorage.getItem("pbms_expires_at");
+          if (newExp && Number(newExp) > Date.now()) {
+            startSessionTimer(newExp);
+          }
         }
       }).catch(error => {
         console.error("Refresh session saat timer error:", error);
@@ -2084,12 +2089,46 @@ function startSessionTimer(expiresAt) {
     }
   }, 1000);
 
-  // Heartbeat 30 detik: endpoint /api/session memperpanjang expiry di server.
   sessionCheckInterval = setInterval(async () => {
-    const sessionId =
-      sessionStorage.getItem("pbms_session_id");
+    const rawSessionId = sessionStorage.getItem("pbms_session_id");
+    if (!rawSessionId) {
+      stopSessionTimer();
+      return;
+    }
 
-    if (!sessionId) {
+    await cekSessionLogin();
+  }, 30000);
+}
+
+function startSessionTimer(expiresAt) {
+  stopSessionTimer();
+
+  const expTime = Number(expiresAt);
+  if (!expTime || isNaN(expTime)) return;
+
+  sessionTimerInterval = setInterval(() => {
+    const currentExpiresAt =
+      Number(sessionStorage.getItem("pbms_expires_at")) || expTime;
+
+    if (!currentExpiresAt) return;
+
+    if (Date.now() >= currentExpiresAt) {
+      cekSessionLogin().then(valid => {
+        if (valid) {
+          const newExp = sessionStorage.getItem("pbms_expires_at");
+          if (newExp && Number(newExp) > Date.now()) {
+            startSessionTimer(newExp);
+          }
+        }
+      }).catch(error => {
+        console.error("Refresh session saat timer error:", error);
+      });
+    }
+  }, 1000);
+
+  sessionCheckInterval = setInterval(async () => {
+    const rawSessionId = sessionStorage.getItem("pbms_session_id");
+    if (!rawSessionId) {
       stopSessionTimer();
       return;
     }
@@ -2140,8 +2179,9 @@ function handleSessionExpired(message = "Session login sudah berakhir. Silakan l
 }
 
 async function cekSessionLogin() {
-  const sessionId = sessionStorage.getItem("pbms_session_id");
-  const deviceId = getOrCreateDeviceId();
+  const rawSessionId = sessionStorage.getItem("pbms_session_id");
+  const sessionId = rawSessionId ? rawSessionId.trim() : "";
+  const deviceId = getOrCreateDeviceId().trim();
   if (!sessionId) return false;
 
   try {
@@ -2159,24 +2199,31 @@ async function cekSessionLogin() {
     });
 
     const result = await response.json();
-    if (!result.success || !result.valid) {
+
+    if (response.ok && result.success === true && result.valid === true) {
+      if (result.expiresAt) {
+        sessionStorage.setItem("pbms_expires_at", result.expiresAt);
+      }
+      return true;
+    }
+
+    if (result && result.code && ["SESSION_EXPIRED", "SESSION_NOT_FOUND", "INVALID_SESSION", "DEVICE_MISMATCH"].includes(result.code)) {
       handleSessionExpired(result.message || "Session login sudah berakhir. Silakan login kembali.");
       return false;
     }
 
-    if (result.expiresAt) {
-      sessionStorage.setItem("pbms_expires_at", result.expiresAt);
-    }
+    console.warn("Cek session menerima respons server non-valid:", response.status, result);
     return true;
   } catch (e) {
-    console.error("Cek session error:", e);
-    return false;
+    console.error("Cek session network error:", e);
+    return true;
   }
 }
 
 async function logoutKasir() {
-  const sessionId = sessionStorage.getItem("pbms_session_id");
-  const deviceId = getOrCreateDeviceId();
+  const rawSessionId = sessionStorage.getItem("pbms_session_id");
+  const sessionId = rawSessionId ? rawSessionId.trim() : "";
+  const deviceId = getOrCreateDeviceId().trim();
 
   if (sessionId) {
     try {
@@ -3413,6 +3460,10 @@ function renderPopupMeja() {
   }
   grid.innerHTML = html;
 
+  if (window.MejaBubble) {
+    window.MejaBubble.update(mejaSessions);
+  }
+
   // Inisialisasi timer (Count-Up LOSS / Countdown DURASI) untuk setiap meja aktif
   for (let i = 1; i <= 10; i++) {
     const rawSession = mejaSessions[i];
@@ -3764,6 +3815,9 @@ async function klikMejaPopup(nomor) {
       const latestWaitingList = await getWaitingList();
       if (typeof waitingListData !== "undefined" && Array.isArray(latestWaitingList)) {
         waitingListData = latestWaitingList;
+        if (typeof window !== "undefined") {
+          window.waitingListData = latestWaitingList;
+        }
       }
     } catch (error) {
       console.warn("Gagal refresh waiting list saat klik meja:", error);
@@ -3785,7 +3839,7 @@ async function klikMejaPopup(nomor) {
   }
 
   // ==================================================
-  // PRIORITAS 2: BOOKING
+  // PRIORITAS 2: BOOKING (WAITING LIST)
   // ==================================================
   const currentWaitingList = (typeof waitingListData !== "undefined" && Array.isArray(waitingListData))
     ? waitingListData
@@ -3794,7 +3848,7 @@ async function klikMejaPopup(nomor) {
   const foundBooking = currentWaitingList.find(w => {
     const mejaNo = Number(w?.nomorMeja || w?.nomor_meja);
     const status = String(w?.status || "").toUpperCase();
-    return mejaNo === Number(nomor) && ["WAITING", "CONFIRMED", "BOOKING"].includes(status);
+    return mesaNoSafe(mejaNo) === mesaNoSafe(nomor) && ["WAITING", "CONFIRMED", "BOOKING"].includes(status);
   });
 
   if (foundBooking && typeof mejaSiap === "function") {
@@ -4200,7 +4254,7 @@ async function simpanPesananMeja() {
     setTimeout(() => {
       btn.innerHTML = `
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; flex-shrink: 0;">
-          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
           <polyline points="17 21 17 13 7 13 7 21"></polyline>
           <polyline points="7 3 7 8 15 8"></polyline>
         </svg>
@@ -4214,7 +4268,7 @@ async function simpanPesananMeja() {
     alert("Gagal memverifikasi pesanan ke server: " + error.message);
     btn.innerHTML = `
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; flex-shrink: 0;">
-        <path d="M19 21H5a2 2 0 0 1 2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
         <polyline points="17 21 17 13 7 13 7 21"></polyline>
         <polyline points="7 3 7 8 15 8"></polyline>
       </svg>
@@ -6299,6 +6353,28 @@ async function prosesBatalTransaksi() {
   <script src="/stock-opname.js"></script>
 
   <script src="./printer-bluetooth.js?v=20260902-1917"></script>
+
+
+<script>
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState === "visible") {
+    const rawSessionId = sessionStorage.getItem("pbms_session_id");
+    if (rawSessionId && currentKasir) {
+      try {
+        const valid = await cekSessionLogin();
+        if (valid) {
+          const newExp = sessionStorage.getItem("pbms_expires_at");
+          if (newExp) {
+            startSessionTimer(newExp);
+          }
+        }
+      } catch (err) {
+        console.error("Error checking session on visibilitychange:", err);
+      }
+    }
+  }
+});
+</script>
 
 </body>
 

@@ -52,6 +52,222 @@
         display: none !important;
     }
 
+    /* ==================================================
+       LOGIN - DOODLE + CARD MODERN
+    ================================================== */
+    #loginScreen {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 18px !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        background-color: #f5f7f6 !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='420' viewBox='0 0 520 420'%3E%3Cg fill='none' stroke='%23b8c5bd' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='.34'%3E%3Cpath d='M38 62h118l14 10-14 10H38l-14-10z'/%3E%3Cpath d='M52 83l-13 43M142 83l13 43'/%3E%3Cpath d='M44 129h116'/%3E%3Ccircle cx='92' cy='72' r='10'/%3E%3Cpath d='M232 58l20 42M252 48l20 42'/%3E%3Cpath d='M332 52l10 10m0-10l-10 10'/%3E%3Ccircle cx='400' cy='72' r='22'/%3E%3Ccircle cx='400' cy='72' r='9'/%3E%3Ctext x='396' y='77' font-size='12' fill='%23a7b5ad' stroke='none'%3E8%3C/text%3E%3Cpath d='M28 236h150M28 236l-18-8m18 8-18 8'/%3E%3Ccircle cx='205' cy='232' r='18'/%3E%3Ccircle cx='205' cy='232' r='8'/%3E%3Cpath d='M292 196l34 20-34 20-34-20z'/%3E%3Ccircle cx='292' cy='216' r='6'/%3E%3Cpath d='M382 202c20 0 36 14 36 32s-16 32-36 32-36-14-36-32 16-32 36-32z'/%3E%3Cpath d='M364 234c8 10 28 10 36 0'/%3E%3Cpath d='M456 178v74m-18-18h36m-36 18h36'/%3E%3Ccircle cx='458' cy='174' r='10'/%3E%3Cpath d='M56 354l26-26m0 0l26 26M56 328h52'/%3E%3Ccircle cx='174' cy='354' r='22'/%3E%3Ccircle cx='174' cy='354' r='9'/%3E%3Ctext x='169' y='359' font-size='12' fill='%23a7b5ad' stroke='none'%3E9%3C/text%3E%3Cpath d='M270 340l12 20 22 4-16 15 4 22-22-10-20 10 4-22-16-15 22-4z'/%3E%3Cpath d='M384 326v60M364 346h40'/%3E%3Ccircle cx='384' cy='324' r='9'/%3E%3C/g%3E%3C/svg%3E") !important;
+        background-repeat: repeat !important;
+        background-size: 520px 420px !important;
+    }
+
+    #loginScreen::before {
+        content: "";
+        position: absolute;
+        inset: -20px;
+        background: rgba(255,255,255,0.32);
+        pointer-events: none;
+    }
+
+    #loginScreen .login-card {
+        position: relative !important;
+        z-index: 1 !important;
+        width: min(430px, calc(100vw - 30px)) !important;
+        box-sizing: border-box !important;
+        border-radius: 22px !important;
+        background: rgba(255,255,255,0.98) !important;
+        box-shadow: 0 22px 55px rgba(15,23,42,0.14) !important;
+        border: 1px solid rgba(226,232,240,0.95) !important;
+        padding: 24px 26px 22px !important;
+        animation: loginCardIn .28s ease-out !important;
+    }
+
+    @keyframes loginCardIn {
+        from { opacity: 0; transform: translateY(10px) scale(.985); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Animasi billiard: stik menyodok bola 9. Card dan form tetap diam. */
+    #loginScreen .login-card {
+        padding-top: 104px !important;
+        animation: none !important;
+    }
+
+    #loginScreen .login-card::before {
+        content: "9";
+        position: absolute;
+        top: 22px;
+        left: 50%;
+        width: 68px;
+        height: 68px;
+        transform: translateX(-50%);
+        transform-origin: center center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        box-sizing: border-box;
+        color: #111827;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 17px;
+        font-weight: 900;
+        background:
+          radial-gradient(circle at 34% 25%, rgba(255,255,255,.9) 0 5%, transparent 6%),
+          radial-gradient(ellipse 72% 26% at 50% 50%, #ffffff 0 72%, transparent 73%),
+          radial-gradient(circle at 50% 50%, #facc15 0 58%, #eab308 59% 82%, #ca8a04 83% 100%);
+        border: 2px solid #b77900;
+        box-shadow:
+          0 7px 14px rgba(15,23,42,.20),
+          inset -5px -6px 8px rgba(120,83,6,.18),
+          inset 3px 3px 7px rgba(255,255,255,.42);
+        animation: ball9Hit 2.4s ease-in-out infinite;
+        z-index: 2;
+    }
+
+    /* Stik cue bergerak mendekat lalu menyodok bola. */
+    #loginScreen .login-card::after {
+        content: "";
+        position: absolute;
+        top: 38px;
+        left: 50%;
+        width: 112px;
+        height: 5px;
+        transform: translateX(-4px) rotate(-18deg);
+        transform-origin: 100% 50%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #7c5a36 0 82%, #f3f4f6 82% 100%);
+        box-shadow: 0 2px 5px rgba(15,23,42,.18);
+        animation: cueStrike 2.4s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 3;
+    }
+
+    @keyframes ball9Hit {
+        0%, 22% {
+            transform: translateX(-50%) translateX(0) scale(1);
+        }
+        28% {
+            transform: translateX(-50%) translateX(3px) scale(.98);
+        }
+        42% {
+            transform: translateX(-50%) translateX(26px) scale(1);
+        }
+        70%, 100% {
+            transform: translateX(-50%) translateX(0) scale(1);
+        }
+    }
+
+    @keyframes cueStrike {
+        0%, 18% {
+            transform: translateX(18px) rotate(-18deg);
+        }
+        26% {
+            transform: translateX(5px) rotate(-18deg);
+        }
+        34% {
+            transform: translateX(-8px) rotate(-18deg);
+        }
+        40%, 100% {
+            transform: translateX(18px) rotate(-18deg);
+        }
+    }
+
+    #loginScreen .login-title {
+        font-size: 1.5rem !important;
+        font-weight: 850 !important;
+        letter-spacing: -0.6px !important;
+        text-align: center !important;
+        color: #111827 !important;
+        margin-top: 2px !important;
+    }
+
+    #loginScreen .login-subtitle {
+        margin-top: 5px !important;
+        text-align: center !important;
+        color: #64748b !important;
+        font-size: 0.86rem !important;
+    }
+
+    #loginScreen .login-title::after {
+        content: "";
+        display: block;
+        width: 56px;
+        height: 3px;
+        border-radius: 999px;
+        margin: 13px auto 18px;
+        background: #16a34a;
+        opacity: .9;
+    }
+
+    #loginScreen .form-label {
+        margin-top: 13px !important;
+        margin-bottom: 6px !important;
+        color: #374151 !important;
+        font-size: 0.76rem !important;
+        font-weight: 800 !important;
+        letter-spacing: .3px !important;
+    }
+
+    #loginScreen .form-input {
+        width: 100% !important;
+        min-height: 48px !important;
+        box-sizing: border-box !important;
+        border-radius: 11px !important;
+        border: 1px solid #d7dde5 !important;
+        background: #ffffff !important;
+        color: #111827 !important;
+        box-shadow: none !important;
+        transition: border-color .15s ease, box-shadow .15s ease !important;
+    }
+
+    #loginScreen .form-input:focus {
+        border-color: #16a34a !important;
+        box-shadow: 0 0 0 3px rgba(22,163,74,.10) !important;
+        outline: none !important;
+    }
+
+    #loginScreen .primary-btn {
+        width: 100% !important;
+        min-height: 49px !important;
+        margin-top: 18px !important;
+        border-radius: 11px !important;
+        font-weight: 800 !important;
+        background: #16a34a !important;
+        box-shadow: 0 7px 16px rgba(22,163,74,.18) !important;
+    }
+
+    #loginScreen .primary-btn:hover {
+        background: #15803d !important;
+    }
+
+    @media (max-width: 520px) {
+        #loginScreen {
+            padding: 12px !important;
+            background-size: 390px 315px !important;
+        }
+        #loginScreen .login-card {
+            width: min(410px, calc(100vw - 24px)) !important;
+            padding: 21px 20px 20px !important;
+            border-radius: 19px !important;
+        }
+        #loginScreen .login-card::before {
+            margin-bottom: 10px;
+        }
+        #loginScreen .login-card::after {
+            top: 28px;
+        }
+        #loginScreen .login-title {
+            font-size: 1.34rem !important;
+        }
+    }
+
     /* Perbaikan layout Android landscape untuk cart panel & save button */
     .cart-panel {
         display: flex !important;
@@ -61,12 +277,26 @@
         overflow: hidden !important;
     }
 
-    .cart-items {
-        flex: 1 1 auto !important;
-        overflow-y: auto !important;
-        min-height: 0 !important;
+    .cart-title {
+        flex: 0 0 auto !important;
     }
 
+    .cart-items {
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain !important;
+    }
+
+    .cart-panel {
+        min-height: 0 !important;
+        max-height: 100% !important;
+    }
+
+    /* TOMBOL SIMPAN PESANAN: BIRU MODERN */
     .save-order-btn {
         flex-shrink: 0 !important;
         z-index: 10 !important;
@@ -74,16 +304,655 @@
         width: 100% !important;
         margin-bottom: 12px !important;
         padding: 12px 16px !important;
-        font-size: 1rem !important;
-        font-weight: bold !important;
-        border-radius: 6px !important;
+        font-size: 0.9rem !important;
+        font-weight: 800 !important;
+        border-radius: 8px !important;
         box-sizing: border-box !important;
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border: none !important;
+        cursor: pointer !important;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important;
+        transition: background-color 0.15s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+    }
+
+    .save-order-btn:hover {
+        background-color: #1d4ed8 !important;
     }
 
     .payment-box {
         flex-shrink: 0 !important;
     }
-  </style>
+
+    /* Styling Header Menu Sederhana & Notification Badge */
+    .header-menu-item {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        cursor: pointer;
+        padding: 8px 12px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .header-menu-item:hover {
+        opacity: 0.85;
+    }
+
+    .parent-meja {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .badge-meja {
+        position: absolute;
+        top: -10px;
+        right: -12px;
+        background-color: #ef4444;
+        color: #ffffff;
+        font-size: 0.7rem;
+        font-weight: bold;
+        padding: 1px 5px;
+        border-radius: 9999px;
+        min-width: 18px;
+        height: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    /* ==================================================
+       FIXED & CONSISTENT TABLE CARDS STYLING (SCOPED 5x2 GRID)
+    ================================================== */
+    #pilihMejaPopup {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 999999 !important;
+        overflow-y: auto !important;
+        padding: 24px 12px 12px 12px !important;
+        box-sizing: border-box !important;
+        display: none;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    #pilihMejaPopup.show {
+        display: flex !important;
+    }
+
+    #pilihMejaPopup .popup-card {
+        background: #ffffff !important;
+        border-radius: 16px !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+        padding: 16px 20px !important;
+        max-width: 900px !important;
+        width: 100% !important;
+        max-height: calc(100vh - 20px) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        margin: auto !important;
+    }
+
+    #pilihMejaPopup .popup-table-grid {
+        display: grid !important;
+        grid-template-columns: repeat(5, 160px) !important;
+        gap: 7px !important;
+        padding: 10px !important;
+        justify-content: center !important;
+        align-items: start !important;
+        box-sizing: border-box !important;
+        overflow-y: auto !important;
+        max-height: 100% !important;
+    }
+
+    #pilihMejaPopup .popup-table-btn {
+        position: relative !important;
+        width: 160px !important;
+        min-width: 160px !important;
+        max-width: 160px !important;
+        height: 145px !important;
+        min-height: 145px !important;
+        max-height: 145px !important;
+        box-sizing: border-box !important;
+        padding: 6px 6px 6px 6px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        text-align: center !important;
+        overflow: hidden !important;
+        border-radius: 10px !important;
+        border: 1px solid #d1d5db !important;
+        background: #ffffff !important;
+        color: #111827 !important;
+        cursor: pointer !important;
+        flex-grow: 0 !important;
+        flex-shrink: 0 !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+        transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
+        user-select: none;
+    }
+
+    #pilihMejaPopup .popup-table-btn:hover {
+        border-color: #3b82f6 !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+    }
+
+    #pilihMejaPopup .popup-table-btn.active-selected {
+        border-color: #2563eb !important;
+        background: #f8fafc !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+    }
+
+    /* BADGES CONTAINERS & PILLS */
+    .meja-top-badge-container {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 2px !important;
+        width: 100% !important;
+        min-height: 18px !important;
+        max-height: 36px !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+    }
+
+    .meja-booking-container {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 100% !important;
+        min-height: 16px !important;
+        margin-top: 1px !important;
+        box-sizing: border-box !important;
+    }
+
+    .badge-member {
+        background: #2563eb !important;
+        color: #ffffff !important;
+        font-size: 0.6rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.5px !important;
+        padding: 2px 8px !important;
+        border-radius: 9999px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.12) !important;
+        text-transform: uppercase !important;
+        line-height: 1 !important;
+        max-width: 130px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        display: inline-block !important;
+    }
+
+    .ribbon-booking {
+        background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+        color: #ffffff !important;
+        font-size: 0.6rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.5px !important;
+        padding: 2px 8px !important;
+        border-radius: 9999px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.12) !important;
+        text-transform: uppercase !important;
+        line-height: 1 !important;
+        display: inline-block !important;
+    }
+
+    .ribbon-karyawan {
+        background: linear-gradient(135deg, #10b981, #059669) !important;
+        color: #ffffff !important;
+        font-size: 0.6rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.5px !important;
+        padding: 2px 8px !important;
+        border-radius: 9999px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.12) !important;
+        text-transform: uppercase !important;
+        line-height: 1 !important;
+        display: inline-block !important;
+    }
+
+    /* ELEMEN ISI KARTU MEJA */
+    #pilihMejaPopup .popup-table-num {
+        font-size: 1.05rem !important;
+        font-weight: 800 !important;
+        color: #111827 !important;
+        line-height: 1.1 !important;
+        margin-top: 1px !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    #pilihMejaPopup .popup-table-status {
+        font-size: 0.6rem !important;
+        font-weight: 700 !important;
+        padding: 1px 6px !important;
+        border-radius: 9999px !important;
+        text-transform: uppercase !important;
+        margin-top: 1px !important;
+        background: #f3f4f6 !important;
+        color: #4b5563 !important;
+    }
+
+    #pilihMejaPopup .meja-timer-box {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin-top: auto !important;
+        padding-top: 2px !important;
+    }
+
+    #pilihMejaPopup .meja-timer-label {
+        font-size: 0.55rem !important;
+        color: #6b7280 !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    /* STYLING TIMER & OVERRIDE WARNA TIMER HABIS (MERAH) DAN HAMPIR HABIS (KUNING) */
+    #pilihMejaPopup .meja-timer-val {
+        font-size: 0.85rem !important;
+        font-weight: 800 !important;
+        color: #2563eb !important;
+        font-family: monospace, monospace !important;
+        letter-spacing: 0.5px !important;
+        margin-top: 1px !important;
+    }
+
+    /* HAMPIR HABIS */
+    #pilihMejaPopup .meja-timer-val.timer-hampir-habis,
+    #pilihMejaPopup .meja-timer-val.hampir-habis,
+    #pilihMejaPopup .popup-table-btn.hampir-habis .meja-timer-val {
+        color: #d97706 !important;
+    }
+
+    /* HABIS */
+    #pilihMejaPopup .meja-timer-val.timer-habis,
+    #pilihMejaPopup .meja-timer-val.habis,
+    #pilihMejaPopup .popup-table-btn.habis .meja-timer-val {
+        color: #dc2626 !important;
+    }
+
+    #pilihMejaPopup .meja-timer-sub {
+        font-size: 0.58rem !important;
+        color: #6b7280 !important;
+        margin-top: 1px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 100% !important;
+    }
+
+    /* ==================================================
+       DESAIN MODERN POPUP PILIH MEJA
+       Semua selector khusus popup
+    ================================================== */
+
+    #pilihMejaPopup .popup-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        padding-bottom: 10px !important;
+        margin-bottom: 10px !important;
+        flex-shrink: 0 !important;
+    }
+
+    #pilihMejaPopup .popup-header-title-wrapper {
+        display: flex !important;
+        align-items: center !important;
+        gap: 7px !important;
+    }
+
+    #pilihMejaPopup .popup-title-icon {
+        flex-shrink: 0 !important;
+    }
+
+    #pilihMejaPopup .popup-title {
+        font-size: 1.25rem !important;
+        font-weight: 800 !important;
+        color: #111827 !important;
+        margin: 0 !important;
+        line-height: 1.2 !important;
+    }
+
+    #pilihMejaPopup .popup-subtitle {
+        font-size: 0.85rem !important;
+        color: #6b7280 !important;
+        margin: 2px 0 0 0 !important;
+    }
+
+    #pilihMejaPopup .popup-close-btn {
+        background: transparent !important;
+        border: none !important;
+        font-size: 1.5rem !important;
+        cursor: pointer !important;
+        color: #6b7280 !important;
+        padding: 0 !important;
+        line-height: 1 !important;
+    }
+
+    #pilihMejaPopup .popup-legend {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 15px !important;
+        font-size: 0.75rem !important;
+        font-weight: 700 !important;
+        color: #374151 !important;
+        margin-bottom: 15px !important;
+        align-items: center !important;
+    }
+
+    #pilihMejaPopup .legend-item {
+        display: flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+    }
+
+    #pilihMejaPopup .legend-dot {
+        width: 8px !important;
+        height: 8px !important;
+        border-radius: 50% !important;
+        display: inline-block !important;
+    }
+
+    #pilihMejaPopup .legend-kosong { background: #9ca3af !important; }
+    #pilihMejaPopup .legend-aktif { background: #2563eb !important; }
+    #pilihMejaPopup .legend-karyawan { background: #10b981 !important; }
+    #pilihMejaPopup .legend-vip { background: #8b5cf6 !important; }
+    #pilihMejaPopup .legend-booking { background: #f59e0b !important; }
+
+    #pilihMejaPopup .popup-table-grid {
+        display: grid !important;
+        grid-template-columns: repeat(5, 160px) !important;
+        grid-template-rows: repeat(2, 145px) !important;
+        gap: 12px !important;
+        justify-content: center !important;
+        margin-bottom: 15px !important;
+    }
+
+    #pilihMejaPopup .popup-footer {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        border-top: 1px solid #e5e7eb !important;
+        padding-top: 12px !important;
+    }
+
+    #pilihMejaPopup .popup-footer-info {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        font-size: 0.85rem !important;
+        color: #4b5563 !important;
+    }
+
+    #pilihMejaPopup .popup-tutup-btn {
+        background: #f3f4f6 !important;
+        border: 1px solid #d1d5db !important;
+        color: #374151 !important;
+        font-weight: 700 !important;
+        padding: 6px 16px !important;
+        border-radius: 6px !important;
+        cursor: pointer !important;
+        font-size: 0.85rem !important;
+    }
+
+    #pilihMejaPopup .popup-tutup-btn:hover {
+        background: #e5e7eb !important;
+    }
+
+    /* ==================================================
+       SYNC PRODUK - OVERLAY PROSES
+       ================================================== */
+    #syncLoadingOverlay {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 1000001 !important;
+        display: none !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: rgba(17, 24, 39, 0.48) !important;
+        backdrop-filter: blur(2px) !important;
+        -webkit-backdrop-filter: blur(2px) !important;
+    }
+
+    #syncLoadingOverlay.show {
+        display: flex !important;
+    }
+
+    #syncLoadingCard {
+        width: min(320px, calc(100vw - 40px)) !important;
+        box-sizing: border-box !important;
+        background: #ffffff !important;
+        border-radius: 16px !important;
+        box-shadow: 0 14px 40px rgba(0,0,0,0.22) !important;
+        padding: 22px 20px !important;
+        text-align: center !important;
+    }
+
+    #syncLoadingBall {
+        width: 68px !important;
+        height: 68px !important;
+        margin: 0 auto 14px auto !important;
+        animation: syncBallSpin 1.05s linear infinite !important;
+        transform-origin: center center !important;
+    }
+
+    @keyframes syncBallSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    #syncLoadingTitle {
+        margin: 0 !important;
+        color: #111827 !important;
+        font-size: 1.08rem !important;
+        font-weight: 800 !important;
+    }
+
+    #syncLoadingText {
+        margin: 5px 0 0 0 !important;
+        color: #6b7280 !important;
+        font-size: 0.9rem !important;
+    }
+  
+/* ==================================================
+   MODAL TRANSAKSI BERHASIL - MODERN
+================================================== */
+#hasilTransaksiModal {
+  background: rgba(15, 23, 42, 0.50) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  z-index: 1000002 !important;
+}
+
+#hasilTransaksiModal .popup-card {
+  width: min(88vw, 420px) !important;
+  max-width: 420px !important;
+  padding: 0 !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  box-shadow: 0 25px 70px rgba(15, 23, 42, 0.28), 0 8px 24px rgba(15, 23, 42, 0.12) !important;
+  animation: trxSuccessIn 0.25s ease-out !important;
+}
+
+@keyframes trxSuccessIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+#hasilTransaksiModal .receipt-modal-content {
+  padding: 18px !important;
+}
+
+#hasilTransaksiModal .receipt-success-title {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  margin-bottom: 16px !important;
+  color: #15803d !important;
+  font-size: 1.12rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.3px !important;
+  text-align: center !important;
+}
+
+#hasilTransaksiModal .receipt-success-title::before {
+  content: "✓";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: #ffffff;
+  font-size: 1.45rem;
+  font-weight: 900;
+  box-shadow: 0 0 0 7px #dcfce7;
+}
+
+#hasilTransaksiModal .trx-detail-box {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+#hasilTransaksiModal .receipt-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 20px !important;
+  min-height: 38px !important;
+  padding: 0 12px !important;
+  border-bottom: 1px dashed #e5e7eb !important;
+  font-size: 0.80rem !important;
+}
+
+#hasilTransaksiModal .receipt-row:last-child {
+  border-bottom: none !important;
+}
+
+#hasilTransaksiModal .receipt-row span:first-child {
+  color: #64748b !important;
+  font-weight: 500 !important;
+}
+
+#hasilTransaksiModal .receipt-row span:last-child {
+  color: #0f172a !important;
+  font-weight: 750 !important;
+  text-align: right !important;
+}
+
+#hasilTransaksiModal .trx-payment-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+#hasilTransaksiModal .trx-payment-item {
+  padding: 12px;
+  border-radius: 11px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+#hasilTransaksiModal .trx-payment-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+#hasilTransaksiModal .trx-payment-value {
+  display: block;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+#hasilTransaksiModal .trx-change-box {
+  margin-bottom: 14px;
+  padding: 14px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #dcfce7 100%);
+  border: 1px solid #bbf7d0;
+  text-align: center;
+}
+
+#hasilTransaksiModal .trx-change-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #15803d;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+
+#hasilTransaksiModal .trx-change-value {
+  display: block;
+  color: #166534;
+  font-size: clamp(1.75rem, 6vw, 2.25rem);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.8px;
+}
+
+#hasilTransaksiModal .receipt-ok-btn {
+  width: 100% !important;
+  height: 46px !important;
+  border: none !important;
+  border-radius: 10px !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.25) !important;
+  transition: 0.15s ease !important;
+}
+
+#hasilTransaksiModal .receipt-ok-btn:hover {
+  background: #1d4ed8 !important;
+  transform: translateY(-1px);
+}
+
+#hasilTransaksiModal .receipt-ok-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 520px) {
+  #hasilTransaksiModal .receipt-modal-content { padding: 18px 12px !important; }
+  #hasilTransaksiModal .trx-payment-box { grid-template-columns: 1fr; gap: 8px; }
+  #hasilTransaksiModal .receipt-row { padding: 0 12px !important; font-size: 0.88rem !important; }
+}
+
+</style>
 
 </head>
 
@@ -125,7 +994,7 @@
     >
       <option value="">-- Pilih Kasir --</option>
       <option value="160">Faisal</option>
-      <option value="164">Ryan</option>
+      <option value="164">Ozat</option>
       <option value="161">Fitri</option>
       <option value="162">Nada</option>
       <option value="163">Septi</option>
@@ -185,16 +1054,16 @@
         class="server-status"
         style="line-height: 1;"
       >
-        ● ONLINE
+
       </div>
 
-      <!-- Nama kasir disembunyikan agar tampilan rapi, tapi ID tetap ada agar JS tidak error -->
+      <!-- Nama kasir aktif -->
       <div
         id="cashierName"
         class="cashier-name"
-        style="display: none;"
+        style="display: block;"
       >
-        -
+        KASIR: - <span id="internetStatus" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 800; margin-left: 8px;"><span id="internetStatusDot" style="width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: #dc2626; flex: 0 0 auto;"></span><span id="internetStatusText">OFFLINE</span></span>
       </div>
 
     </div>
@@ -206,28 +1075,49 @@
         id="syncInfo"
         class="sync-info"
       >
-        Database lokal
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+          <path d="M21.5 2v6h-6"></path>
+          <path d="M2.5 22v-6h6"></path>
+          <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8"></path>
+          <path d="M22 12.5a10 10 0 0 1-18.8 4.3L2.5 16"></path>
+        </svg>
+        <span id="syncInfoText">Database lokal</span>
       </div>
 
-      <button id="mejaHeaderBtn" class="meja-header-btn" onclick="bukaPopupPilihMeja()">
-        <div class="meja-header-content">
-          <div class="meja-header-left">
-            <span class="meja-icon">▣</span>
-            <span id="btnMejaText" class="btn-meja-label">PILIH MEJA</span>
-            <span id="mejaActiveBadge" class="meja-active-badge"></span>
-          </div>
-          <div id="mejaIndicator" class="meja-indicator" style="display: none;"></div>
-        </div>
-        <span id="btnPemesanText" class="btn-pemesan-label"></span>
+      <!-- TOMBOL MEJA DENGAN IKON BOLA 9 BILLIARD INLINE SVG -->
+      <button id="mejaHeaderBtn" class="header-menu-item" onclick="bukaPopupPilihMeja()">
+        <span class="parent-meja">
+          <svg width="22" height="22" viewBox="0 0 100 100" style="vertical-align: middle; margin-right: 6px;" aria-hidden="true">
+            <!-- Dasar Bola Kuning khas 9-Ball -->
+            <circle cx="50" cy="50" r="48" fill="#f59e0b" stroke="#ffffff" stroke-width="4"/>
+            <!-- Motif Strip Putih Atas & Bawah -->
+            <path d="M 10 30 A 48 48 0 0 1 90 30 Z" fill="#ffffff"/>
+            <path d="M 10 70 A 48 48 0 0 0 90 70 Z" fill="#ffffff"/>
+            <!-- Garis Pinggir Bola & Lingkaran Tengah -->
+            <circle cx="50" cy="50" r="48" fill="none" stroke="#1e293b" stroke-width="4"/>
+            <circle cx="50" cy="50" r="22" fill="#ffffff" stroke="#1e293b" stroke-width="3"/>
+            <!-- Angka 9 -->
+            <text x="50" y="59" font-size="28" font-weight="900" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">9</text>
+          </svg>
+          <span id="btnMejaText">MEJA</span>
+          <span id="mejaActiveBadge" class="badge-meja" style="display: none;"></span>
+        </span>
       </button>
 
-      <!-- TOMBOL WAITING LIST -->
+      <!-- TOMBOL WAITING LIST DENGAN INLINE SVG ICON -->
       <button
         id="waitingListBtn"
-        class="sync-produk-btn"
+        class="header-menu-item"
         onclick="bukaWaitingList()"
       >
-        WAITING LIST
+        <span class="parent-meja">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; flex-shrink: 0;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>WAITING LIST</span>
+          <span id="waitingListBadge" class="badge-meja" style="display: none;"></span>
+        </span>
       </button>
 
       <!-- HAMBURGER MENU -->
@@ -238,7 +1128,7 @@
           onclick="toggleHamburgerMenu(event)"
           style="background: transparent; border: none; box-shadow: none; cursor: pointer; padding: 10px 14px; font-size: 1.5rem; color: #ffffff; display: flex; align-items: center; justify-content: center;"
         >
-          ☰
+          &#9776;
         </button>
 
         <div id="hamburgerDropdown" class="hamburger-dropdown">
@@ -256,6 +1146,36 @@
             onclick="syncProduk(); tutupHamburgerMenu();"
           >
             SYNC PRODUK
+          </button>
+
+          <button
+            id="printerBluetoothBtn"
+            class="hamburger-item"
+            onclick="if (typeof bukaPrinterBluetooth === 'function') { bukaPrinterBluetooth(); } else { alert('Modul Printer Bluetooth belum siap. Silakan refresh aplikasi.'); } tutupHamburgerMenu();"
+          >
+            PRINTER BLUETOOTH
+          </button>
+
+          <button
+            class="hamburger-item"
+            onclick="
+              if (typeof MejaKaryawanModal !== 'undefined' && typeof MejaKaryawanModal.buka === 'function') {
+                MejaKaryawanModal.buka();
+              } else {
+                alert('Modul Meja Karyawan belum siap. Silakan refresh aplikasi.');
+              }
+              tutupHamburgerMenu();
+            "
+          >
+            MEJA KARYAWAN
+          </button>
+
+          <button
+            id="stockOpnameBtn"
+            class="hamburger-item"
+            onclick="if (window.StockOpname && typeof window.StockOpname.open === 'function') { window.StockOpname.open(); } else { alert('Modul Stock Opname belum siap. Silakan refresh aplikasi.'); } tutupHamburgerMenu();"
+          >
+            STOCK OPNAME
           </button>
 
           <button
@@ -295,13 +1215,19 @@
 
     <div class="products-panel">
 
-      <input
-        id="search"
-        class="search-box"
-        type="text"
-        placeholder="Cari barang..."
-        autocomplete="off"
-      >
+      <div class="search-wrapper">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          id="search"
+          class="search-box"
+          type="text"
+          placeholder="Cari barang..."
+          autocomplete="off"
+        >
+      </div>
 
 
       <div
@@ -324,6 +1250,26 @@
 
     <div class="cart-panel">
 
+      <div class="cart-title" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <div style="display:flex; align-items:center; min-width:0;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; flex-shrink: 0;">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">KERANJANG PESANAN</span>
+        </div>
+        <button
+          id="cekHargaMejaBtn"
+          class="pay-btn"
+          type="button"
+          onclick="cekHargaMeja()"
+          style="margin:0; padding:6px 10px; min-height:32px; width:auto; flex:0 0 auto; background:#2563eb;"
+        >
+          <span>CEK</span>
+        </button>
+      </div>
+
 
       <div
         id="cartItems"
@@ -338,14 +1284,19 @@
       <div class="payment-box">
 
 
-        <!-- TOMBOL SIMPAN PESANAN DI DALAM PAYMENT BOX TEPAT DI ATAS TOTAL -->
+        <!-- TOMBOL SIMPAN PESANAN DI DALAM PAYMENT BOX TEPAT DI ATAS TOTAL (WARNA BIRU) -->
         <button
           id="saveOrderBtn"
           class="save-order-btn"
           onclick="simpanPesananMeja()"
           style="display: none;"
         >
-          SIMPAN PESANAN
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; flex-shrink: 0;">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          <span>SIMPAN PESANAN</span>
         </button>
 
 
@@ -369,7 +1320,12 @@
             class="payment-btn active"
             onclick="pilihMetode('CASH')"
           >
-            CASH
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; flex-shrink: 0;">
+              <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+              <circle cx="12" cy="12" r="2"></circle>
+              <path d="M6 12h.01M18 12h.01"></path>
+            </svg>
+            <span>CASH</span>
           </button>
 
 
@@ -378,7 +1334,13 @@
             class="payment-btn"
             onclick="pilihMetode('QRIS')"
           >
-            QRIS
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; flex-shrink: 0;">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+              <path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 17h3v3h-3z"></path>
+            </svg>
+            <span>QRIS</span>
           </button>
 
 
@@ -387,7 +1349,12 @@
             class="payment-btn"
             onclick="pilihMetode('SPLIT')"
           >
-            CASH + QRIS
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; flex-shrink: 0;">
+              <rect x="2" y="5" width="10" height="14" rx="1.5"></rect>
+              <rect x="14" y="5" width="8" height="6" rx="1"></rect>
+              <rect x="14" y="13" width="8" height="6" rx="1"></rect>
+            </svg>
+            <span>CASH + QRIS</span>
           </button>
 
         </div>
@@ -418,21 +1385,23 @@
         >
 
           <input
-            id="cashAmount"
-            class="cash-input"
-            type="number"
-            inputmode="numeric"
-            placeholder="Nominal Cash"
-          >
+          id="cashAmount"
+          class="cash-input"
+          type="text"
+          inputmode="numeric"
+          placeholder="Nominal Cash"
+          oninput="this.value = formatCurrencyInput(this.value)"
+        >
 
 
           <input
-            id="qrisAmount"
-            class="cash-input"
-            type="number"
-            inputmode="numeric"
-            placeholder="Nominal QRIS"
-          >
+          id="qrisAmount"
+          class="cash-input"
+          type="text"
+          inputmode="numeric"
+          placeholder="Nominal QRIS"
+          oninput="this.value = formatCurrencyInput(this.value)"
+        >
 
         </div>
 
@@ -455,7 +1424,11 @@
           class="pay-btn"
           onclick="bayarTransaksi()"
         >
-          BAYAR
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; flex-shrink: 0;">
+            <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+            <line x1="2" y1="10" x2="22" y2="10"></line>
+          </svg>
+          <span>BAYAR</span>
         </button>
 
       </div>
@@ -473,11 +1446,45 @@
 <div id="pilihMejaPopup" class="popup-overlay" onclick="tutupPopupPilihMejaLuar(event)">
   <div class="popup-card">
     <div class="popup-header">
-      <h3 class="popup-title">PILIH MEJA</h3>
+      <div class="popup-header-title-wrapper">
+        <svg class="popup-title-icon" width="24" height="24" viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="48" fill="#f59e0b" stroke="#ffffff" stroke-width="4"/>
+          <path d="M 10 30 A 48 48 0 0 1 90 30 Z" fill="#ffffff"/>
+          <path d="M 10 70 A 48 48 0 0 0 90 70 Z" fill="#ffffff"/>
+          <circle cx="50" cy="50" r="48" fill="none" stroke="#1e293b" stroke-width="4"/>
+          <circle cx="50" cy="50" r="22" fill="#ffffff" stroke="#1e293b" stroke-width="3"/>
+          <text x="50" y="59" font-size="28" font-weight="900" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">9</text>
+        </svg>
+        <div>
+          <h3 class="popup-title">PILIH MEJA</h3>
+          <p class="popup-subtitle">Pilih meja untuk memulai pesanan</p>
+        </div>
+      </div>
       <button class="popup-close-btn" onclick="tutupPopupPilihMeja()">&times;</button>
     </div>
+
+    <div class="popup-legend">
+      <div class="legend-item"><span class="legend-dot legend-kosong"></span>KOSONG</div>
+      <div class="legend-item"><span class="legend-dot legend-aktif"></span>AKTIF</div>
+      <div class="legend-item"><span class="legend-dot legend-karyawan"></span>KARYAWAN</div>
+      <div class="legend-item"><span class="legend-dot legend-vip"></span>VIP / VGG</div>
+      <div class="legend-item"><span class="legend-dot legend-booking"></span>BOOKING</div>
+    </div>
+
     <div id="popupTableGrid" class="popup-table-grid">
       <!-- Diisi melalui JavaScript renderPopupMeja() -->
+    </div>
+
+    <div class="popup-footer">
+      <div class="popup-footer-info">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <span>Klik meja untuk membuat pesanan</span>
+      </div>
+      <button class="popup-tutup-btn" onclick="tutupPopupPilihMeja()">TUTUP</button>
     </div>
   </div>
 </div>
@@ -487,11 +1494,40 @@
      MODAL BUKA MEJA (NAMA PEMESAN)
 ================================================== -->
 <div id="bukaMejaModal" class="popup-overlay" onclick="tutupModalBukaMejaLuar(event)">
-  <div class="popup-card">
+  <div class="popup-card" style="max-width: 440px; width: 90%;">
     <div class="popup-header">
       <h3 id="bukaMejaTitle" class="popup-title">BUKA MEJA</h3>
       <button class="popup-close-btn" onclick="tutupModalBukaMeja()">&times;</button>
     </div>
+
+    <!-- PILIHAN MODE PERMAINAN -->
+    <label class="form-label" style="font-weight: 700; margin-bottom: 8px; display: block; color: #374151;">
+      Pilihan Mode Permainan
+    </label>
+    <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+      <div 
+        id="modeDurasiCard" 
+        onclick="setModeSesiBukaMeja('DURASI')"
+        style="flex: 1; padding: 12px 10px; border: 2px solid #2563eb; background: #eff6ff; border-radius: 10px; cursor: pointer; text-align: center; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
+      >
+        <div style="font-weight: 800; font-size: 0.95rem; color: #1e40af;">DURASI</div>
+        <div style="font-size: 0.72rem; color: #3b82f6; font-weight: 600; margin-top: 3px;">Pilih Jumlah Jam</div>
+      </div>
+      
+      <div 
+        id="modeLossCard" 
+        onclick="setModeSesiBukaMeja('LOSS')"
+        style="flex: 1; padding: 12px 10px; border: 2px solid #e5e7eb; background: #ffffff; border-radius: 10px; cursor: pointer; text-align: center; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
+      >
+        <div style="font-weight: 800; font-size: 0.95rem; color: #374151;">WAKTU LOSS</div>
+        <div style="font-size: 0.72rem; color: #059669; font-weight: 700; margin-top: 3px;">Rp30.000 / jam</div>
+        <div style="font-size: 0.68rem; color: #6b7280; font-weight: 500;">Rp500 / menit</div>
+      </div>
+    </div>
+
+    <input type="hidden" id="inputJenisSesi" value="DURASI">
+
+    <!-- NAMA PEMESAN -->
     <label class="form-label">
       Nama Pemesan
     </label>
@@ -502,13 +1538,87 @@
       placeholder="Masukkan nama pemesan"
       autocomplete="off"
     >
-    <div style="display: flex; gap: 10px; margin-top: 15px;">
-      <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #f3f4f6; font-weight: bold;" onclick="tutupModalBukaMeja()">BATAL</button>
-      <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #3b82f6; color: #ffffff; font-weight: bold;" onclick="konfirmasiMulaiSesi()">MULAI</button>
+
+    <!-- KONTROL DURASI JAM (MODE DURASI) -->
+    <div id="containerDurasiMain" style="margin-top: 10px;">
+      <label class="form-label">
+        Durasi Main (Jam)
+      </label>
+      <select id="inputDurasiJam" class="form-input" style="cursor: pointer;">
+        <option value="1">1 Jam</option>
+        <option value="2">2 Jam</option>
+        <option value="3">3 Jam</option>
+        <option value="4">4 Jam</option>
+        <option value="5">5 Jam</option>
+        <option value="6">6 Jam</option>
+        <option value="7">7 Jam</option>
+        <option value="8">8 Jam</option>
+      </select>
+    </div>
+
+    <!-- INFO BOX WAKTU LOSS -->
+    <div id="infoWaktuLossBox" style="display: none; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 0.72rem; color: #065f46; line-height: 1.4;">
+      <strong style="display: flex; align-items: center; gap: 4px; font-weight: 700; margin-bottom: 2px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        MODE WAKTU LOSS
+      </strong>
+      Tanpa batas waktu jam. Waktu bermain dihitung dari nol (timer berjalan).<br>
+      Tarif: <strong>Rp30.000 / jam</strong> (<strong>Rp500 / menit</strong>).
+    </div>
+
+    <div style="display: flex; gap: 8px; margin-top: 18px;">
+      <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #f3f4f6; color: #374151; font-weight: bold; border-radius: 8px;" onclick="tutupModalBukaMeja()">BATAL</button>
+      <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #3b82f6; color: #ffffff; font-weight: bold; border-radius: 8px;" onclick="konfirmasiMulaiSesi()">MULAI MAIN</button>
     </div>
   </div>
 </div>
 
+<!-- ==================================================
+     MODAL PINDAH MEJA
+================================================== -->
+<div id="pindahMejaModal" class="popup-overlay" onclick="tutupModalPindahMejaLuar(event)">
+  <div class="popup-card" style="max-width: 440px; width: 90%;">
+    <div class="popup-header">
+      <div class="popup-header-title-wrapper">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="17 1 21 5 17 9"></polyline>
+          <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+          <polyline points="7 23 3 19 7 15"></polyline>
+          <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+        </svg>
+        <h3 class="popup-title">PINDAH MEJA</h3>
+      </div>
+      <button class="popup-close-btn" onclick="tutupModalPindahMeja()">&times;</button>
+    </div>
+
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 15px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem;">
+        <span style="color: #64748b; font-weight: 600;">Meja Asal:</span>
+        <strong id="pindahMejaAsalText" style="color: #0f172a; font-size: 1rem;">Meja --</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem;">
+        <span style="color: #64748b; font-weight: 600;">Customer / Member:</span>
+        <strong id="pindahNamaCustomerText" style="color: #2563eb;">-</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+        <span style="color: #64748b; font-weight: 600;">Sisa Waktu / Status:</span>
+        <strong id="pindahSisaWaktuText" style="color: #059669; font-family: monospace;">--:--:--</strong>
+      </div>
+    </div>
+
+    <label class="form-label" style="font-weight: 700; margin-bottom: 6px; display: block; color: #374151;">
+      Pilih Meja Tujuan (Hanya Meja Kosong)
+    </label>
+    <select id="pindahMejaTujuanSelect" class="form-input" style="cursor: pointer; font-weight: 700; font-size: 1rem; padding: 10px;">
+      <option value="">-- Pilih Meja Tujuan --</option>
+    </select>
+
+    <div style="display: flex; gap: 8px; margin-top: 18px;">
+      <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #f3f4f6; color: #374151; font-weight: bold; border-radius: 8px;" onclick="tutupModalPindahMeja()">BATAL</button>
+      <button id="konfirmasiPindahMejaBtn" class="popup-table-btn" style="flex: 1; padding: 10px; background: #2563eb; color: #ffffff; font-weight: bold; border-radius: 8px;" onclick="eksekusiPindahMeja()">KONFIRMASI PINDAH</button>
+    </div>
+  </div>
+</div>
 
 <!-- ==================================================
      MODAL HASIL TRANSAKSI
@@ -516,41 +1626,53 @@
 <div id="hasilTransaksiModal" class="popup-overlay">
   <div class="popup-card">
     <div class="receipt-modal-content">
-      <div class="receipt-success-title">TRANSAKSI BERHASIL ✓</div>
-      
-      <div class="receipt-row">
-        <span>No. Transaksi</span>
-        <span id="resNoTrx">-</span>
-      </div>
-      <div class="receipt-row">
-        <span>Meja</span>
-        <span id="resMeja">-</span>
-      </div>
-      <div class="receipt-row">
-        <span>Pemesan</span>
-        <span id="resPemesan">-</span>
-      </div>
-      <div class="receipt-row">
-        <span>Total</span>
-        <span id="resTotal">Rp0</span>
-      </div>
-      <div class="receipt-row">
-        <span>Bayar</span>
-        <span id="resBayar">Rp0</span>
-      </div>
-      <div class="receipt-row">
-        <span>Kembalian</span>
-        <span id="resKembalian">Rp0</span>
+
+      <div class="receipt-success-title">
+        TRANSAKSI BERHASIL
       </div>
 
-      <button class="receipt-ok-btn" onclick="tutupHasilTransaksi()">OK</button>
+      <div class="trx-detail-box">
+        <div class="receipt-row">
+          <span>No. Transaksi</span>
+          <span id="resNoTrx">-</span>
+        </div>
+        <div class="receipt-row">
+          <span>Meja</span>
+          <span id="resMeja">TANPA MEJA</span>
+        </div>
+        <div class="receipt-row">
+          <span>Pemesan</span>
+          <span id="resPemesan">-</span>
+        </div>
+      </div>
+
+      <div class="trx-payment-box">
+        <div class="trx-payment-item">
+          <span class="trx-payment-label">TOTAL</span>
+          <span id="resTotal" class="trx-payment-value">Rp0</span>
+        </div>
+        <div class="trx-payment-item">
+          <span class="trx-payment-label">BAYAR</span>
+          <span id="resBayar" class="trx-payment-value">Rp0</span>
+        </div>
+      </div>
+
+      <div class="trx-change-box">
+        <span class="trx-change-label">KEMBALIAN</span>
+        <span id="resKembalian" class="trx-change-value">Rp0</span>
+      </div>
+
+      <button class="receipt-ok-btn" onclick="tutupHasilTransaksi()">
+        OK
+      </button>
+
     </div>
   </div>
 </div>
 
 
 <!-- ==================================================
-     POPUP OTORISASI MANAGER (KURANG DURASI MEJA)
+     POPUP OTORISASI MANAGER (KURANG DURASI MEJA / QTY PRODUK)
 ================================================== -->
 <div id="otorisasiManagerPopup" class="popup-overlay" onclick="tutupPopupOtorisasiManagerLuar(event)">
   <div class="popup-card" style="max-width: 380px;">
@@ -571,9 +1693,9 @@
       style="text-align: center; font-size: 1.2rem; letter-spacing: 4px; font-weight: bold;"
       autocomplete="off"
     >
-    <div style="display: flex; gap: 10px; margin-top: 15px;">
+    <div style="display: flex; gap: 8px; margin-top: 15px;">
       <button id="batalOtorisasiBtn" class="popup-table-btn" style="flex: 1; padding: 10px; background: #f3f4f6; font-weight: bold;" onclick="tutupPopupOtorisasiManager()">BATAL</button>
-      <button id="verifikasiTotpBtn" class="popup-table-btn" style="flex: 1; padding: 10px; background: #3b82f6; color: #ffffff; font-weight: bold;" onclick="prosesKurangDurasiMeja()">VERIFIKASI</button>
+      <button id="verifikasiTotpBtn" class="popup-table-btn" style="flex: 1; padding: 10px; background: #3b82f6; color: #ffffff; font-weight: bold;" onclick="prosesOtorisasiManager()">VERIFIKASI</button>
     </div>
   </div>
 </div>
@@ -594,7 +1716,7 @@
     <div id="infoTrxPembatalan" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; margin-bottom: 15px; font-size: 0.9rem; color: #374151; line-height: 1.5;">
       <!-- Info transaksi yang dipilih -->
     </div>
-    <div style="display: flex; gap: 10px; margin-top: 15px;">
+    <div style="display: flex; gap: 8px; margin-top: 15px;">
       <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #f3f4f6; font-weight: bold;" onclick="tutupPopupBatalTransaksi()">BATAL</button>
       <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #ef4444; color: #ffffff; font-weight: bold;" onclick="lanjutkanBatalTransaksi()">LANJUTKAN</button>
     </div>
@@ -624,7 +1746,7 @@
       style="text-align: center; font-size: 1.2rem; letter-spacing: 4px; font-weight: bold;"
       autocomplete="off"
     >
-    <div style="display: flex; gap: 10px; margin-top: 15px;">
+    <div style="display: flex; gap: 8px; margin-top: 15px;">
       <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #f3f4f6; font-weight: bold;" onclick="tutupPopupOtorisasiBatal()">BATAL</button>
       <button id="verifikasiBatalTotpBtn" class="popup-table-btn" style="flex: 1; padding: 10px; background: #3b82f6; color: #ffffff; font-weight: bold;" onclick="prosesBatalTransaksi()">VERIFIKASI</button>
     </div>
@@ -660,7 +1782,7 @@
     >
 
       <div class="locked-icon">
-        🔒
+        &#128274;
       </div>
 
 
@@ -727,7 +1849,7 @@
       <button onclick="tutupRiwayat()" style="background: none; border: none; font-size: 28px; line-height: 1; cursor: pointer; color: #374151; font-weight: bold;">&times;</button>
     </div>
 
-    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+    <div style="display: flex; gap: 8px; margin-bottom: 15px;">
       <input
         type="text"
         id="riwayatSearch"
@@ -751,7 +1873,7 @@
 
     <div
       id="riwayatList"
-      style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;"
+      style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;"
     >
       <!-- Konten transaksi akan dirender di sini -->
     </div>
@@ -762,7 +1884,10 @@
 
 
 <!-- LOAD LIBRARY TIMER -->
+<script src="/promo.js"></script>
+<script src="/pricing-meja.js"></script>
 <script src="/meja-timer.js"></script>
+<script src="/meja-bubble.js"></script>
 
 <!-- LOAD MODAL PRODUK -->
 <script src="/meja-produk-modal.js"></script>
@@ -807,7 +1932,6 @@ function apiUrl(path) {
 let masterBarang = [];
 
 let cart = [];
-let cartServerBaseline = [];
 
 let activeCategory = "SEMUA";
 
@@ -820,10 +1944,39 @@ let nomorMeja = null; // Sinkronisasi untuk pembayaran backend
 // State Sesi Meja (Sumber Kebenaran Utama = SQLite via API)
 let mejaSessions = {};
 let activeMeja = null;
+// Menyimpan sessionId sesi meja yang sudah di-STOP tetapi tidak lagi dikembalikan oleh GET /api/meja/sesi.
+// Dipakai hanya sebagai referensi pembayaran setelah STOP LOSS.
+const stoppedSessionIdsByMeja = {};
+// Meja yang sudah STOP LOSS dan menunggu pembayaran.
+let pendingPaymentTableNo = null;
+let pendingMemberForMeja = null;
+const memberByMeja = new Map();
+
+// Global Loading Lock State untuk Stop Waktu Loss
+let isProcessingStopLoss = false;
+
+// State untuk Pindah Meja
+let targetPindahSessionId = null;
+let targetPindahMejaAsal = null;
+
+window.addEventListener("memberSelected", function (event) {
+  const member = event.detail?.member || null;
+  if (!member) return;
+
+  pendingMemberForMeja = member;
+
+  if (activeMeja) {
+    memberByMeja.set(String(activeMeja), member);
+  }
+
+  renderCart();
+});
+
 let targetBukaMejaNomor = null;
 let targetKurangSessionId = null;
+let targetKurangProdukNama = null; // State untuk tracking produk biasa yang akan dikurangi QTY-nya
 
-// Registry untuk menyimpan fungsi stop countdown per meja agar bisa dibersihkan saat render ulang
+// Registry untuk menyimpan fungsi stop countdown/count-up per meja agar bisa dibersihkan saat render ulang
 let mejaTimersCleanup = {};
 
 // State untuk Riwayat
@@ -838,6 +1991,9 @@ let selectedTrxIndex = null;
 
 function getOrCreateDeviceId() {
   let deviceId = localStorage.getItem("pbms_device_id");
+  if (deviceId) {
+    deviceId = deviceId.trim();
+  }
   if (!deviceId) {
     try {
       if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -854,14 +2010,16 @@ function getOrCreateDeviceId() {
       alert("Error: Browser/Device tidak mendukung secure random UUID.");
       throw e;
     }
+    deviceId = deviceId.trim();
     localStorage.setItem("pbms_device_id", deviceId);
   }
   return deviceId;
 }
 
 async function authenticatedFetch(url, options = {}) {
-  const deviceId = getOrCreateDeviceId();
-  const sessionId = sessionStorage.getItem("pbms_session_id");
+  const deviceId = getOrCreateDeviceId().trim();
+  const rawSessionId = sessionStorage.getItem("pbms_session_id");
+  const sessionId = rawSessionId ? rawSessionId.trim() : "";
 
   const headers = {
     ...(options.headers || {})
@@ -874,17 +2032,22 @@ async function authenticatedFetch(url, options = {}) {
     headers["X-Device-Id"] = deviceId;
   }
 
-  const response = await fetch(apiUrl(url), {
-    ...options,
-    headers
-  });
+  let response;
+  try {
+    response = await fetch(apiUrl(url), {
+      ...options,
+      headers
+    });
+  } catch (e) {
+    throw e;
+  }
 
   if (response.status === 401 || response.status === 403) {
     try {
       const clone = response.clone();
       const json = await clone.json();
       if (json && json.code && ["SESSION_EXPIRED", "SESSION_NOT_FOUND", "INVALID_SESSION", "DEVICE_MISMATCH"].includes(json.code)) {
-        handleSessionExpired(json.message || "Session login sudah berakhir. Silakan login kembali.");
+        handleSessionExpired(json.message || "Session berakhir");
         throw new Error(json.message || "Session berakhir");
       }
     } catch (e) {
@@ -902,17 +2065,74 @@ let sessionCheckInterval = null;
 
 function startSessionTimer(expiresAt) {
   stopSessionTimer();
+
   const expTime = Number(expiresAt);
   if (!expTime || isNaN(expTime)) return;
 
   sessionTimerInterval = setInterval(() => {
-    if (Date.now() >= expTime) {
-      stopSessionTimer();
-      handleSessionExpired("Session login sudah berakhir. Silakan login kembali.");
+    const currentExpiresAt =
+      Number(sessionStorage.getItem("pbms_expires_at")) || expTime;
+
+    if (!currentExpiresAt) return;
+
+    if (Date.now() >= currentExpiresAt) {
+      cekSessionLogin().then(valid => {
+        if (valid) {
+          const newExp = sessionStorage.getItem("pbms_expires_at");
+          if (newExp && Number(newExp) > Date.now()) {
+            startSessionTimer(newExp);
+          }
+        }
+      }).catch(error => {
+        console.error("Refresh session saat timer error:", error);
+      });
     }
   }, 1000);
 
   sessionCheckInterval = setInterval(async () => {
+    const rawSessionId = sessionStorage.getItem("pbms_session_id");
+    if (!rawSessionId) {
+      stopSessionTimer();
+      return;
+    }
+
+    await cekSessionLogin();
+  }, 30000);
+}
+
+function startSessionTimer(expiresAt) {
+  stopSessionTimer();
+
+  const expTime = Number(expiresAt);
+  if (!expTime || isNaN(expTime)) return;
+
+  sessionTimerInterval = setInterval(() => {
+    const currentExpiresAt =
+      Number(sessionStorage.getItem("pbms_expires_at")) || expTime;
+
+    if (!currentExpiresAt) return;
+
+    if (Date.now() >= currentExpiresAt) {
+      cekSessionLogin().then(valid => {
+        if (valid) {
+          const newExp = sessionStorage.getItem("pbms_expires_at");
+          if (newExp && Number(newExp) > Date.now()) {
+            startSessionTimer(newExp);
+          }
+        }
+      }).catch(error => {
+        console.error("Refresh session saat timer error:", error);
+      });
+    }
+  }, 1000);
+
+  sessionCheckInterval = setInterval(async () => {
+    const rawSessionId = sessionStorage.getItem("pbms_session_id");
+    if (!rawSessionId) {
+      stopSessionTimer();
+      return;
+    }
+
     await cekSessionLogin();
   }, 30000);
 }
@@ -922,6 +2142,7 @@ function stopSessionTimer() {
     clearInterval(sessionTimerInterval);
     sessionTimerInterval = null;
   }
+
   if (sessionCheckInterval) {
     clearInterval(sessionCheckInterval);
     sessionCheckInterval = null;
@@ -941,7 +2162,6 @@ function handleSessionExpired(message = "Session login sudah berakhir. Silakan l
   activeMeja = null;
   nomorMeja = null;
   cart = [];
-  cartServerBaseline = [];
 
   renderCart();
   updateMejaHeaderUI();
@@ -959,8 +2179,9 @@ function handleSessionExpired(message = "Session login sudah berakhir. Silakan l
 }
 
 async function cekSessionLogin() {
-  const sessionId = sessionStorage.getItem("pbms_session_id");
-  const deviceId = getOrCreateDeviceId();
+  const rawSessionId = sessionStorage.getItem("pbms_session_id");
+  const sessionId = rawSessionId ? rawSessionId.trim() : "";
+  const deviceId = getOrCreateDeviceId().trim();
   if (!sessionId) return false;
 
   try {
@@ -978,24 +2199,31 @@ async function cekSessionLogin() {
     });
 
     const result = await response.json();
-    if (!result.success || !result.valid) {
+
+    if (response.ok && result.success === true && result.valid === true) {
+      if (result.expiresAt) {
+        sessionStorage.setItem("pbms_expires_at", result.expiresAt);
+      }
+      return true;
+    }
+
+    if (result && result.code && ["SESSION_EXPIRED", "SESSION_NOT_FOUND", "INVALID_SESSION", "DEVICE_MISMATCH"].includes(result.code)) {
       handleSessionExpired(result.message || "Session login sudah berakhir. Silakan login kembali.");
       return false;
     }
 
-    if (result.expiresAt) {
-      sessionStorage.setItem("pbms_expires_at", result.expiresAt);
-    }
+    console.warn("Cek session menerima respons server non-valid:", response.status, result);
     return true;
   } catch (e) {
-    console.error("Cek session error:", e);
-    return false;
+    console.error("Cek session network error:", e);
+    return true;
   }
 }
 
 async function logoutKasir() {
-  const sessionId = sessionStorage.getItem("pbms_session_id");
-  const deviceId = getOrCreateDeviceId();
+  const rawSessionId = sessionStorage.getItem("pbms_session_id");
+  const sessionId = rawSessionId ? rawSessionId.trim() : "";
+  const deviceId = getOrCreateDeviceId().trim();
 
   if (sessionId) {
     try {
@@ -1028,7 +2256,6 @@ async function logoutKasir() {
   activeMeja = null;
   nomorMeja = null;
   cart = [];
-  cartServerBaseline = [];
 
   renderCart();
   updateMejaHeaderUI();
@@ -1080,10 +2307,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         document.getElementById("loginScreen").classList.add("hidden");
         document.getElementById("app").classList.remove("hidden");
-        document.getElementById("cashierName").textContent = kName;
+        document.getElementById("cashierName").childNodes[0].nodeValue = "KASIR: " + (kName || "") + " ";
 
         await loadBarang();
         await fetchMejaSessions();
+        if (!activeMeja || !mejaSessions[activeMeja]) {
+          await loadCartDraftServer();
+        }
         cekServer();
         updateMejaHeaderUI();
         updateSaveOrderButton();
@@ -1130,6 +2360,57 @@ function formatCurrencyInput(value) {
   const num = parseFormattedCurrency(value);
   if (num === 0) return '';
   return num.toLocaleString('id-ID');
+}
+
+
+// ==================================================
+// CART DRAFT HELPERS (TANPA MEJA)
+// ==================================================
+
+async function syncCartDraftItem(namaBarang, qty) {
+  if (activeMeja && mejaSessions[activeMeja]) return;
+  try {
+    await authenticatedFetch("/api/cart-draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ namaBarang, qty })
+    });
+  } catch (e) {
+    console.error("Gagal sync cart draft item:", e);
+  }
+}
+
+async function clearCartDraftServer() {
+  if (activeMeja && mejaSessions[activeMeja]) return;
+  try {
+    await authenticatedFetch("/api/cart-draft", {
+      method: "DELETE"
+    });
+  } catch (e) {
+    console.error("Gagal clear cart draft:", e);
+  }
+}
+
+async function loadCartDraftServer() {
+  if (activeMeja && mejaSessions[activeMeja]) return;
+  try {
+    const res = await authenticatedFetch("/api/cart-draft");
+    const data = await res.json();
+    let draftList = [];
+    if (Array.isArray(data)) {
+      draftList = data;
+    } else if (Array.isArray(data?.data)) {
+      draftList = data.data;
+    }
+    cart = draftList.map(item => ({
+      nama: item.nama || item.namaBarang || item.nama_barang,
+      qty: Number(item.qty || 1)
+    }));
+    renderCart();
+    updateSaveOrderButton();
+  } catch (e) {
+    console.error("Gagal load cart draft:", e);
+  }
 }
 
 
@@ -1286,6 +2567,10 @@ async function loginKasir() {
     sessionStorage.setItem("pbms_nama", result.nama);
     sessionStorage.setItem("pbms_shift_id", result.shiftId);
 
+    if (sessionStorage.getItem("pbms_session_id")) {
+      updateWaitingListBadge();
+    }
+
     currentKasir = {
       id: result.kasirId,
       kasirId: result.kasirId,
@@ -1318,12 +2603,15 @@ async function loginKasir() {
       .getElementById(
         "cashierName"
       )
-      .textContent =
-        result.nama;
+      .childNodes[0].nodeValue =
+        "KASIR: " + (result.nama || "") + " ";
 
 
     await loadBarang();
     await fetchMejaSessions();
+    if (!activeMeja || !mejaSessions[activeMeja]) {
+      await loadCartDraftServer();
+    }
 
 
     cekServer();
@@ -1344,6 +2632,60 @@ async function loginKasir() {
 
   }
 
+}
+
+
+// ==================================================
+// STATUS INTERNET
+// ==================================================
+
+let internetStatusTimer = null;
+
+async function cekStatusInternet() {
+  const el = document.getElementById("internetStatus");
+  if (!el) return;
+
+  let online = navigator.onLine;
+
+  if (online) {
+    try {
+      await fetch("https://www.gstatic.com/generate_204", {
+        method: "GET",
+        mode: "no-cors",
+        cache: "no-store"
+      });
+      online = true;
+    } catch {
+      online = false;
+    }
+  }
+
+  const textEl = document.getElementById("internetStatusText");
+  const dotEl = document.getElementById("internetStatusDot");
+  if (textEl) {
+    textEl.textContent = online ? "ONLINE" : "OFFLINE";
+    textEl.style.color = online ? "#16a34a" : "#dc2626";
+  }
+  if (dotEl) {
+    dotEl.style.backgroundColor = online ? "#16a34a" : "#dc2626";
+  }
+  el.style.color = "inherit";
+}
+
+function mulaiCekStatusInternet() {
+  cekStatusInternet();
+  clearInterval(internetStatusTimer);
+  internetStatusTimer = setInterval(cekStatusInternet, 15000);
+}
+
+window.addEventListener("online", cekStatusInternet);
+window.addEventListener("offline", cekStatusInternet);
+
+// Jalankan setelah halaman siap.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", mulaiCekStatusInternet);
+} else {
+  mulaiCekStatusInternet();
 }
 
 
@@ -1371,8 +2713,7 @@ async function cekServer() {
       )
       .textContent =
         result.success
-          ? "● ONLINE"
-          : "● OFFLINE";
+          ? "" : "";
 
   } catch {
 
@@ -1381,7 +2722,7 @@ async function cekServer() {
         "serverStatus"
       )
       .textContent =
-        "● OFFLINE";
+        "";
 
   }
 
@@ -1420,30 +2761,28 @@ async function loadBarang() {
     result.data;
 
 
+  const syncInfoTextEl = document.getElementById("syncInfoText");
+
   if (
     result.updatedAt
   ) {
 
-    document
-      .getElementById(
-        "syncInfo"
-      )
-      .textContent =
+    if (syncInfoTextEl) {
+      syncInfoTextEl.textContent =
         "Produk sync: " +
         new Date(
           result.updatedAt
         ).toLocaleString(
           "id-ID"
         );
+    }
 
   } else {
 
-    document
-      .getElementById(
-        "syncInfo"
-      )
-      .textContent =
+    if (syncInfoTextEl) {
+      syncInfoTextEl.textContent =
         "Database produk lokal kosong";
+    }
 
   }
 
@@ -1471,14 +2810,20 @@ async function syncProduk() {
       "syncProdukBtn"
     );
 
+  const syncOverlay =
+    document.getElementById(
+      "syncLoadingOverlay"
+    );
 
-  button.disabled =
-    true;
+  if (button) {
+    button.disabled = true;
+    button.textContent = "SYNC...";
+  }
 
-
-  button.textContent =
-    "SYNC...";
-
+  if (syncOverlay) {
+    syncOverlay.classList.add("show");
+    syncOverlay.setAttribute("aria-hidden", "false");
+  }
 
   try {
 
@@ -1486,31 +2831,22 @@ async function syncProduk() {
       await authenticatedFetch(
         "/api/sync-produk",
         {
-          method:
-            "POST"
+          method: "POST"
         }
       );
-
 
     const result =
       await response.json();
 
-
-    if (
-      !result.success
-    ) {
-
+    if (!result.success) {
       throw new Error(
         result.error ||
         result.message ||
         "Sync produk gagal"
       );
-
     }
 
-
     await loadBarang();
-
 
     alert(
       "SYNC PRODUK BERHASIL\n\n" +
@@ -1527,11 +2863,15 @@ async function syncProduk() {
 
   } finally {
 
-    button.disabled =
-      false;
+    if (syncOverlay) {
+      syncOverlay.classList.remove("show");
+      syncOverlay.setAttribute("aria-hidden", "true");
+    }
 
-    button.textContent =
-      "SYNC PRODUK";
+    if (button) {
+      button.disabled = false;
+      button.textContent = "SYNC PRODUK";
+    }
 
   }
 
@@ -1566,6 +2906,25 @@ function getKategori() {
 }
 
 
+function getCategoryIcon(nama) {
+  const nameUpper = String(nama || "").trim().toUpperCase();
+  if (nameUpper === "SEMUA") {
+    return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>`;
+  } else if (nameUpper === "ROKOK") {
+    return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="12" x2="22" y2="12"></line><line x1="18" y1="8" x2="18" y2="16"></line><rect x="2" y="8" width="16" height="8" rx="1"></rect><line x1="6" y1="8" x2="6" y2="16"></line></svg>`;
+  } else if (nameUpper === "KASIR") {
+    return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>`;
+  } else if (nameUpper === "DAPUR") {
+    return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z"></path><path d="M5 10h14v7a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-7z"></path><line x1="9" y1="14" x2="15" y2="14"></line></svg>`;
+  } else if (nameUpper === "BAR") {
+    return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 22h8"></path><path d="M12 15v7"></path><path d="M6 3h12l-1 8a5 5 0 0 1-5 4 5 5 0 0 1-5-4L6 3z"></path></svg>`;
+  } else if (nameUpper === "MEJA") {
+    return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle></svg>`;
+  }
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>`;
+}
+
+
 function tampilkanKategori() {
 
   const bar =
@@ -1591,10 +2950,8 @@ function tampilkanKategori() {
             }"
             onclick='pilihKategori(${JSON.stringify(nama)})'
           >
-
-            ${escapeHtml(
-              nama
-            )}
+            ${getCategoryIcon(nama)}
+            <span>${escapeHtml(nama)}</span>
 
           </button>
 
@@ -1769,8 +3126,55 @@ async function fetchMejaSessions() {
         mejaSessions[m.nomorMeja] = m;
       });
     }
+
+    const dataMejaList = [];
+    for (let i = 1; i <= 10; i++) {
+      const rawSession = mejaSessions[i];
+      const session = window.MejaTimer ? window.MejaTimer.normalisasiSesiMeja(rawSession) : rawSession;
+      
+      let statusMeja = "TERSEDIA";
+      if (!session || session.status !== "AKTIF") {
+        statusMeja = "TERSEDIA";
+      } else {
+        const jenisSesiStr = String(session.jenisSesi || session.jenis_sesi || "").toUpperCase();
+        if (jenisSesiStr === "LOSS") {
+          statusMeja = "AKTIF";
+        } else {
+          const waktuSelesai = session.waktuSelesai;
+          if (!waktuSelesai) {
+            statusMeja = "AKTIF";
+          } else {
+            const end = window.MejaTimer ? window.MejaTimer.parseDate(waktuSelesai) : new Date(waktuSelesai);
+            const now = new Date();
+            if (!end || isNaN(end.getTime())) {
+              statusMeja = "AKTIF";
+            } else {
+              const totalMs = end.getTime() - now.getTime();
+              if (totalMs <= 0) {
+                statusMeja = "HABIS";
+              } else if (totalMs <= 30 * 60 * 1000) {
+                statusMeja = "HAMPIR_HABIS";
+              } else {
+                statusMeja = "AKTIF";
+              }
+            }
+          }
+        }
+      }
+      dataMejaList.push({
+        nomorMeja: i,
+        status: statusMeja,
+        session: session && session.status === "AKTIF" ? session : null
+      });
+    }
+
+    if (typeof window.updateStatusMejaKaryawan === "function") {
+      window.updateStatusMejaKaryawan(dataMejaList);
+    }
+
     // Update tampilan popup meja setelah data sesi diperbarui
     renderPopupMeja();
+    updateMejaHeaderUI();
   } catch (error) {
     console.error("Gagal mengambil sesi meja:", error);
   }
@@ -1781,11 +3185,26 @@ async function fetchDetailSesi(sessionId, loadCart = false) {
     const res = await authenticatedFetch(`/api/meja/sesi/${sessionId}`);
     const data = await res.json();
     if (data.success) {
-      // Simpan items ke variabel terpisah dulu agar aman
-      const itemsBaru = (data.items || []).map(item => ({
-        nama: item.nama,
-        qty: item.qty
-      }));
+      // Pulihkan identitas member dari sesi database agar harga member tidak hilang
+      // ketika cart di-refresh, qty dikurangi, atau qty ditambah kembali.
+      if (activeMeja && data.session?.memberId && data.session?.kategoriMember) {
+        memberByMeja.set(String(activeMeja), {
+          idMember: data.session.memberId,
+          kategori: data.session.kategoriMember
+        });
+      }
+
+      // Ambil hargaJual/subtotal dari server secara tepat
+      const itemsBaru = (data.items || []).map(item => {
+        const hJual = item.hargaJual !== undefined ? item.hargaJual : (item.harga !== undefined ? item.harga : 0);
+        return {
+          nama: item.nama,
+          qty: item.qty,
+          hargaJual: hJual,
+          harga: hJual,
+          subtotal: item.subtotal !== undefined ? item.subtotal : (hJual * item.qty)
+        };
+      });
       
       // Ambil data sesi terbaru dari /api/meja/sesi untuk memperbarui mejaSessions
       const resSesi = await authenticatedFetch("/api/meja/sesi");
@@ -1796,27 +3215,34 @@ async function fetchDetailSesi(sessionId, loadCart = false) {
         });
       }
 
-      // Hanya muat cart dari server ketika explicitly diminta (misal: saat pertama kali memilih/membuka meja atau sinkronisasi qty server)
-      // Refresh status/timer rutin tidak boleh menimpa cart draft lokal yang sedang diedit.
+      // Hanya muat cart dari server ketika explicitly diminta
       if (loadCart) {
+        if (activeMeja && mejaSessions[activeMeja]) {
+          const jenisSesiStr = String(mejaSessions[activeMeja].jenisSesi || mejaSessions[activeMeja].jenis_sesi || "").toUpperCase();
+          if (jenisSesiStr !== "LOSS") {
+            const durasiMeja = Number(mejaSessions[activeMeja].durasiJam || 0);
+            const itemMeja = itemsBaru.find(
+              x => String(x.nama || '').trim().toLowerCase() === 'meja billiard'
+            );
+            if (itemMeja && durasiMeja > 0) {
+              itemMeja.qty = durasiMeja;
+              const hargaPerJam = Number(
+                itemMeja.hargaJual !== undefined
+                  ? itemMeja.hargaJual
+                  : (itemMeja.harga !== undefined ? itemMeja.harga : 0)
+              );
+              if (hargaPerJam > 0) {
+                itemMeja.subtotal = hargaPerJam * durasiMeja;
+              }
+            }
+          }
+        }
+
         cart = itemsBaru;
-        cartServerBaseline = JSON.parse(JSON.stringify(itemsBaru));
-        console.log("DEBUG CART BASELINE", {
-          sessionId,
-          serverCart: cartServerBaseline
-        });
       }
 
       if (activeMeja && mejaSessions[activeMeja]) {
-        mejaSessions[activeMeja].cart = loadCart ? cart : (mejaSessions[activeMeja].cart || []);
-        const session = mejaSessions[activeMeja];
-        console.log("DEBUG TIMER MEJA", {
-          nomorMeja: session.nomorMeja,
-          sessionId: session.sessionId,
-          durasiJam: session.durasiJam,
-          waktuMulai: session.waktuMulai,
-          waktuSelesai: session.waktuSelesai
-        });
+        mejaSessions[activeMeja].cart = cart;
       }
 
       renderPopupMeja();
@@ -1824,22 +3250,42 @@ async function fetchDetailSesi(sessionId, loadCart = false) {
         renderCart();
       }
       updateSaveOrderButton();
-      return itemsBaru;
+      updateMejaHeaderUI();
     } else {
       throw new Error(data.message || "Gagal mengambil detail sesi");
     }
   } catch (error) {
     console.error("Error fetchDetailSesi:", error);
     alert("Gagal memuat detail pesanan meja: " + error.message);
-    return [];
   }
 }
 
-function bukaPopupPilihMeja() {
-  fetchMejaSessions().then(() => {
+async function bukaPopupPilihMeja() {
+  try {
+    const tasks = [fetchMejaSessions()];
+
+    // Pastikan data booking terbaru tersedia sebelum kartu meja dirender.
+    if (typeof getWaitingList === "function") {
+      tasks.push(
+        getWaitingList()
+          .then(latestWaitingList => {
+            if (typeof waitingListData !== "undefined" && Array.isArray(latestWaitingList)) {
+              waitingListData = latestWaitingList;
+            }
+          })
+          .catch(error => {
+            console.warn("Gagal refresh waiting list saat membuka popup meja:", error);
+          })
+      );
+    }
+
+    await Promise.all(tasks);
     renderPopupMeja();
     document.getElementById("pilihMejaPopup").classList.add("show");
-  });
+  } catch (error) {
+    console.error("Gagal membuka popup pilih meja:", error);
+    alert("Gagal memuat data meja. Silakan coba lagi.");
+  }
 }
 
 function tutupPopupPilihMeja() {
@@ -1852,17 +3298,22 @@ function tutupPopupPilihMejaLuar(event) {
   }
 }
 
+function mesaNoSafe(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : -1;
+}
+
 function renderPopupMeja() {
   const grid = document.getElementById("popupTableGrid");
   if (!grid) return;
 
   // Bersihkan timer lama pada elemen grid meja sebelum render ulang
   for (const key in mejaTimersCleanup) {
-    if (typeof mejaTimersCleanup[key] === 'function') {
+    if (key !== 'cart_loss' && typeof mejaTimersCleanup[key] === 'function') {
       mejaTimersCleanup[key]();
+      delete mejaTimersCleanup[key];
     }
   }
-  mejaTimersCleanup = {};
 
   let html = "";
   for (let i = 1; i <= 10; i++) {
@@ -1881,34 +3332,169 @@ function renderPopupMeja() {
       cardClass += " active-selected";
     }
 
+    // CHECK BADGES (KARYAWAN & BOOKING)
+    const jenisSesiStr = String(session?.jenisSesi || session?.jenis_sesi || "").toUpperCase();
+    const isKaryawan = jenisSesiStr === "KARYAWAN";
+    const isLoss = jenisSesiStr === "LOSS";
+
+    const currentWaitingList = (typeof waitingListData !== "undefined" && Array.isArray(waitingListData))
+      ? waitingListData
+      : (typeof window !== "undefined" && Array.isArray(window.waitingListData) ? window.waitingListData : []);
+
+    const isBooking = Boolean(
+      session?.isBooking ||
+      session?.hasBooking ||
+      session?.booking ||
+      jenisSesiStr === "BOOKING" ||
+      currentWaitingList.some(w => {
+        const mejaNo = Number(w?.nomorMeja || w?.nomor_meja);
+        const status = String(w?.status || "").toUpperCase();
+        return mejaNo === i && ["WAITING", "CONFIRMED", "BOOKING"].includes(status);
+      })
+    );
+
+    // 1. TOP BADGES (MEMBER / KARYAWAN / BOOKING CUSTOMER)
+    const bookingForTable = currentWaitingList.find(w => {
+      const mejaNo = Number(w?.nomorMeja || w?.nomor_meja);
+      const status = String(w?.status || "").toUpperCase();
+      return mesaNoSafe(mejaNo) === mesaNoSafe(i) && ["WAITING", "CONFIRMED", "BOOKING"].includes(status);
+    });
+
+    let topBadgesHtml = "";
+    let bookingTimeHtml = "";
+
+    if (isKaryawan) {
+      topBadgesHtml += `<span class="ribbon-karyawan">KARYAWAN</span>`;
+    }
+
+    // BOOKING HANYA DARI WAITING LIST.
+    // Tampilkan nama sebagai "BOOKING Nama" dan jam booking.
+    if (bookingForTable && bookingForTable.namaCustomer) {
+      const namaBooking = escapeHtml(String(bookingForTable.namaCustomer).trim());
+      const jamBooking = escapeHtml(String(bookingForTable.jamBooking || bookingForTable.jam_booking || "").trim());
+
+      topBadgesHtml += `<span class="badge-member" title="Booking ${namaBooking}">BOOKING ${namaBooking}</span>`;
+
+      if (jamBooking) {
+        bookingTimeHtml = `<div style="font-size: 0.7rem; font-weight: 800; color: #d97706; line-height: 1.1; margin-top: 1px;">${jamBooking}</div>`;
+      }
+    } else if (session && session.status === "AKTIF" && session.namaPemesan) {
+      topBadgesHtml += `<span class="badge-member" title="${escapeHtml(session.namaPemesan)}">${escapeHtml(session.namaPemesan)}</span>`;
+    }
+
+    const topContainerHtml = `<div class="meja-top-badge-container"${!topBadgesHtml ? ' style="visibility: hidden;"' : ''}>${topBadgesHtml || '<span class="badge-member">-</span>'}${bookingTimeHtml}</div>`;
+
+    // 2. MEJA XX
+    const mejaNumHtml = `<div class="popup-table-num">MEJA ${i < 10 ? '0' + i : i}</div>`;
+
+    // 3. STATUS AKTIF / KOSONG
+    const statusHtml = `<div class="popup-table-status">${statusText}</div>`;
+
+    // 4. BADGE BOOKING
+    // Jika booking berasal dari Waiting List dan sudah ditampilkan di bagian atas,
+    // jangan tampilkan badge BOOKING kedua di bawah MEJA.
+    const bookingBadgeHtml = `<div class="meja-booking-container"${(!isBooking || bookingForTable) ? ' style="visibility: hidden;"' : ''}><span class="ribbon-booking">BOOKING</span></div>`;
+
+    // 5 & 6. TIMER & TOMBOL STOP LOSS / PINDAH MEJA
+    let timerHtml = "";
+    if (session && session.status === "AKTIF") {
+      if (isLoss) {
+        timerHtml = `
+          <div class="meja-timer-box">
+            <div class="meja-timer-label" style="color: #059669; font-weight: 800;">WAKTU LOSS</div>
+            <div id="timer-meja-${i}" class="meja-timer-val" style="color: #059669 !important;">00:00:00</div>
+            <div style="display: flex; gap: 4px; margin-top: 4px;">
+              <button 
+                onclick="event.stopPropagation(); bukaModalPindahMeja(${i})"
+                style="padding: 3px 6px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-size: 0.65rem; font-weight: 800; cursor: pointer;"
+              >
+                PINDAH
+              </button>
+              <button 
+                class="btn-stop-loss" 
+                onclick="event.stopPropagation(); stopWaktuLoss('${session.sessionId}', this)"
+                style="padding: 3px 6px; background: #dc2626; color: #ffffff; border: none; border-radius: 6px; font-size: 0.65rem; font-weight: 800; cursor: pointer;"
+              >
+                STOP
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        timerHtml = `
+          <div class="meja-timer-box">
+            <div class="meja-timer-label">SISA WAKTU</div>
+            <div id="timer-meja-${i}" class="meja-timer-val">00:00:00</div>
+            <div style="display: flex; gap: 4px; justify-content: center; align-items: center; margin-top: 2px;">
+              <span class="meja-timer-sub" style="margin-top:0;">Selesai: ${session.waktuSelesai ? window.MejaTimer.formatJam(session.waktuSelesai) : '-'}</span>
+              <button 
+                onclick="event.stopPropagation(); bukaModalPindahMeja(${i})"
+                style="padding: 2px 6px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-size: 0.65rem; font-weight: 800; cursor: pointer; flex-shrink: 0;"
+              >
+                PINDAH
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    } else {
+      timerHtml = `
+        <div class="meja-timer-box" style="visibility: hidden;">
+          <div class="meja-timer-label">SISA WAKTU</div>
+          <div class="meja-timer-val">--:--:--</div>
+          <div class="meja-timer-sub">Selesai: -</div>
+        </div>
+      `;
+    }
+
+    // Menggunakan DIV dengan role="button" untuk kontainer utama meja agar struktur HTML valid tanpa nested button
     html += `
-      <button class="${cardClass}" onclick="klikMejaPopup(${i})">
-        <span class="popup-table-num">MEJA ${i < 10 ? '0' + i : i}</span>
-        <span class="popup-table-status">${statusText}</span>
-        ${session && session.status === "AKTIF" ? `<span class="popup-table-name">${escapeHtml(session.namaPemesan || '-')}</span>` : ''}
-        ${session && session.status === "AKTIF" ? `
-          <div style="font-size: 0.55rem; color: #4b5563; margin-top: 2px; font-weight: bold;">SISA WAKTU</div>
-          <div id="timer-meja-${i}" style="font-size: 0.6rem; font-weight: bold; color: #1d4ed8; margin-top: 1px;">00:00:00</div>
-          <div style="font-size: 0.55rem; color: #6b7280; margin-top: 1px;">Selesai: ${session.waktuSelesai ? window.MejaTimer.formatJam(session.waktuSelesai) : '-'}</div>
-        ` : ''}
-      </button>
+      <div class="${cardClass}" onclick="klikMejaPopup(${i})" role="button" tabindex="0">
+        ${topContainerHtml}
+        ${mejaNumHtml}
+        ${statusHtml}
+        ${bookingBadgeHtml}
+        ${timerHtml}
+      </div>
     `;
   }
   grid.innerHTML = html;
 
-  // Inisialisasi countdown timer untuk setiap meja yang aktif
+  if (window.MejaBubble) {
+    window.MejaBubble.update(mejaSessions);
+  }
+
+  // Inisialisasi timer (Count-Up LOSS / Countdown DURASI) untuk setiap meja aktif
   for (let i = 1; i <= 10; i++) {
     const rawSession = mejaSessions[i];
     const session = window.MejaTimer ? window.MejaTimer.normalisasiSesiMeja(rawSession) : rawSession;
     if (session && session.status === "AKTIF") {
       const timerEl = document.getElementById(`timer-meja-${i}`);
       if (timerEl && window.MejaTimer) {
-        if (session.durasiJam === null || session.durasiJam === 0 || !session.waktuSelesai) {
-          timerEl.textContent = "TIMER BELUM TERSEDIA";
+        const jenisSesiStr = String(session.jenisSesi || session.jenis_sesi || "").toUpperCase();
+        if (jenisSesiStr === "LOSS") {
+          if (session.waktuMulai) {
+            const stopFn = window.MejaTimer.mulaiCountUpLoss(timerEl, session.waktuMulai);
+            if (typeof stopFn === 'function') {
+              mejaTimersCleanup[i] = stopFn;
+            }
+          } else {
+            timerEl.textContent = "00:00:00";
+          }
         } else {
-          const stopFn = window.MejaTimer.mulaiCountdownMeja(timerEl, session.waktuSelesai);
-          if (typeof stopFn === 'function') {
-            mejaTimersCleanup[i] = stopFn;
+          if (session.durasiJam === null || session.durasiJam === 0 || !session.waktuSelesai) {
+            timerEl.textContent = "TIMER BELUM TERSEDIA";
+          } else {
+            const stopFn = window.MejaTimer.mulaiCountdownMeja(
+              timerEl,
+              session.waktuSelesai,
+              {
+                jenisSesi: session.jenisSesi || session.jenis_sesi || "BIASA"
+              }
+            );
+            if (typeof stopFn === 'function') {
+              mejaTimersCleanup[i] = stopFn;
+            }
           }
         }
       }
@@ -1916,67 +3502,448 @@ function renderPopupMeja() {
   }
 }
 
-async function klikMejaPopup(nomor) {
-  tutupPopupPilihMeja();
-  const session = mejaSessions[nomor];
+// FUNGSI UNTUK MENGHENTIKAN SESI WAKTU LOSS
+async function stopWaktuLoss(sessionId, btnElement) {
+  if (!sessionId) {
+    alert("Session ID tidak valid.");
+    return;
+  }
+
+  if (isProcessingStopLoss) return;
+
+  // Proteksi Double Click
+  if (btnElement) {
+    if (btnElement.disabled) return;
+    btnElement.disabled = true;
+    btnElement.dataset.originalText = btnElement.textContent || "STOP WAKTU";
+    btnElement.textContent = "MEMPROSES...";
+  }
+
+  // Cari objek sesi dan tentukan nomor meja
+  let targetNomorMeja = null;
+  let session = null;
+  for (const key in mejaSessions) {
+    if (mejaSessions[key] && mejaSessions[key].sessionId === sessionId) {
+      session = mejaSessions[key];
+      targetNomorMeja = Number(key);
+      break;
+    }
+  }
 
   if (!session || session.status !== "AKTIF") {
-    // Meja kosong -> Integrasi MejaModal modular
-    if (!window.MejaModal || typeof window.MejaModal.buka !== "function") {
-      alert("Modul meja-modal.js belum termuat.");
-      return;
+    alert("Sesi meja tidak dalam status AKTIF.");
+    if (btnElement) {
+      btnElement.disabled = false;
+      btnElement.textContent = btnElement.dataset.originalText || "STOP WAKTU";
     }
-    // Reset draft di MejaProdukModal untuk meja baru
-    if (window.MejaProdukModal && typeof window.MejaProdukModal.mulaiMejaBaru === "function") {
-      window.MejaProdukModal.mulaiMejaBaru();
-    }
-    window.MejaModal.buka(nomor);
-  } else {
-    const cartBefore = JSON.parse(JSON.stringify(cart));
-    const sessionId = session.sessionId;
+    return;
+  }
 
-    // Meja sudah aktif -> gunakan sessionId dari server dan muat cart dari server
+  const jenisSesiStr = String(session.jenisSesi || session.jenis_sesi || "").toUpperCase();
+  if (jenisSesiStr !== "LOSS") {
+    alert("Sesi ini bukan sesi WAKTU LOSS.");
+    if (btnElement) {
+      btnElement.disabled = false;
+      btnElement.textContent = btnElement.dataset.originalText || "STOP WAKTU";
+    }
+    return;
+  }
+
+  // AKTIFKAN LOADING LOCK STATE SEBELUM PROSES DIMALAI
+  isProcessingStopLoss = true;
+
+  // PASTIKAN activeMeja DAN nomorMeja TERSINKRONISASI SEBELUM REFRESH DATA
+  if (targetNomorMeja) {
+    activeMeja = targetNomorMeja;
+    nomorMeja = targetNomorMeja;
+    // Simpan sessionId karena setelah STOP LOSS, GET /api/meja/sesi
+    // hanya mengembalikan sesi yang masih AKTIF.
+    stoppedSessionIdsByMeja[targetNomorMeja] = sessionId;
+    pendingPaymentTableNo = targetNomorMeja;
+    updateMejaHeaderUI();
+  }
+
+  try {
+    // Pengiriman payload HANYA sessionId ke server
+    const response = await authenticatedFetch("/api/meja/loss/stop", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        sessionId: sessionId,
+        deviceId: getOrCreateDeviceId()
+      })
+    });
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.message || "Gagal menghentikan WAKTU LOSS.");
+    }
+
+    // Refresh sesi meja & detail cart dari server
+    await fetchMejaSessions();
+    await fetchDetailSesi(sessionId, true);
+
+    // Setelah STOP berhasil, tutup popup supaya cart pembayaran langsung terlihat.
+    tutupPopupPilihMeja();
+
+    alert("Waktu Loss berhasil dihentikan. Biaya telah dihitung oleh server.");
+
+  } catch (error) {
+    console.error("Gagal stop waktu loss:", error);
+    alert("Gagal menghentikan waktu loss: " + error.message);
+  } finally {
+    isProcessingStopLoss = false;
+    if (btnElement) {
+      btnElement.disabled = false;
+      btnElement.textContent = btnElement.dataset.originalText || "STOP WAKTU";
+    }
+    renderCart();
+  }
+}
+
+window.stopWaktuLoss = stopWaktuLoss;
+
+// ==================================================
+// LOGIKA FITUR PINDAH MEJA
+// ==================================================
+
+async function bukaModalPindahMeja(nomorAsal) {
+  const nomor = Number(nomorAsal);
+  if (!nomor || nomor < 1 || nomor > 10) {
+    alert("Nomor meja asal tidak valid.");
+    return;
+  }
+
+  const session = mejaSessions[nomor];
+  if (!session || session.status !== "AKTIF") {
+    alert("Meja " + (nomor < 10 ? "0" + nomor : nomor) + " tidak dalam status AKTIF.");
+    return;
+  }
+
+  targetPindahSessionId = session.sessionId;
+  targetPindahMejaAsal = nomor;
+
+  // Set teks meja asal & customer
+  document.getElementById("pindahMejaAsalText").textContent = "MEJA " + (nomor < 10 ? "0" + nomor : nomor);
+  document.getElementById("pindahNamaCustomerText").textContent = session.namaPemesan || "-";
+
+  // Hitung Sisa Waktu / Status
+  const timerEl = document.getElementById(`timer-meja-${nomor}`);
+  let sisaText = "--:--:--";
+  if (timerEl) {
+    sisaText = timerEl.textContent || "--:--:--";
+  } else {
+    const jenisSesiStr = String(session.jenisSesi || session.jenis_sesi || "").toUpperCase();
+    if (jenisSesiStr === "LOSS") {
+      sisaText = "WAKTU LOSS";
+    } else if (session.waktuSelesai) {
+      sisaText = window.MejaTimer ? window.MejaTimer.formatJam(session.waktuSelesai) : session.waktuSelesai;
+    }
+  }
+  document.getElementById("pindahSisaWaktuText").textContent = sisaText;
+
+  // Ambil data booking dari waiting list
+  const currentWaitingList = (typeof waitingListData !== "undefined" && Array.isArray(waitingListData))
+    ? waitingListData
+    : (typeof window !== "undefined" && Array.isArray(window.waitingListData) ? window.waitingListData : []);
+
+  // Filter meja yang benar-benar KOSONG
+  // Meja aktif, meja karyawan, atau meja booking TIDAK BISA dipilih sebagai tujuan.
+  const selectEl = document.getElementById("pindahMejaTujuanSelect");
+  selectEl.innerHTML = `<option value="">-- Pilih Meja Tujuan --</option>`;
+
+  let countKosong = 0;
+  for (let i = 1; i <= 10; i++) {
+    if (i === nomor) continue; // Skip meja asal
+
+    const sess = mejaSessions[i];
+    const isAktif = sess && sess.status === "AKTIF";
+    
+    // Check booking status
+    const isBooking = currentWaitingList.some(w => {
+      const mejaNo = Number(w?.nomorMeja || w?.nomor_meja);
+      const status = String(w?.status || "").toUpperCase();
+      return mejaNo === i && ["WAITING", "CONFIRMED", "BOOKING"].includes(status);
+    });
+
+    if (!isAktif && !isBooking) {
+      countKosong++;
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = `MEJA ${i < 10 ? '0' + i : i} (KOSONG)`;
+      selectEl.appendChild(option);
+    }
+  }
+
+  if (countKosong === 0) {
+    alert("Tidak ada meja lain yang kosong saat ini.");
+    return;
+  }
+
+  document.getElementById("pindahMejaModal").classList.add("show");
+}
+
+function tutupModalPindahMeja() {
+  const modal = document.getElementById("pindahMejaModal");
+  if (modal) modal.classList.remove("show");
+  targetPindahSessionId = null;
+  targetPindahMejaAsal = null;
+  const btn = document.getElementById("konfirmasiPindahMejaBtn");
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "KONFIRMASI PINDAH";
+  }
+}
+
+function tutupModalPindahMejaLuar(event) {
+  if (event.target.id === "pindahMejaModal") {
+    tutupModalPindahMeja();
+  }
+}
+
+async function eksekusiPindahMeja() {
+  const selectEl = document.getElementById("pindahMejaTujuanSelect");
+  const nomorTujuan = selectEl ? Number(selectEl.value) : 0;
+
+  if (!targetPindahSessionId || !targetPindahMejaAsal) {
+    alert("Data meja asal tidak valid.");
+    return;
+  }
+
+  if (!nomorTujuan || nomorTujuan < 1 || nomorTujuan > 10) {
+    alert("Silakan pilih meja tujuan yang kosong.");
+    return;
+  }
+
+  if (nomorTujuan === targetPindahMejaAsal) {
+    alert("Meja tujuan tidak boleh sama dengan meja asal.");
+    return;
+  }
+
+  // Simpan nilai asal dan sessionId ke variabel lokal SEBELUM memanggil tutupModalPindahMeja()
+  const sessionIdPindah = targetPindahSessionId;
+  const mejaAsalPindah = targetPindahMejaAsal;
+
+  const textAsal = mejaAsalPindah < 10 ? "0" + mejaAsalPindah : mejaAsalPindah;
+  const textTujuan = nomorTujuan < 10 ? "0" + nomorTujuan : nomorTujuan;
+
+  const konfirmasi = confirm(`Pindahkan dari Meja ${textAsal} ke Meja ${textTujuan}?`);
+  if (!konfirmasi) return;
+
+  const btn = document.getElementById("konfirmasiPindahMejaBtn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "MEMPROSES...";
+  }
+
+  try {
+    const response = await authenticatedFetch("/api/meja/pindah", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        sessionId: sessionIdPindah,
+        nomorMejaAsal: mejaAsalPindah,
+        nomorMejaTujuan: nomorTujuan
+      })
+    });
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.message || "Gagal memindahkan meja.");
+    }
+
+    tutupModalPindahMeja();
+
+    // Transfer member mapping jika ada
+    if (memberByMeja.has(String(mejaAsalPindah))) {
+      const m = memberByMeja.get(String(mejaAsalPindah));
+      memberByMeja.set(String(nomorTujuan), m);
+      memberByMeja.delete(String(mejaAsalPindah));
+    }
+
+    // Refresh data sesi meja
+    await fetchMejaSessions();
+
+    // Pindah UI activeMeja dan nomorMeja ke meja tujuan
+    activeMeja = nomorTujuan;
+    nomorMeja = nomorTujuan;
+
+    // Load detail sesi meja baru (menjaga cart & items utuh)
+    await fetchDetailSesi(result.sessionId, true);
+
+    updateMejaHeaderUI();
+    renderCart();
+    updateSaveOrderButton();
+
+    alert(`Berhasil memindahkan sesi ke Meja ${textTujuan}.`);
+
+  } catch (error) {
+    console.error("Error eksekusiPindahMeja:", error);
+    alert("Gagal memindahkan meja: " + error.message);
+    fetchMejaSessions().catch(() => {});
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "KONFIRMASI PINDAH";
+    }
+  }
+}
+
+async function klikMejaPopup(nomor) {
+  // Jangan izinkan cart pembayaran LOSS yang sudah di-stop ditimpa
+  // oleh pemilihan meja lain sampai transaksi tersebut selesai.
+  if (
+    pendingPaymentTableNo !== null &&
+    Number(nomor) !== Number(pendingPaymentTableNo)
+  ) {
+    alert(
+      `Meja ${pendingPaymentTableNo < 10 ? "0" + pendingPaymentTableNo : pendingPaymentTableNo} sudah STOP WAKTU dan menunggu pembayaran. Selesaikan pembayaran terlebih dahulu.`
+    );
+    return;
+  }
+
+  tutupPopupPilihMeja();
+
+  if (typeof getWaitingList === "function") {
+    try {
+      const latestWaitingList = await getWaitingList();
+      if (typeof waitingListData !== "undefined" && Array.isArray(latestWaitingList)) {
+        waitingListData = latestWaitingList;
+        if (typeof window !== "undefined") {
+          window.waitingListData = latestWaitingList;
+        }
+      }
+    } catch (error) {
+      console.warn("Gagal refresh waiting list saat klik meja:", error);
+    }
+  }
+
+  // ==================================================
+  // PRIORITAS 1: SESI AKTIF
+  // ==================================================
+  const session = mejaSessions[nomor];
+
+  if (session && session.status === "AKTIF") {
     activeMeja = nomor;
     nomorMeja = nomor;
     updateMejaHeaderUI();
     updateSaveOrderButton();
-    const serverItems = await fetchDetailSesi(sessionId, true);
-    const cartAfter = JSON.parse(JSON.stringify(cart));
+    await fetchDetailSesi(session.sessionId, true);
+    return;
+  }
 
-    console.log("DEBUG PILIH MEJA", {
-      nomor,
-      sessionId,
-      cartBefore,
-      serverItems,
-      cartAfter,
-      baseline: cartServerBaseline
-    });
+  // ==================================================
+  // PRIORITAS 2: BOOKING (WAITING LIST)
+  // ==================================================
+  const currentWaitingList = (typeof waitingListData !== "undefined" && Array.isArray(waitingListData))
+    ? waitingListData
+    : (typeof window !== "undefined" && Array.isArray(window.waitingListData) ? window.waitingListData : []);
+
+  const foundBooking = currentWaitingList.find(w => {
+    const mejaNo = Number(w?.nomorMeja || w?.nomor_meja);
+    const status = String(w?.status || "").toUpperCase();
+    return mesaNoSafe(mejaNo) === mesaNoSafe(nomor) && ["WAITING", "CONFIRMED", "BOOKING"].includes(status);
+  });
+
+  if (foundBooking && typeof mejaSiap === "function") {
+    mejaSiap(foundBooking.id);
+    return;
+  }
+
+  // ==================================================
+  // PRIORITAS 3: MEJA BIASA
+  // ==================================================
+  if (!window.MejaModal || typeof window.MejaModal.buka !== "function") {
+    alert("Modul meja-modal.js belum termuat.");
+    return;
+  }
+
+  if (window.MejaProdukModal && typeof window.MejaProdukModal.mulaiMejaBaru === "function") {
+    window.MejaProdukModal.mulaiMejaBaru();
+  }
+
+  window.MejaModal.buka(nomor);
+}
+
+// BRIDGE FUNCTION UNTUK MEJA-MODAL.JS & FITUR WAKTU LOSS
+let modeSesiDraft = "DURASI";
+
+function setModeSesiBukaMeja(mode) {
+  modeSesiDraft = (mode === "LOSS" || mode === "WAKTU LOSS") ? "LOSS" : "DURASI";
+  const hiddenInput = document.getElementById("inputJenisSesi");
+  if (hiddenInput) hiddenInput.value = modeSesiDraft;
+
+  const cardDurasi = document.getElementById("modeDurasiCard");
+  const cardLoss = document.getElementById("modeLossCard");
+  const containerDurasi = document.getElementById("containerDurasiMain");
+  const infoLossBox = document.getElementById("infoWaktuLossBox");
+
+  if (modeSesiDraft === "LOSS") {
+    if (cardLoss) {
+      cardLoss.style.borderColor = "#059669";
+      cardLoss.style.background = "#ecfdf5";
+      const divs = cardLoss.querySelectorAll('div');
+      if (divs.length > 0) divs[0].style.color = "#065f46";
+    }
+    if (cardDurasi) {
+      cardDurasi.style.borderColor = "#e5e7eb";
+      cardDurasi.style.background = "#ffffff";
+      const divs = cardDurasi.querySelectorAll('div');
+      if (divs.length > 0) divs[0].style.color = "#374151";
+    }
+    if (containerDurasi) containerDurasi.style.display = "none";
+    if (infoLossBox) infoLossBox.style.display = "block";
+  } else {
+    if (cardDurasi) {
+      cardDurasi.style.borderColor = "#2563eb";
+      cardDurasi.style.background = "#eff6ff";
+      const divs = cardDurasi.querySelectorAll('div');
+      if (divs.length > 0) divs[0].style.color = "#1e40af";
+    }
+    if (cardLoss) {
+      cardLoss.style.borderColor = "#e5e7eb";
+      cardLoss.style.background = "#ffffff";
+      const divs = cardLoss.querySelectorAll('div');
+      if (divs.length > 0) divs[0].style.color = "#374151";
+    }
+    if (containerDurasi) containerDurasi.style.display = "block";
+    if (infoLossBox) infoLossBox.style.display = "none";
   }
 }
 
-// BRIDGE FUNCTION UNTUK MEJA-MODAL.JS
-window.bukaMejaDariModalBaru = async function(nomor, namaPemesan, durasiJam, draft) {
-  console.log("DEBUG BUKA MEJA MODAL BARU", {
-    nomor,
-    namaPemesan,
-    durasiJam,
-    draft
-  });
-
+window.bukaMejaDariModalBaru = async function(nomor, namaPemesan, durasiJam, draft, jenisSesi) {
   targetBukaMejaNomor = nomor;
+  if (pendingMemberForMeja) {
+    memberByMeja.set(String(nomor), pendingMemberForMeja);
+    pendingMemberForMeja = null;
+  }
   const input = document.getElementById("inputNamaPemesan");
   if (input) {
     input.value = namaPemesan;
   }
 
-  console.log("DEBUG MEMANGGIL konfirmasiMulaiSesi");
-  const berhasil = await konfirmasiMulaiSesi(durasiJam, draft);
+  if (jenisSesi === "LOSS" || jenisSesi === "WAKTU LOSS") {
+    setModeSesiBukaMeja("LOSS");
+  } else {
+    setModeSesiBukaMeja("DURASI");
+  }
+
+  const berhasil = await konfirmasiMulaiSesi(durasiJam, draft, jenisSesi);
   return berhasil;
 };
+
+window.handleMulaiMain = window.handleMulaiMain || window.bukaMejaDariModalBaru;
 
 function tutupModalBukaMeja() {
   document.getElementById("bukaMejaModal").classList.remove("show");
   targetBukaMejaNomor = null;
+  setModeSesiBukaMeja("DURASI");
 }
 
 function tutupModalBukaMejaLuar(event) {
@@ -1985,7 +3952,7 @@ function tutupModalBukaMejaLuar(event) {
   }
 }
 
-async function konfirmasiMulaiSesi(durasiJam = 1, draft = []) {
+async function konfirmasiMulaiSesi(durasiJam = 1, draft = [], jenisSesiParam = null) {
   const input = document.getElementById("inputNamaPemesan");
   const namaPemesan = input ? input.value.trim() : "";
 
@@ -1994,25 +3961,51 @@ async function konfirmasiMulaiSesi(durasiJam = 1, draft = []) {
     return false;
   }
 
-  if (!Number.isInteger(durasiJam) || durasiJam < 1) {
-    alert("Durasi meja tidak valid.");
-    return false;
+  let selectedMode = modeSesiDraft;
+  if (jenisSesiParam === "LOSS" || jenisSesiParam === "WAKTU LOSS") {
+    selectedMode = "LOSS";
+  } else if (jenisSesiParam === "DURASI" || jenisSesiParam === "BIASA") {
+    selectedMode = "DURASI";
+  }
+
+  const finalJenisSesi = (selectedMode === "LOSS") ? "LOSS" : "BIASA";
+
+  let finalDurasiJam = Number(durasiJam);
+
+  if (selectedMode === "LOSS") {
+    finalDurasiJam = 0;
+  } else {
+    if (!Number.isInteger(finalDurasiJam) || finalDurasiJam < 1) {
+      alert("Durasi meja tidak valid.");
+      return false;
+    }
   }
 
   if (!targetBukaMejaNomor) {
     return false;
   }
 
+  const selectedMember = memberByMeja.get(String(targetBukaMejaNomor)) || pendingMemberForMeja;
+  const memberId = selectedMember?.idMember || null;
+
+  const requestPayload = {
+    nomorMeja: targetBukaMejaNomor,
+    namaPemesan: namaPemesan,
+    kasir: currentKasir ? currentKasir.nama : "-",
+    durasiJam: finalDurasiJam,
+    jenisSesi: finalJenisSesi,
+    modeSesi: finalJenisSesi
+  };
+
+  if (memberId) {
+    requestPayload.memberId = memberId;
+  }
+
   try {
     const response = await authenticatedFetch("/api/meja/buka", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nomorMeja: targetBukaMejaNomor,
-        namaPemesan: namaPemesan,
-        kasir: currentKasir.nama,
-        durasiJam: durasiJam
-      })
+      body: JSON.stringify(requestPayload)
     });
 
     const result = await response.json();
@@ -2052,7 +4045,9 @@ async function konfirmasiMulaiSesi(durasiJam = 1, draft = []) {
       }
     }
 
-    await fetchMejaSessions();
+    fetchMejaSessions().catch(error => {
+      console.error("Gagal refresh daftar meja setelah buka:", error);
+    });
 
     activeMeja = targetBukaMejaNomor;
     nomorMeja = targetBukaMejaNomor;
@@ -2062,13 +4057,10 @@ async function konfirmasiMulaiSesi(durasiJam = 1, draft = []) {
     updateMejaHeaderUI();
     updateSaveOrderButton();
 
-    if (
-      sessionId
-    ) {
-      await fetchDetailSesi(
-        sessionId,
-        true
-      );
+    if (sessionId) {
+      fetchDetailSesi(sessionId, true).catch(error => {
+        console.error("Gagal refresh detail sesi setelah buka:", error);
+      });
     }
 
     return true;
@@ -2081,22 +4073,8 @@ async function konfirmasiMulaiSesi(durasiJam = 1, draft = []) {
 
 function updateMejaHeaderUI() {
   const btnMejaText = document.getElementById("btnMejaText");
-  const btnPemesanText = document.getElementById("btnPemesanText");
-  const mejaIndicator = document.getElementById("mejaIndicator");
-
-  if (!btnMejaText || !btnPemesanText) return;
-
-  if (activeMeja && mejaSessions[activeMeja] && mejaSessions[activeMeja].status === "AKTIF") {
-    const s = mejaSessions[activeMeja];
-    let numStr = String(s.nomorMeja);
-    if (numStr.length === 1) numStr = "0" + numStr;
-    btnMejaText.textContent = `MEJA ${numStr}`;
-    btnPemesanText.textContent = s.namaPemesan;
-    if (mejaIndicator) mejaIndicator.style.display = "block";
-  } else {
-    btnMejaText.textContent = "PILIH MEJA";
-    btnPemesanText.textContent = "";
-    if (mejaIndicator) mejaIndicator.style.display = "none";
+  if (btnMejaText) {
+    btnMejaText.textContent = "MEJA";
   }
 
   const mejaActiveBadge = document.getElementById("mejaActiveBadge");
@@ -2115,6 +4093,33 @@ function updateMejaHeaderUI() {
   }
 
   updateSaveOrderButton();
+  if (typeof updateWaitingListBadge === "function") {
+    if (sessionStorage.getItem("pbms_session_id")) {
+      updateWaitingListBadge();
+    }
+  }
+}
+
+async function updateWaitingListBadge() {
+  try {
+    if (typeof getWaitingList !== "function") return;
+    const list = await getWaitingList();
+    const count = Array.isArray(list)
+      ? list.filter(item => item && String(item.status || "").toUpperCase() === "WAITING").length
+      : 0;
+    const badge = document.getElementById("waitingListBadge");
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = "inline-flex";
+      } else {
+        badge.textContent = "";
+        badge.style.display = "none";
+      }
+    }
+  } catch (error) {
+    console.error("Gagal update badge waiting list:", error);
+  }
 }
 
 
@@ -2127,23 +4132,11 @@ function updateSaveOrderButton() {
 
   const shouldShow = Boolean(activeMeja) && cart.length > 0;
 
-  console.log(
-    "DEBUG SAVE BUTTON " +
-    JSON.stringify({
-      activeMeja: activeMeja,
-      cart: cart,
-      cartLength: cart.length,
-      shouldShow: shouldShow,
-      buttonFound: !!button,
-      buttonDisplay: button ? button.style.display : "BUTTON_NOT_FOUND"
-    })
-  );
-
   if (!button) return;
 
   if (shouldShow) {
-    button.style.display = "block";
-    button.style.setProperty("display", "block", "important");
+    button.style.display = "flex";
+    button.style.setProperty("display", "flex", "important");
     button.style.setProperty("visibility", "visible", "important");
     button.style.setProperty("opacity", "1", "important");
     button.style.setProperty("flex-shrink", "0", "important");
@@ -2161,6 +4154,11 @@ function updateSaveOrderButton() {
 // ==================================================
 
 async function simpanPesananMeja() {
+  if (isProcessingStopLoss) {
+    alert("Proses Stop Waktu Loss sedang berjalan. Mohon tunggu.");
+    return;
+  }
+
   if (!activeMeja) {
     alert("Pilih meja terlebih dahulu.");
     return;
@@ -2176,38 +4174,46 @@ async function simpanPesananMeja() {
   if (!btn) return;
 
   btn.disabled = true;
-  btn.textContent = "MENYIMPAN...";
-
-  const deltaItems = [];
-  for (const item of cart) {
-    const baseItem = cartServerBaseline.find(b => b.nama === item.nama);
-    const baseQty = baseItem ? baseItem.qty : 0;
-    const diff = item.qty - baseQty;
-    if (diff > 0) {
-      deltaItems.push({
-        nama: item.nama,
-        qty: diff
-      });
-    }
-  }
-
-  console.log("DEBUG SIMPAN PESANAN", {
-    baseline: cartServerBaseline,
-    cartSekarang: cart,
-    delta: deltaItems
-  });
+  btn.innerHTML = `
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; flex-shrink: 0;">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+      <polyline points="17 21 17 13 7 13 7 21"></polyline>
+      <polyline points="7 3 7 8 15 8"></polyline>
+    </svg>
+    <span>MENYIMPAN...</span>`;
 
   try {
-    for (const item of deltaItems) {
+    // Baca kondisi server terlebih dahulu. Simpan hanya selisih qty yang benar-benar baru.
+    const detailResponse = await authenticatedFetch(`/api/meja/sesi/${session.sessionId}`);
+    const detailResult = await detailResponse.json();
+    if (!detailResult.success) {
+      throw new Error(detailResult.message || "Gagal membaca pesanan meja dari server");
+    }
+
+    const serverQty = new Map(
+      (detailResult.items || []).map(item => [
+        String(item.nama || "").trim().toLowerCase(),
+        Number(item.qty || 0)
+      ])
+    );
+
+    for (const item of cart) {
+      if (item.nama === "Meja Billiard" || item.nama === "Billiard Waktu Loss") continue;
+
+      const namaKey = String(item.nama || "").trim().toLowerCase();
+      const targetQty = Number(item.qty || 0);
+      const oldQty = serverQty.get(namaKey) || 0;
+      const deltaQty = targetQty - oldQty;
+
+      if (deltaQty <= 0) continue;
+
       const responsePesanan = await authenticatedFetch("/api/meja/pesanan", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: session.sessionId,
           namaBarang: item.nama,
-          qty: item.qty
+          qty: deltaQty
         })
       });
 
@@ -2215,40 +4221,44 @@ async function simpanPesananMeja() {
       if (!resultPesanan.success) {
         throw new Error(resultPesanan.message || `Gagal menyimpan produk: ${item.nama}`);
       }
+
+      serverQty.set(namaKey, targetQty);
     }
 
-    // 1. Ambil ulang data sesi server & 2. Perbarui mejaSessions
-    const serverItems = await fetchDetailSesi(session.sessionId, false);
+    const response = await authenticatedFetch(`/api/meja/sesi/${session.sessionId}`);
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || "Gagal mengambil data sesi dari server");
+    }
+
     await fetchMejaSessions();
-
-    // 3. Perbarui cartServerBaseline dengan data server terbaru
-    cartServerBaseline = JSON.parse(JSON.stringify(serverItems));
-
-    if (mejaSessions[activeMeja]) {
-      const activeSes = mejaSessions[activeMeja];
-      console.log("DEBUG TIMER MEJA", {
-        nomorMeja: activeSes.nomorMeja,
-        sessionId: activeSes.sessionId,
-        durasiJam: activeSes.durasiJam,
-        waktuMulai: activeSes.waktuMulai,
-        waktuSelesai: activeSes.waktuSelesai
-      });
-    }
-
     renderPopupMeja();
-    updateMejaHeaderUI();
 
-    // 4. Kosongkan cart
+    activeMeja = null;
+    nomorMeja = null;
     cart = [];
 
-    // 5. renderCart() & 6. updateSaveOrderButton()
+    // Jangan memuat draft lama setelah pesanan berhasil disimpan ke meja.
+    await clearCartDraftServer();
+    await fetchMejaSessions();
+    updateMejaHeaderUI();
     renderCart();
     updateSaveOrderButton();
 
-    btn.textContent = "TERSIMPAN ✓";
+    btn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; flex-shrink: 0;">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <span>TERSIMPAN &#10003;</span>`;
 
     setTimeout(() => {
-      btn.textContent = "SIMPAN PESANAN";
+      btn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; flex-shrink: 0;">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+          <polyline points="17 21 17 13 7 13 7 21"></polyline>
+          <polyline points="7 3 7 8 15 8"></polyline>
+        </svg>
+        <span>SIMPAN PESANAN</span>`;
       btn.disabled = false;
       updateSaveOrderButton();
     }, 1500);
@@ -2256,7 +4266,13 @@ async function simpanPesananMeja() {
   } catch (error) {
     console.error("Gagal simpan pesanan meja:", error);
     alert("Gagal memverifikasi pesanan ke server: " + error.message);
-    btn.textContent = "SIMPAN PESANAN";
+    btn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; flex-shrink: 0;">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+        <polyline points="7 3 7 8 15 8"></polyline>
+      </svg>
+      <span>SIMPAN PESANAN</span>`;
     btn.disabled = false;
     updateSaveOrderButton();
   }
@@ -2267,8 +4283,8 @@ async function simpanPesananMeja() {
 // CART & PESANAN API
 // ==================================================
 
-function tambahBarang(item) {
-  if (item.nama === "Meja Billiard") {
+async function tambahBarang(item) {
+  if (item.nama === "Meja Billiard" || item.nama === "Billiard Waktu Loss") {
     if (
       !activeMeja ||
       !mejaSessions[activeMeja] ||
@@ -2283,17 +4299,25 @@ function tambahBarang(item) {
     x => x.nama === item.nama
   );
 
+  let existingQty = 1;
+
   if (existing) {
     existing.qty += 1;
+    existingQty = existing.qty;
   } else {
     cart.push({
       nama: item.nama,
       qty: 1
     });
+    existingQty = 1;
   }
 
   renderCart();
   updateSaveOrderButton();
+
+  if (!activeMeja || !mejaSessions[activeMeja]) {
+    await syncCartDraftItem(item.nama, existingQty);
+  }
 }
 
 
@@ -2303,14 +4327,24 @@ async function tambahQty(index) {
     if (item) {
       item.qty += 1;
       renderCart();
+      await syncCartDraftItem(item.nama, item.qty);
     }
     return;
   }
+
+  // Ambil sesi terbaru dari server sebelum mengubah qty agar
+  // sessionId/cart tidak memakai data frontend yang sudah stale.
+  await fetchMejaSessions();
+
   const s = mejaSessions[activeMeja];
   const item = cart[index];
 
+  if (!s || !s.sessionId || !item) {
+    alert("Sesi meja tidak ditemukan. Silakan pilih ulang meja.");
+    return;
+  }
+
   try {
-    // JIKA PRODUK ADALAH MEJA BILLIARD
     if (item.nama === "Meja Billiard") {
       const resDurasi = await authenticatedFetch("/api/meja/tambah-durasi", {
         method: "POST",
@@ -2320,7 +4354,9 @@ async function tambahQty(index) {
           durasiTambahJam: 1
         })
       });
+
       const resultDurasi = await resDurasi.json();
+
       if (!resDurasi.ok || resultDurasi.success === false) {
         throw new Error(resultDurasi.message || "Gagal menambah durasi meja");
       }
@@ -2330,23 +4366,40 @@ async function tambahQty(index) {
       return;
     }
 
-    // UPDATE QTY PESANAN (UNTUK PRODUK SELAIN MEJA BILLIARD)
+    if (item.nama === "Billiard Waktu Loss") {
+      alert("Durasi Waktu Loss dikalkulasi secara otomatis oleh server saat Stop Waktu.");
+      return;
+    }
+
+    // Refresh detail terlebih dahulu agar item di cart sama dengan item
+    // yang benar-benar tersimpan pada pesanan_meja.
+    await fetchDetailSesi(s.sessionId, true);
+
+    const freshItem = cart.find(
+      x => String(x.nama || "").trim().toLowerCase() ===
+           String(item.nama || "").trim().toLowerCase()
+    );
+
+    if (!freshItem) {
+      throw new Error("Pesanan belum tersedia pada sesi ini. Data sesi sudah disegarkan, silakan tekan + lagi.");
+    }
+
     const response = await authenticatedFetch("/api/meja/pesanan", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         sessionId: s.sessionId,
-        namaBarang: item.nama,
-        qty: item.qty + 1
+        namaBarang: freshItem.nama,
+        qty: Number(freshItem.qty) + 1
       })
     });
 
     const result = await response.json();
+
     if (!result.success) {
       throw new Error(result.message || "Gagal update qty");
     }
 
-    // Refresh sesi detail (juga merefresh cart dan waktu selesai meja)
     await fetchDetailSesi(s.sessionId, true);
     updateSaveOrderButton();
 
@@ -2357,56 +4410,97 @@ async function tambahQty(index) {
 
 
 async function kurangQty(index) {
-  if (!activeMeja || !mejaSessions[activeMeja]) {
-    const item = cart[index];
-    if (item) {
-      item.qty -= 1;
-      if (item.qty <= 0) {
-        cart.splice(index, 1);
-      }
-      renderCart();
-    }
-    return;
-  }
-  const s = mejaSessions[activeMeja];
   const item = cart[index];
+  if (!item) return;
 
-  // JIKA PRODUK ADALAH MEJA BILLIARD
   if (item.nama === "Meja Billiard") {
+    let session = mejaSessions[activeMeja];
+    if (!session) {
+      await fetchMejaSessions();
+      session = mejaSessions[activeMeja];
+    }
+
+    if (!session || !session.sessionId) {
+      alert("Session meja tidak ditemukan. Silakan pilih ulang meja.");
+      return;
+    }
+
     if (item.qty <= 1) {
       alert("Durasi meja minimal 1 jam.");
-      return; // Jangan izinkan durasi menjadi 0 atau negatif (minimal qty 1)
+      return;
     }
     
-    targetKurangSessionId = s.sessionId;
+    targetKurangSessionId = session.sessionId;
+    targetKurangProdukNama = null;
     bukaPopupOtorisasiManager();
     return;
   }
 
-  // UNTUK PRODUK BIASA
-  const newQty = item.qty - 1;
+  if (item.nama === "Billiard Waktu Loss") {
+    alert("Durasi Waktu Loss dikalkulasi secara otomatis oleh server saat Stop Waktu.");
+    return;
+  }
+
+  let session = null;
+
+  if (activeMeja && mejaSessions[activeMeja]) {
+    session = mejaSessions[activeMeja];
+  }
+
+  if (!session && activeMeja) {
+    await fetchMejaSessions();
+    session = mejaSessions[activeMeja];
+  }
+
+  if (session && session.sessionId) {
+    try {
+      const response = await authenticatedFetch("/api/meja/kurang-qty", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: session.sessionId,
+          namaBarang: item.nama
+        })
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.message || "Gagal mengurangi qty produk meja");
+      }
+
+      await fetchDetailSesi(session.sessionId, true);
+      updateSaveOrderButton();
+    } catch (error) {
+      alert("Gagal mengurangi qty: " + error.message);
+    }
+    return;
+  }
 
   try {
-    const response = await authenticatedFetch("/api/meja/pesanan", {
-      method: "PUT",
+    const response = await authenticatedFetch("/api/cart/kurang-qty", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionId: s.sessionId,
-        namaBarang: item.nama,
-        qty: newQty
-      })
+      body: JSON.stringify({ namaBarang: item.nama })
     });
 
     const result = await response.json();
     if (!result.success) {
-      throw new Error(result.message || "Gagal update qty");
+      throw new Error(result.message || "Gagal mengurangi qty produk");
     }
 
-    await fetchDetailSesi(s.sessionId, true);
-    updateSaveOrderButton();
+    item.qty -= 1;
+    const barangNama = item.nama;
+    let newQty = item.qty;
+    if (item.qty <= 0) {
+      cart.splice(index, 1);
+      newQty = 0;
+    }
 
+    renderCart();
+    updateSaveOrderButton();
+    await syncCartDraftItem(barangNama, newQty);
   } catch (error) {
-    alert("Gagal update qty: " + error.message);
+    alert("Gagal mengurangi qty: " + error.message);
   }
 }
 
@@ -2424,6 +4518,7 @@ function bukaPopupOtorisasiManager() {
 function tutupPopupOtorisasiManager() {
   document.getElementById("otorisasiManagerPopup").classList.remove("show");
   targetKurangSessionId = null;
+  targetKurangProdukNama = null;
   const btn = document.getElementById("verifikasiTotpBtn");
   if (btn) {
     btn.disabled = false;
@@ -2437,17 +4532,12 @@ function tutupPopupOtorisasiManagerLuar(event) {
   }
 }
 
-async function prosesKurangDurasiMeja() {
+async function prosesOtorisasiManager() {
   const input = document.getElementById("inputTotpCode");
   const code = input ? input.value.trim() : "";
 
   if (!/^\d{6}$/.test(code)) {
     alert("Kode Google Authenticator harus 6 digit.");
-    return;
-  }
-
-  if (!targetKurangSessionId) {
-    alert("Session ID tidak ditemukan.");
     return;
   }
 
@@ -2458,7 +4548,78 @@ async function prosesKurangDurasiMeja() {
   }
 
   try {
-    // 1. Verifikasi Google Authenticator & kurangi durasi di backend
+    if (targetKurangSessionId && targetKurangProdukNama) {
+      const response = await authenticatedFetch("/api/meja/kurang-qty", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          sessionId: targetKurangSessionId,
+          namaBarang: targetKurangProdukNama,
+          code: code
+        })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || "Gagal mengurangi qty produk meja");
+      }
+
+      const sessionIdToFetch = targetKurangSessionId;
+      tutupPopupOtorisasiManager();
+
+      await fetchDetailSesi(sessionIdToFetch, true);
+      updateSaveOrderButton();
+      return;
+    }
+
+    if (targetKurangProdukNama && !targetKurangSessionId) {
+      const response = await authenticatedFetch("/api/cart/kurang-qty", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          namaBarang: targetKurangProdukNama,
+          code: code
+        })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || "Otorisasi Manager gagal");
+      }
+
+      const itemIndex = cart.findIndex(x => x.nama === targetKurangProdukNama);
+      let newQty = 0;
+      let barangNama = targetKurangProdukNama;
+
+      if (itemIndex !== -1) {
+        cart[itemIndex].qty -= 1;
+        newQty = cart[itemIndex].qty;
+        if (cart[itemIndex].qty <= 0) {
+          cart.splice(itemIndex, 1);
+          newQty = 0;
+        }
+      }
+
+      renderCart();
+      updateSaveOrderButton();
+
+      await syncCartDraftItem(barangNama, newQty);
+
+      tutupPopupOtorisasiManager();
+      return;
+    }
+
+    if (!targetKurangSessionId) {
+      alert("Session ID tidak ditemukan.");
+      return;
+    }
+
     const response = await authenticatedFetch("/api/meja/kurang-durasi", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2476,38 +4637,8 @@ async function prosesKurangDurasiMeja() {
     }
 
     const sessionIdToFetch = targetKurangSessionId;
-
-    // Cari item Meja Billiard di cart saat ini untuk mengetahui qty lama
-    const itemMeja = cart.find(x => x.nama === "Meja Billiard");
-    if (!itemMeja) {
-      throw new Error("Item Meja Billiard tidak ditemukan di keranjang.");
-    }
-
-    const newQty = itemMeja.qty - 1;
-    if (newQty < 1) {
-      throw new Error("Kuantitas Meja Billiard tidak boleh kurang dari 1.");
-    }
-
-    // 2. Kirim PUT /api/meja/pesanan untuk mengurangi qty Meja Billiard di database
-    const responseQty = await authenticatedFetch("/api/meja/pesanan", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionId: sessionIdToFetch,
-        namaBarang: "Meja Billiard",
-        qty: newQty
-      })
-    });
-
-    const resultQty = await responseQty.json();
-
-    if (!resultQty.success) {
-      throw new Error("Durasi berhasil dikurangi tetapi qty Meja Billiard gagal diperbarui: " + (resultQty.message || "Gagal update qty"));
-    }
-
     tutupPopupOtorisasiManager();
 
-    // 3. Ambil detail sesi terbaru dari server untuk sinkronisasi UI & Timer
     await fetchDetailSesi(sessionIdToFetch, true);
 
   } catch (error) {
@@ -2526,163 +4657,181 @@ async function prosesKurangDurasiMeja() {
 // ==================================================
 
 function renderCart() {
+  const container = document.getElementById("cartItems");
 
-  const container =
-    document.getElementById(
-      "cartItems"
-    );
+  // Hentikan timer keranjang LOSS lama sebelum render ulang untuk mencegah memory leak / double timer
+  if (typeof mejaTimersCleanup['cart_loss'] === 'function') {
+    mejaTimersCleanup['cart_loss']();
+    delete mejaTimersCleanup['cart_loss'];
+  }
 
-
-  if (
-    !cart.length
-  ) {
-
-    container.innerHTML =
-      `
+  if (!cart.length) {
+    container.innerHTML = `
       <div class="cart-empty">
         Keranjang kosong
       </div>
-      `;
-
-
-    document.getElementById(
-      "total"
-    ).textContent =
-      "Rp0";
-
-
-    document.getElementById(
-      "kembalian"
-    ).textContent =
-      "Rp0";
-
+    `;
+    document.getElementById("total").textContent = "Rp0";
+    document.getElementById("kembalian").textContent = "Rp0";
     updateSaveOrderButton();
     return;
-
   }
 
+  let total = 0;
+  let cartReady = true;
 
-  let total =
-    0;
+  // Render Header Informasi Meja jika Aktif
+  let lossBannerHtml = "";
+  if (activeMeja && mejaSessions[activeMeja] && mejaSessions[activeMeja].status === "AKTIF") {
+    const activeSession = mejaSessions[activeMeja];
+    const jenisSesiStr = String(activeSession.jenisSesi || activeSession.jenis_sesi || "").toUpperCase();
+    if (jenisSesiStr === "LOSS") {
+      lossBannerHtml = `
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+          <div>
+            <div style="font-size: 0.75rem; font-weight: 800; color: #065f46; letter-spacing: 0.5px;">MEJA ${activeMeja < 10 ? '0' + activeMeja : activeMeja} &mdash; WAKTU LOSS</div>
+            <div id="cartLossTimerVal" style="font-size: 1.15rem; font-weight: 800; color: #047857; font-family: monospace, monospace; margin-top: 2px;">00:00:00</div>
+          </div>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button 
+              onclick="bukaModalPindahMeja(${activeMeja})"
+              style="padding: 8px 12px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"
+            >
+              PINDAH MEJA
+            </button>
+            <button 
+              class="btn-stop-loss-cart"
+              onclick="stopWaktuLoss('${activeSession.sessionId}', this)"
+              style="padding: 8px 14px; background: #dc2626; color: #ffffff; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 800; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"
+            >
+              STOP WAKTU
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      lossBannerHtml = `
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+          <div>
+            <div style="font-size: 0.75rem; font-weight: 800; color: #1e40af; letter-spacing: 0.5px;">MEJA ${activeMeja < 10 ? '0' + activeMeja : activeMeja} &mdash; ${escapeHtml(activeSession.namaPemesan || 'AKTIF')}</div>
+            <div style="font-size: 0.75rem; color: #3b82f6; font-weight: 600; margin-top: 2px;">Selesai: ${activeSession.waktuSelesai ? window.MejaTimer.formatJam(activeSession.waktuSelesai) : '-'}</div>
+          </div>
+          <button 
+            onclick="bukaModalPindahMeja(${activeMeja})"
+            style="padding: 8px 14px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 800; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"
+          >
+            PINDAH MEJA
+          </button>
+        </div>
+      `;
+    }
+  }
 
+  const itemsHtml = cart.map((item, index) => {
+    const master = masterBarang.find(x => x.nama === item.nama);
+    let harga = Number(item.hargaJual !== undefined ? item.hargaJual : (item.harga !== undefined ? item.harga : (master?.hargaJual || 0)));
+    let subtotal = item.subtotal !== undefined ? Number(item.subtotal) : (harga * item.qty);
 
-  container.innerHTML =
-    cart
-      .map(
-        (
-          item,
-          index
-        ) => {
+    let isWaitingForPrice = false;
+    let hargaTampil = "";
+    let subtotalTampil = "";
 
-          const master =
-            masterBarang.find(
-              x =>
-                x.nama ===
-                item.nama
-            );
+    // MENGGUNAKAN SUBTOTAL DARI SERVER SEBAGAI SUMBER KEBENARAN UTAMA
+    if (item.nama === "Billiard Waktu Loss") {
+      harga = item.hargaJual !== undefined ? Number(item.hargaJual) : (item.harga !== undefined ? Number(item.harga) : 500);
+      if (item.subtotal !== undefined && item.subtotal !== null) {
+        subtotal = Number(item.subtotal);
+      } else {
+        subtotal = harga * item.qty;
+      }
+    } else if (item.nama === "Meja Billiard" && activeMeja && mejaSessions[activeMeja]) {
+      const session = mejaSessions[activeMeja];
+      const jenisSesi = String(session.jenisSesi || session.jenis_sesi || "").trim().toUpperCase();
 
-
-          const harga =
-            Number(
-              master?.hargaJual ||
-              0
-            );
-
-
-          const subtotal =
-            harga *
-            item.qty;
-
-
-          total +=
-            subtotal;
-
-
-          return `
-
-            <div class="cart-item">
-
-
-              <div>
-
-
-                <div class="cart-item-name">
-
-                  ${escapeHtml(
-                    item.nama
-                  )}
-
-                </div>
-
-
-                <div class="cart-item-price">
-
-                  ${rupiah(
-                    harga
-                  )}
-
-                </div>
-
-
-                <div class="qty-row">
-
-
-                  <button
-                    class="qty-btn"
-                    onclick="kurangQty(${index})"
-                  >
-                    −
-                  </button>
-
-
-                  <strong>
-                    ${item.qty}
-                  </strong>
-
-
-                  <button
-                    class="qty-btn"
-                    onclick="tambahQty(${index})"
-                  >
-                    +
-                  </button>
-
-
-                </div>
-
-
-              </div>
-
-
-              <div class="cart-subtotal">
-
-                ${rupiah(
-                  subtotal
-                )}
-
-              </div>
-
-
-            </div>
-
-          `;
-
+      if (jenisSesi === "LOSS") {
+        if (item.subtotal !== undefined && item.subtotal !== null) {
+          subtotal = Number(item.subtotal);
+          harga = item.hargaJual !== undefined ? Number(item.hargaJual) : (item.harga !== undefined ? Number(item.harga) : 500);
+        } else {
+          harga = item.hargaJual !== undefined ? Number(item.hargaJual) : 500;
+          subtotal = harga * item.qty;
         }
-      )
-      .join("");
+      } else if (jenisSesi === "KARYAWAN") {
+        harga = 0;
+        subtotal = 0;
+      } else {
+        // MODE DURASI: untuk sesi meja yang sudah tersimpan di server,
+        // harga_jual + subtotal server adalah sumber kebenaran.
+        // Jangan hitung ulang dengan harga master/member di frontend.
+        if (item.hargaJual !== undefined && item.subtotal !== undefined && item.subtotal !== null) {
+          harga = Number(item.hargaJual);
+          subtotal = Number(item.subtotal);
+        } else {
+          // Jangan gunakan harga master atau hitung ulang harga member jika
+          // item meja aktif belum membawa harga dari server. Tunggu refresh
+          // detail sesi agar harga sesi/database menjadi sumber kebenaran.
+          isWaitingForPrice = true;
+          cartReady = false;
+          harga = 0;
+          subtotal = 0;
+        }
+      }
+    }
 
+    if (isWaitingForPrice) {
+      hargaTampil = "Memuat...";
+      subtotalTampil = "Memuat...";
+    } else {
+      hargaTampil = rupiah(harga);
+      subtotalTampil = rupiah(subtotal);
+      total += subtotal;
+    }
 
-  document.getElementById(
-    "total"
-  ).textContent =
-    rupiah(
-      total
-    );
+    return `
+      <div class="cart-item">
+        <div>
+          <div class="cart-item-name">
+            ${escapeHtml(item.nama)}
+          </div>
+          <div class="cart-item-price">
+            ${hargaTampil}
+          </div>
+          <div class="qty-row">
+            <button class="qty-btn" onclick="kurangQty(${index})">&minus;</button>
+            <strong>${item.qty}</strong>
+            <button class="qty-btn" onclick="tambahQty(${index})">+</button>
+          </div>
+        </div>
+        <div class="cart-subtotal">
+          ${subtotalTampil}
+        </div>
+      </div>
+    `;
+  }).join("");
 
+  container.innerHTML = lossBannerHtml + itemsHtml;
+
+  // Jalankan timer Count-Up pada banner keranjang jika meja LOSS sedang aktif
+  if (activeMeja && mejaSessions[activeMeja] && mejaSessions[activeMeja].status === "AKTIF") {
+    const activeSession = mejaSessions[activeMeja];
+    const jenisSesiStr = String(activeSession.jenisSesi || activeSession.jenis_sesi || "").toUpperCase();
+    if (jenisSesiStr === "LOSS") {
+      const cartTimerEl = document.getElementById("cartLossTimerVal");
+      if (cartTimerEl && window.MejaTimer && activeSession.waktuMulai) {
+        const stopCartFn = window.MejaTimer.mulaiCountUpLoss(cartTimerEl, activeSession.waktuMulai);
+        if (typeof stopCartFn === 'function') {
+          mejaTimersCleanup['cart_loss'] = stopCartFn;
+        }
+      }
+    }
+  }
+
+  window._isCartReady = cartReady;
+  
+  document.getElementById("total").textContent = cartReady ? rupiah(total) : "Memuat...";
 
   updateKembalian();
   updateSaveOrderButton();
-
 }
 
 
@@ -2691,35 +4840,85 @@ function renderCart() {
 // ==================================================
 
 function getTotal() {
+  let total = 0;
 
-  let total =
-    0;
+  cart.forEach(item => {
+    const master = masterBarang.find(x => x.nama === item.nama);
+    let harga = Number(item.hargaJual !== undefined ? item.hargaJual : (item.harga !== undefined ? item.harga : (master?.hargaJual || 0)));
+    let subtotal = item.subtotal !== undefined ? Number(item.subtotal) : (harga * item.qty);
 
+    if (item.nama === "Billiard Waktu Loss") {
+      if (item.subtotal !== undefined && item.subtotal !== null) {
+        subtotal = Number(item.subtotal);
+      } else {
+        const h = item.hargaJual !== undefined ? Number(item.hargaJual) : (item.harga !== undefined ? Number(item.harga) : 500);
+        subtotal = h * item.qty;
+      }
+    } else if (
+      item.nama === "Meja Billiard" &&
+      activeMeja &&
+      mejaSessions[activeMeja]
+    ) {
+      const session = mejaSessions[activeMeja];
+      const jenisSesi = String(session.jenisSesi || session.jenis_sesi || "").trim().toUpperCase();
 
-  cart.forEach(
-    item => {
+      if (jenisSesi === "LOSS") {
+        if (item.subtotal !== undefined && item.subtotal !== null) {
+          subtotal = Number(item.subtotal);
+        } else {
+          const h = item.hargaJual !== undefined ? Number(item.hargaJual) : 500;
+          subtotal = h * item.qty;
+        }
+      } else if (jenisSesi === "KARYAWAN") {
+        harga = 0;
+        subtotal = 0;
+      } else {
+        // Sesi meja yang sudah tersimpan: gunakan harga/subtotal dari server.
+        // Ini mencegah harga member Platinum kembali ke harga master Rp30.000/jam.
+        if (item.hargaJual !== undefined && item.subtotal !== undefined && item.subtotal !== null) {
+          harga = Number(item.hargaJual);
+          subtotal = Number(item.subtotal);
+        } else {
+          const member = memberByMeja.get(String(activeMeja));
+          const durasiJam = Number(session.durasiJam || item.qty || 1);
+        const waktuMulai = session.waktuMulai || null;
 
-      const master =
-        masterBarang.find(
-          x =>
-            x.nama ===
-            item.nama
-        );
+        if (member && ["PLATINUM", "UMUM", "PELAJAR"].includes(String(member.kategori || member.kategoriId || "").trim().toUpperCase())) {
+          const kategori = String(member.kategori || member.kategoriId).trim().toUpperCase();
+          const cacheKey = `${activeMeja}_${kategori}_${durasiJam}_${waktuMulai}`;
 
+          if (window._hargaMejaCache && window._hargaMejaCache[cacheKey]) {
+            const hasilHarga = window._hargaMejaCache[cacheKey];
+            if (hasilHarga && hasilHarga.success) {
+              harga = Number(hasilHarga.hargaPerJam || 0);
+              subtotal = Number(hasilHarga.total || 0);
+            } else {
+              subtotal = 0;
+            }
+          } else {
+            subtotal = 0;
+          }
+        } else if (typeof window.hitungHargaSewa === "function") {
+          const kategori = member ? String(member.kategori || member.kategoriId || "").trim().toUpperCase() : "NON_MEMBER";
+          const hasilHarga = window.hitungHargaSewa({
+            kategori,
+            durasiJam,
+            waktuMulai
+          });
 
-      total +=
-        Number(
-          master?.hargaJual ||
-          0
-        ) *
-        item.qty;
-
+          if (hasilHarga && hasilHarga.success === true) {
+            harga = Number(hasilHarga.hargaPerJam || harga);
+            subtotal = Number(hasilHarga.total || (harga * durasiJam));
+          }
+          }
+        }
+      }
     }
-  );
 
+    total += subtotal;
+  });
 
   return total;
-
 }
 
 
@@ -2920,7 +5119,7 @@ function getPaymentValues() {
   else {
 
     cash =
-      Number(
+      parseFormattedCurrency(
         document
           .getElementById(
             "cashAmount"
@@ -2930,7 +5129,7 @@ function getPaymentValues() {
 
 
     qris =
-      Number(
+      parseFormattedCurrency(
         document
           .getElementById(
             "qrisAmount"
@@ -3022,12 +5221,154 @@ document
 
 
 // ==================================================
+// CEK HARGA MEJA
+// ==================================================
+
+async function cekHargaMeja() {
+  const btn = document.getElementById("cekHargaMejaBtn");
+
+  if (!activeMeja || !mejaSessions[activeMeja]) {
+    alert("Pilih meja terlebih dahulu.");
+    return;
+  }
+
+  const session = mejaSessions[activeMeja];
+  const jenisSesi = String(session.jenisSesi || session.jenis_sesi || "").trim().toUpperCase();
+
+  if (jenisSesi === "LOSS") {
+    alert("Harga Waktu Loss dihitung otomatis oleh server saat Stop Waktu.");
+    return;
+  }
+
+  let member = memberByMeja.get(String(activeMeja)) || null;
+  let kategori = String(member?.kategori || member?.kategoriId || session.kategoriMember || session.kategori_member || "").trim().toUpperCase();
+
+  // Jika mapping frontend/session belum membawa kategori, ambil langsung dari cache member.
+  if (!["PLATINUM", "UMUM", "PELAJAR"].includes(kategori)) {
+    try {
+      const memberResponse = await authenticatedFetch("/api/member");
+      const memberData = await memberResponse.json();
+      const members = Array.isArray(memberData?.data) ? memberData.data : [];
+      const targetId = session.memberId || session.member_id || member?.idMember || member?.memberId || null;
+      const targetNama = String(session.namaPemesan || "").trim().toLowerCase();
+
+      const foundMember = members.find(m => {
+        const mId = m.idMember ?? m.member_id ?? m.id ?? m.kodeMember ?? m.kode_member;
+        const mNama = String(m.nama || m.namaMember || m.nama_member || "").trim().toLowerCase();
+        return (targetId && String(mId) === String(targetId)) || (!targetId && targetNama && mNama === targetNama);
+      });
+
+      if (foundMember) {
+        kategori = String(foundMember.kategori || foundMember.kategoriId || foundMember.kategori_member || "").trim().toUpperCase();
+        member = foundMember;
+        memberByMeja.set(String(activeMeja), {
+          idMember: foundMember.idMember ?? foundMember.member_id ?? foundMember.id ?? foundMember.kodeMember ?? foundMember.kode_member ?? null,
+          kategori
+        });
+      }
+    } catch (e) {
+      console.error("Gagal mengambil data member saat cek harga:", e);
+    }
+  }
+
+  if (!["PLATINUM", "UMUM", "PELAJAR"].includes(kategori)) {
+    alert("Member belum dipilih atau kategori member tidak tersedia.");
+    return;
+  }
+
+  const durasiJam = Number(session.durasiJam || 0);
+  if (!Number.isInteger(durasiJam) || durasiJam < 1) {
+    alert("Durasi meja belum valid.");
+    return;
+  }
+
+  const waktuMulai = session.waktuMulai || null;
+  if (!waktuMulai) {
+    alert("Waktu mulai sesi tidak tersedia.");
+    return;
+  }
+
+  const d = new Date(waktuMulai);
+  const jam = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "MENGECEK...";
+  }
+
+  try {
+    const response = await authenticatedFetch("/api/meja/hitung-harga", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: session.sessionId || session.session_id || null,
+        kategori,
+        durasiJam,
+        jam
+      })
+    });
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.message || "Harga member tidak tersedia.");
+    }
+
+    const itemMeja = cart.find(
+      item => String(item.nama || "").trim().toLowerCase() === "meja billiard"
+    );
+
+    if (!itemMeja) {
+      throw new Error("Item Meja Billiard tidak ditemukan di keranjang.");
+    }
+
+    itemMeja.qty = durasiJam;
+    itemMeja.hargaJual = Number(result.hargaPerJam);
+    itemMeja.harga = Number(result.hargaPerJam);
+    itemMeja.subtotal = Number(result.total);
+
+    renderCart();
+    updateSaveOrderButton();
+
+    alert(`Harga ${kategori} diterapkan: ${rupiah(result.hargaPerJam)}/jam × ${durasiJam} jam = ${rupiah(result.total)}`);
+  } catch (error) {
+    alert("Gagal cek harga meja: " + error.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "CEK HARGA MEJA";
+    }
+  }
+}
+
+
+// ==================================================
 // BAYAR TRANSAKSI
 // ==================================================
 
 let currentFinishedSessionInfo = null;
 
 async function bayarTransaksi() {
+
+  if (isProcessingStopLoss) {
+    alert("Proses Stop Waktu Loss sedang berjalan. Mohon tunggu.");
+    return;
+  }
+
+  // Wajib cegah pembayaran jika sesi LOSS masih AKTIF (Kasir harus STOP WAKTU terlebih dahulu)
+  if (activeMeja && mejaSessions[activeMeja]) {
+    const activeSession = mejaSessions[activeMeja];
+    const jenisSesiStr = String(activeSession.jenisSesi || activeSession.jenis_sesi || "").toUpperCase();
+    if (jenisSesiStr === "LOSS" && activeSession.status === "AKTIF") {
+      alert("Sesi WAKTU LOSS masih AKTIF. Harap tekan STOP WAKTU terlebih dahulu sebelum melakukan pembayaran.");
+      return;
+    }
+  }
+
+  if (window._isCartReady === false) {
+    alert("Harga member sedang dimuat, mohon tunggu sebentar.");
+    return;
+  }
 
   if (
     !cart.length
@@ -3099,6 +5440,19 @@ async function bayarTransaksi() {
 
   }
 
+  // VALIDASI SESSION ID UNTUK TRANSAKSI MEJA
+  let targetSessionId = null;
+  if (nomorMeja) {
+    const sessionObj = mejaSessions[nomorMeja];
+    // Setelah STOP LOSS, sesi sudah berstatus SELESAI sehingga GET /api/meja/sesi
+    // tidak lagi menaruhnya di mejaSessions. Gunakan sessionId yang disimpan saat STOP.
+    targetSessionId = sessionObj?.sessionId || stoppedSessionIdsByMeja[nomorMeja] || null;
+    if (!targetSessionId) {
+      alert("Session meja tidak valid atau tidak tersedia.");
+      return;
+    }
+  }
+
 
   const button =
     document.getElementById(
@@ -3110,11 +5464,48 @@ async function bayarTransaksi() {
     true;
 
 
-  button.textContent =
-    "MEMPROSES...";
+  button.innerHTML = `<span>MEMPROSES...</span>`;
 
 
   try {
+
+    const yakin = confirm("Apakah Anda yakin melakukan pembayaran ini?");
+    if (!yakin) {
+      return;
+    }
+
+    const requestPayload = {
+
+      shiftId:
+        currentKasir.shiftId,
+
+      nomorMeja:
+        nomorMeja || null,
+
+      metodePembayaran:
+
+        metodePembayaran ===
+        "SPLIT"
+          ? "CASH+QRIS"
+          : metodePembayaran,
+
+      bayar:
+        payment.bayar,
+
+      cashAmount:
+        payment.cash,
+
+      qrisAmount:
+        payment.qris,
+
+      items:
+        cart
+
+    };
+
+    if (targetSessionId) {
+      requestPayload.sessionId = targetSessionId;
+    }
 
     const response =
       await authenticatedFetch(
@@ -3130,34 +5521,7 @@ async function bayarTransaksi() {
           },
 
           body:
-            JSON.stringify({
-
-              shiftId:
-                currentKasir.shiftId,
-
-              nomorMeja:
-                nomorMeja || null,
-
-              metodePembayaran:
-
-                metodePembayaran ===
-                "SPLIT"
-                  ? "CASH+QRIS"
-                  : metodePembayaran,
-
-              bayar:
-                payment.bayar,
-
-              cashAmount:
-                payment.cash,
-
-              qrisAmount:
-                payment.qris,
-
-              items:
-                cart
-
-            })
+            JSON.stringify(requestPayload)
 
         }
       );
@@ -3179,7 +5543,6 @@ async function bayarTransaksi() {
     }
 
 
-    // Simpan informasi sesi sebelum direset
     const finishedMeja = nomorMeja;
     const finishedSession = finishedMeja ? mejaSessions[finishedMeja] : null;
     const pemesanName = finishedSession ? finishedSession.namaPemesan : "-";
@@ -3194,35 +5557,47 @@ async function bayarTransaksi() {
     };
 
 
-    // Tutup sesi meja di server jika ada sesi meja aktif
+    // Panggil /api/meja/tutup HANYA jika sesi meja masih bernilai AKTIF (Mode DURASI)
     if (finishedSession && finishedSession.sessionId) {
-      try {
-        await authenticatedFetch("/api/meja/tutup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: finishedSession.sessionId })
-        });
-      } catch (err) {
-        console.error("Gagal menutup sesi meja di server:", err);
+      const finishedStatus = String(finishedSession.status || "").toUpperCase();
+      if (finishedStatus === "AKTIF") {
+        try {
+          await authenticatedFetch("/api/meja/tutup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId: finishedSession.sessionId })
+          });
+        } catch (err) {
+          console.error("Gagal menutup sesi meja di server:", err);
+        }
       }
     }
 
 
-    // ==================================================
-    // RESET LOGIC (Dilakukan langsung setelah transaksi berhasil)
-    // ==================================================
     await fetchMejaSessions();
+    const wasTableTrx = Boolean(finishedMeja);
+    if (finishedMeja && stoppedSessionIdsByMeja[finishedMeja] === targetSessionId) {
+      delete stoppedSessionIdsByMeja[finishedMeja];
+    }
+    if (
+      pendingPaymentTableNo !== null &&
+      Number(pendingPaymentTableNo) === Number(finishedMeja)
+    ) {
+      pendingPaymentTableNo = null;
+    }
     activeMeja = null;
     nomorMeja = null;
     cart = [];
-    cartServerBaseline = [];
+
+    // Setelah transaksi berhasil, semua draft keranjang non-meja harus dibersihkan.
+    // Jangan memuat kembali cart draft lama karena dapat membuat produk lama muncul lagi.
+    await clearCartDraftServer();
 
     updateMejaHeaderUI();
     renderCart();
     updateSaveOrderButton();
 
 
-    // Tampilkan Modal Hasil Transaksi Modern
     document.getElementById("resNoTrx").textContent = result.nomorTransaksi;
     document.getElementById("resMeja").textContent = finishedMeja ? ("MEJA " + finishedMeja) : "TANPA MEJA";
     document.getElementById("resPemesan").textContent = pemesanName;
@@ -3251,8 +5626,12 @@ async function bayarTransaksi() {
       false;
 
 
-    button.textContent =
-      "BAYAR";
+    button.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; flex-shrink: 0;">
+        <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+        <line x1="2" y1="10" x2="22" y2="10"></line>
+      </svg>
+      <span>BAYAR</span>`;
 
   }
 
@@ -3648,7 +6027,7 @@ function debounceFetchRiwayat() {
 
 async function fetchRiwayat() {
   const container = document.getElementById("riwayatList");
-  container.innerHTML = `<div style="text-align: center; padding: 20px; color: #6b7280;">Memuat data...</div>`;
+  container.innerHTML = `<div style="text-align: center; padding: 14px; color: #6b7280;">Memuat data...</div>`;
 
   const searchVal = document.getElementById("riwayatSearch").value.trim();
   const filterVal = document.getElementById("riwayatFilter").value;
@@ -3670,7 +6049,7 @@ async function fetchRiwayat() {
     riwayatData = result.data;
     renderRiwayat();
   } catch (error) {
-    container.innerHTML = `<div style="text-align: center; padding: 20px; color: #ef4444;">${error.message}</div>`;
+    container.innerHTML = `<div style="text-align: center; padding: 14px; color: #ef4444;">${error.message}</div>`;
   }
 }
 
@@ -3678,7 +6057,7 @@ function renderRiwayat() {
   const container = document.getElementById("riwayatList");
 
   if (!riwayatData || riwayatData.length === 0) {
-    container.innerHTML = `<div style="text-align: center; padding: 20px; color: #6b7280; font-weight: 500;">Tidak ada transaksi ditemukan.</div>`;
+    container.innerHTML = `<div style="text-align: center; padding: 14px; color: #6b7280; font-weight: 500;">Tidak ada transaksi ditemukan.</div>`;
     return;
   }
 
@@ -3872,16 +6251,7 @@ async function prosesBatalTransaksi() {
   }
 
   try {
-    const response = authenticatedFetch ? await authenticatedFetch("/api/meja/batalkan", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        nomorTransaksi: trx.nomorTransaksi,
-        code: code
-      })
-    }) : await fetch("/api/meja/batalkan", {
+    const response = await authenticatedFetch("/api/transaksi/batalkan", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -3919,7 +6289,92 @@ async function prosesBatalTransaksi() {
 
 <script src="/waitinglist-api.js"></script>
 <script src="/waitinglist.js"></script>
-<script src="/layout-debug.js"></script>
+<script>
+  if (typeof bukaWaitingList === "function") {
+    const origBukaWaitingList = bukaWaitingList;
+    window.bukaWaitingList = async function(...args) {
+      const res = await origBukaWaitingList.apply(this, args);
+      if (sessionStorage.getItem("pbms_session_id")) {
+        updateWaitingListBadge();
+      }
+      return res;
+    };
+  }
+
+  if (typeof simpanFormBooking === "function") {
+    const origSimpanFormBooking = simpanFormBooking;
+    window.simpanFormBooking = async function(...args) {
+      const res = await origSimpanFormBooking.apply(this, args);
+      if (sessionStorage.getItem("pbms_session_id")) {
+        updateWaitingListBadge();
+      }
+      return res;
+    };
+  }
+
+  if (typeof updateStatusWaitingList === "function") {
+    const origUpdateStatusWaitingList = updateStatusWaitingList;
+    window.updateStatusWaitingList = async function(...args) {
+      const res = await origUpdateStatusWaitingList.apply(this, args);
+      if (sessionStorage.getItem("pbms_session_id")) {
+        updateWaitingListBadge();
+      }
+      return res;
+    };
+  }
+
+  if (sessionStorage.getItem("pbms_session_id")) {
+    updateWaitingListBadge();
+  }
+</script>
+
+
+<!-- ==================================================
+     OVERLAY SYNC PRODUK
+     ================================================== -->
+<div id="syncLoadingOverlay" aria-hidden="true">
+  <div id="syncLoadingCard" role="status" aria-live="polite">
+    <svg id="syncLoadingBall" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="48" fill="#f59e0b" stroke="#ffffff" stroke-width="4"/>
+      <path d="M 10 30 A 48 48 0 0 1 90 30 Z" fill="#ffffff"/>
+      <path d="M 10 70 A 48 48 0 0 0 90 70 Z" fill="#ffffff"/>
+      <circle cx="50" cy="50" r="48" fill="none" stroke="#1e293b" stroke-width="4"/>
+      <circle cx="50" cy="50" r="22" fill="#ffffff" stroke="#1e293b" stroke-width="3"/>
+      <text x="50" y="59" font-size="28" font-weight="900" fill="#111827" text-anchor="middle" font-family="Arial, sans-serif">9</text>
+    </svg>
+    <div id="syncLoadingTitle">SYNC PRODUK</div>
+    <div id="syncLoadingText">Sedang memperbarui data produk...</div>
+  </div>
+</div>
+
+
+  <!-- STOCK OPNAME MODULE -->
+  <link rel="stylesheet" href="/stock-opname.css">
+  <script src="/stock-opname.js"></script>
+
+  <script src="./printer-bluetooth.js?v=20260902-1917"></script>
+
+
+<script>
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState === "visible") {
+    const rawSessionId = sessionStorage.getItem("pbms_session_id");
+    if (rawSessionId && currentKasir) {
+      try {
+        const valid = await cekSessionLogin();
+        if (valid) {
+          const newExp = sessionStorage.getItem("pbms_expires_at");
+          if (newExp) {
+            startSessionTimer(newExp);
+          }
+        }
+      } catch (err) {
+        console.error("Error checking session on visibilitychange:", err);
+      }
+    }
+  }
+});
+</script>
 
 </body>
 
