@@ -288,6 +288,17 @@
       data.waktu_selesai ||
       null;
 
+    if (jenisSesi !== "LOSS" && !parseDate(waktuSelesaiVal)) {
+      const calculatedEnd =
+        waktuMulaiVal && durasiJamVal > 0
+          ? hitungWaktuSelesai(waktuMulaiVal, durasiJamVal)
+          : null;
+
+      waktuSelesaiVal = calculatedEnd
+        ? calculatedEnd.toISOString()
+        : null;
+    }
+
     if (
       !waktuSelesaiVal &&
       waktuMulaiVal &&

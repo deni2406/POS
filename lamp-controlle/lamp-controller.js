@@ -166,11 +166,17 @@ async function sendLampCommand(table, stat) {
 
         await new Promise((resolve, reject) => {
             let settled = false;
+
             const finish = (err) => {
                 if (settled) return;
+
                 settled = true;
-                if (err) reject(err);
-                else resolve();
+
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             };
 
             serialPort.write(command, (err) => {
@@ -179,10 +185,9 @@ async function sendLampCommand(table, stat) {
                     return;
                 }
 
-                // COM3 controller sudah menerima command setelah write sukses.
-                // Jangan menahan HTTP response menunggu drain() terlalu lama.
-                finish();
-
+                // Tunggu buffer serial benar-benar drained sebelum command berikutnya
+                // dijalankan oleh commandQueue. Ini mencegah command antar meja
+                // bertumpuk terlalu cepat di controller COM3.
                 try {
                     serialPort.drain((drainErr) => {
                         if (drainErr) {
@@ -190,13 +195,20 @@ async function sendLampCommand(table, stat) {
                                 `[LAMP CONTROLLER] Serial drain warning ${rawCommand}:`,
                                 drainErr.message
                             );
+
+                            finish(drainErr);
+                            return;
                         }
+
+                        finish();
                     });
                 } catch (drainError) {
                     console.warn(
                         `[LAMP CONTROLLER] Serial drain warning ${rawCommand}:`,
                         drainError.message
                     );
+
+                    finish(drainError);
                 }
             });
         });

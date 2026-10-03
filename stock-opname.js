@@ -4,9 +4,9 @@
  * Path: C:\POS\stock-opname.js
  * 
  * Logic Frontend Stock Opname:
- * - POS hanya mengumpulkan input hitung fisik dan menampilkan hasil dari Apps Script.
+ * - POS menyimpan draft hitung fisik ke SQLite; nominal dan finalisasi masih diblokir.
  * - Tidak melakukan perhitungan selisih, kerugian, atau total di frontend.
- * - Status revisi baru terpakai setelah pengiriman revisi ke server/Apps Script berhasil.
+ * - Revisi dinonaktifkan sampai riwayat lokal dapat mempertahankan aturan lama.
  */
 
 (function () {
@@ -21,7 +21,7 @@
     masterBarang: [],
     categories: [],
     inputSO: {},         // Key: barangId, Value: number (jumlah fisik)
-    hasilSO: null,       // Response murni dari Apps Script / Server
+    hasilSO: null,       // Hasil draft lokal dari server
     revisiKe: 0,        // 0 = Belum revisi, 1 = Sudah revisi
     isRevising: false,   // true saat petugas sedang berada di mode edit revisi
     isFinal: false,      // true jika SO sudah difinalisasi & dikunci
@@ -153,7 +153,7 @@
     showLoadingOverlay(true, 'MEMUAT MASTER BARANG...', 'Mohon tunggu sebentar.');
 
     try {
-      const response = await fetch('/api/barang', {
+      const response = await fetch('/api/stock-opname/local/barang', {
         method: 'GET',
         headers: getAuthHeaders()
       });
@@ -222,7 +222,7 @@
 
     // Sinkronkan status dengan server jika endpoint tersedia
     try {
-      const res = await fetch(`/api/stock-opname/status?category=${encodeURIComponent(category)}`, {
+      const res = await fetch(`/api/stock-opname/local/status?category=${encodeURIComponent(category)}`, {
         method: 'GET',
         headers: getAuthHeaders()
       });
@@ -287,7 +287,7 @@
     } else if (state.isFinal) {
       bodyContentHtml = `
         <div style="text-align: center; padding: 40px 20px; color: #d32f2f; font-weight: 600;">
-          ðŸ”’ Stock Opname untuk kategori "${escapeHtml(state.kategoriAktif)}" telah FINALISED / TERKUNCI.<br>
+          🔒 Stock Opname untuk kategori "${escapeHtml(state.kategoriAktif)}" telah FINALISED / TERKUNCI.<br>
           Data tidak dapat diubah lagi.
         </div>
       `;
@@ -305,7 +305,7 @@
         const satuanText = item.satuan || item.Satuan || 'Pcs';
 
         // PENTING: Hanya tampilkan Nama Barang, Satuan, dan Input Jumlah Hasil SO.
-        // Stok Aktual, HPP, Harga Jual, dan Selisih TIDAK DITAMPILKAN sebelum Apps Script selesai menghitung.
+        // Nominal tidak ditampilkan sebelum aturan perhitungan lokal tervalidasi.
         bodyContentHtml += `
           <div class="so-item-card">
             <div class="so-item-info">
@@ -339,7 +339,7 @@
     const html = `
       <div class="so-modal-container">
         <div class="so-header">
-          <h2>ðŸ“¦ STOCK OPNAME ${state.isRevising ? '(REVISI)' : ''}</h2>
+          <h2>📦 STOCK OPNAME ${state.isRevising ? '(REVISI)' : ''}</h2>
           <button type="button" class="so-close-btn" onclick="window.StockOpname.close()">&times;</button>
         </div>
 
@@ -365,7 +365,7 @@
   }
 
   // ==================================================
-  // PROCESS SUBMIT SO TO GOOGLE APPS SCRIPT / BACKEND
+  // SAVE LOCAL STOCK OPNAME DRAFT
   // ==================================================
   async function submitSO() {
     if (state.sedangMemproses) return;
@@ -389,7 +389,7 @@
       const val = state.inputSO[item.id];
       const qtyHasil = (val === '' || val === undefined || isNaN(Number(val))) ? 0 : Number(val);
       return {
-        idBarang: item.id || item.idBarang,
+        local_master_barang_id: item.id || item.local_master_barang_id,
         namaBarang: item.nama || item.Nama,
         area: item.area || item.kategori || state.kategoriAktif,
         satuan: item.satuan || item.Satuan || 'Pcs',
@@ -403,7 +403,6 @@
     const tanggalSO = new Date().toISOString();
 
     const payload = {
-      action: 'proses_stock_opname',
       mode: mode,
       category: state.kategoriAktif,
       petugas: petugas,
@@ -416,7 +415,7 @@
     showLoadingOverlay(true, 'MENGHITUNG STOCK OPNAME...', 'Mohon tunggu.');
 
     try {
-      const res = await fetch('/api/stock-opname/simpan', {
+      const res = await fetch('/api/stock-opname/local/simpan', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(payload)
@@ -428,9 +427,10 @@
         throw new Error(json.message || `Gagal memproses SO (HTTP ${res.status})`);
       }
 
-      // Terima response hasil perhitungan murni dari Apps Script
+      // Hasil lokal berasal dari SQLite; stok operasional tidak diubah oleh draft.
       const hasilData = json.data || json;
       state.hasilSO = hasilData;
+      state.soId = json.soId || hasilData.soId;
 
       // HANYA jika pengiriman berhasil, revisiKe resmi menjadi 1
       if (state.isRevising) {
@@ -440,9 +440,6 @@
 
       // Simpan status revisi & final ke storage lokal
       saveCategoryState(state.kategoriAktif, state.revisiKe, state.isFinal);
-
-      // SIMPAN SNAPSHOT KE SERVER (Hanya jika Apps Script berhasil memberikan response)
-      await saveSnapshotToServer(hasilData);
 
       showLoadingOverlay(false);
       state.sedangMemproses = false;
@@ -461,38 +458,15 @@
   // ==================================================
   // SAVE SNAPSHOT TO SERVER (C:\POS\data\stock-opname\)
   // ==================================================
-  async function saveSnapshotToServer(hasilData) {
-    try {
-      const snapshotPayload = {
-        soId: hasilData.soId || `SO-${Date.now()}`,
-        kategori: state.kategoriAktif,
-        petugas: getPetugasName(),
-        tanggal: new Date().toISOString(),
-        revisi_ke: state.revisiKe,
-        status: state.isFinal ? 'FINAL' : 'HASIL',
-        items: hasilData.items || [],
-        summary: hasilData.summary || {}
-      };
-
-      await fetch('/api/stock-opname/snapshot', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(snapshotPayload)
-      });
-    } catch (e) {
-      console.warn('[SO] Gagal menyimpan snapshot lokal di server:', e);
-    }
-  }
-
   // ==================================================
-  // RENDER VIEW 2: HASIL PERHITUNGAN APPS SCRIPT
+  // RENDER VIEW 2: HASIL DRAFT SQLITE
   // ==================================================
   function renderResultsView() {
     const modalEl = getOrCreateModalElement();
     const resData = state.hasilSO || {};
     const items = resData.items || [];
     
-    // Ambil nilai ringkasan langsung dari response Apps Script
+    // Ambil nilai ringkasan dari response lokal.
     const summary = resData.summary || {
       totalPlus: resData.totalPlus || 0,
       totalMinus: resData.totalMinus || 0,
@@ -502,7 +476,7 @@
     let itemsListHtml = '';
 
     items.forEach(item => {
-      // Nilai selisih murni dari response Apps Script
+      // Selisih kuantitas berasal dari response SQLite lokal.
       const selisih = Number(item.selisihBarang || 0);
 
       let badgeClass = 'so-badge-zero';
@@ -537,15 +511,15 @@
     });
 
     // Batas Revisi Check: Disabled jika sudah pernah revisi (revisiKe >= 1) atau sudah final
-    const isRevisiDisabled = state.revisiKe >= 1 || state.isFinal;
+    const isRevisiDisabled = true; // Local revision history is not implemented yet.
     const revisiBtnAttr = isRevisiDisabled
-      ? 'disabled class="so-btn so-btn-warning disabled"'
+      ? 'disabled title="Revisi menunggu aturan riwayat lokal tervalidasi" class="so-btn so-btn-warning disabled"'
       : 'class="so-btn so-btn-warning"';
 
     const html = `
       <div class="so-modal-container">
         <div class="so-header">
-          <h2>ðŸ“¦ HASIL STOCK OPNAME â€” ${escapeHtml(state.kategoriAktif)}</h2>
+          <h2>📦 HASIL STOCK OPNAME — ${escapeHtml(state.kategoriAktif)}</h2>
           <button type="button" class="so-close-btn" onclick="window.StockOpname.close()">&times;</button>
         </div>
 
@@ -554,7 +528,7 @@
           
           ${itemsListHtml}
 
-          <!-- RINGKASAN HASIL DARI RESPONSE APPS SCRIPT -->
+          <!-- Ringkasan draft lokal; nominal diblokir sampai formula lama terverifikasi. -->
           <div class="so-summary-box">
             <div class="so-summary-item">
               <span class="so-summary-title">TOTAL PLUS</span>
@@ -569,11 +543,14 @@
               <span class="so-summary-val loss">Rp ${formatRupiah(summary.totalKerugian || 0)}</span>
             </div>
           </div>
+          <div style="padding: 10px 14px; color: #92400e; background: #fffbeb; border-radius: 8px;">
+            Draft tersimpan di SQLite. Rumus nominal plus/minus dan finalisasi masih diblokir sampai aturan lama tervalidasi.
+          </div>
         </div>
 
         <div class="so-footer">
           <button type="button" ${revisiBtnAttr} onclick="window.StockOpname.handleRevisi()">REVISI</button>
-          <button type="button" class="so-btn so-btn-primary" onclick="window.StockOpname.handleSelesai()">SELESAI</button>
+          <button type="button" class="so-btn so-btn-secondary" disabled title="Finalisasi menunggu verifikasi aturan dan persetujuan">DRAFT TERSIMPAN</button>
         </div>
       </div>
     `;
@@ -604,67 +581,6 @@
   // ==================================================
   // FINALISASI FLOW WITH CONFIRMATION
   // ==================================================
-  function handleSelesai() {
-    showConfirmationDialog(
-      'Apakah Anda yakin ingin menyelesaikan Stock Opname ini?',
-      'Data yang sudah diselesaikan tidak dapat diubah lagi.',
-      async () => {
-        await finalizeSO();
-      }
-    );
-  }
-
-  async function finalizeSO() {
-    if (state.sedangMemproses) return;
-
-    state.sedangMemproses = true;
-    showLoadingOverlay(true, 'MENYIMPAN FINALISASI...', 'Mohon tunggu.');
-
-    try {
-      const payload = {
-        category: state.kategoriAktif,
-        petugas: getPetugasName(),
-        revisiKe: state.revisiKe,
-        statusApprove: 'APPROVED'
-      };
-
-      const res = await fetch('/api/stock-opname/finalize', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload)
-      });
-
-      const json = await res.json();
-
-      if (!res.ok || !json || json.success === false) {
-        throw new Error(json.message || 'Gagal memfinalisasi Stock Opname');
-      }
-
-      // Kunci data SO & simpan status final
-      state.isFinal = true;
-      saveCategoryState(state.kategoriAktif, state.revisiKe, true);
-
-      // Simpan snapshot final ke server
-      if (state.hasilSO) {
-        await saveSnapshotToServer({
-          ...state.hasilSO,
-          isFinal: true
-        });
-      }
-
-      showLoadingOverlay(false);
-      state.sedangMemproses = false;
-
-      alert('Stock Opname berhasil diselesaikan dan dikunci.');
-      closeSOModal();
-
-    } catch (err) {
-      showLoadingOverlay(false);
-      state.sedangMemproses = false;
-      alert('Gagal memfinalisasi SO: ' + err.message);
-    }
-  }
-
   // ==================================================
   // UI DIALOGS: LOADING & CONFIRMATION
   // ==================================================
@@ -742,10 +658,7 @@
     onCategoryChange: handleCategoryChange,
     onQtyInput: handleQtyInput,
     submitSO: submitSO,
-    handleRevisi: handleRevisi,
-    handleSelesai: handleSelesai
+    handleRevisi: handleRevisi
   };
 
 })();
-
-

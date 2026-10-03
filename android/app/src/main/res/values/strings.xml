@@ -1,7 +1,11 @@
-<?xml version='1.0' encoding='utf-8'?>
+﻿<?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">PollarBilliard</string>
-    <string name="title_activity_main">PollarBilliard</string>
+    <string name="app_name">ALVA-POS</string>
+    <string name="title_activity_main">ALVA-POS</string>
     <string name="package_name">com.pollardbilliard.pos</string>
     <string name="custom_url_scheme">com.pollardbilliard.pos</string>
 </resources>
+
+
+
+

@@ -1,9 +1,16 @@
 {
+  "name": "alva-pos-cli",
+  "version": "1.0.0",
+  "description": "ALVA terminal CLI",
+  "bin": {
+    "alva": "./alva-cli.js"
+  },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@fedejm/capacitor-esc-pos-printer": "^0.2.4",
+    "@google/genai": "^2.24.0",
     "otplib": "^13.4.1",
     "sqlite3": "^6.0.1"
   }

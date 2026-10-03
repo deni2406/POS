@@ -1,4 +1,4 @@
-/**
+﻿/**
  * meja-modal.js
  * Modul khusus mandiri untuk menangani UI modal ketika kasir memilih MEJA KOSONG,
  * serta modul untuk MEJA KARYAWAN.
@@ -570,7 +570,7 @@
             timeout: true,
             message: "Proses buka meja terlalu lama"
           });
-        }, 1000);
+        }, 15000);
       
       });
 

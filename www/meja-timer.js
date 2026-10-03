@@ -288,22 +288,16 @@
       data.waktu_selesai ||
       null;
 
-    if (
-      !waktuSelesaiVal &&
-      waktuMulaiVal &&
-      durasiJamVal > 0 &&
-      jenisSesi !== "LOSS"
-    ) {
+    if (jenisSesi !== "LOSS" && !parseDate(waktuSelesaiVal)) {
       const calculatedEnd =
-        hitungWaktuSelesai(
-          waktuMulaiVal,
-          durasiJamVal
-        );
+        waktuMulaiVal && durasiJamVal > 0
+          ? hitungWaktuSelesai(waktuMulaiVal, durasiJamVal)
+          : null;
 
-      if (calculatedEnd) {
-        waktuSelesaiVal =
-          calculatedEnd.toISOString();
-      }
+      // Nilai akhir malformed dibuang; tanpa fallback yang valid, timer tetap tidak tersedia.
+      waktuSelesaiVal = calculatedEnd
+        ? calculatedEnd.toISOString()
+        : null;
     }
 
     // Status database tetap mengikuti data sumber.

@@ -1,0 +1,1 @@
+const sqlite3=require("sqlite3").verbose(); const db=new sqlite3.Database("C:/POS/pos.db"); db.all("SELECT * FROM harga_member_cache WHERE kategori = 'PELAJAR' ORDER BY id",(e,r)=>{if(e){console.error(e);return;} console.table(r); db.close();});

@@ -1,0 +1,1 @@
+const s=require("sqlite3").verbose();const d=new s.Database("C:/POS/pos.db");d.all("SELECT * FROM pesanan_meja WHERE session_id=\"SES-20260910-214556-660\"",(e,r)=>{if(e)console.error(e);else console.table(r);d.close()})

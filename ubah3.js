@@ -1,0 +1,1 @@
+const s=require("sqlite3").verbose();const d=new s.Database("C:/POS/pos.db");d.run("UPDATE pesanan_meja SET harga_jual=21000,subtotal=105000 WHERE id=716 AND session_id=\"SES-20260910-164616-815\"",function(e){if(e)console.error(e);else console.log("OK: Meja 3 = Rp105.000");d.close()})

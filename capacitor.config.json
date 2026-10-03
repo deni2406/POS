@@ -1,5 +1,9 @@
 {
   "appId": "com.pollardbilliard.pos",
   "appName": "PollarBilliard",
-  "webDir": "www"
+  "webDir": "www",
+  "server": {
+    "url": "https://192.168.1.140:3100",
+    "cleartext": true
+  }
 }

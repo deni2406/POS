@@ -16,3 +16,12 @@ config.js
 # Temporary backup and patch files
 PollarBilliard-POS-FULL-BACKUP-*.zip
 patch-*.ps1
+.aider*
+
+# Sensitive credentials and signing keys
+manager-totp-secret*.txt
+android/keystore/
+
+# Local database backups
+*.bak
+pos.db*

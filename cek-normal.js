@@ -1,0 +1,1 @@
+const s=require("sqlite3").verbose();const d=new s.Database("C:/POS/pos.db");d.get("SELECT id,nama,harga_jual FROM master_barang WHERE LOWER(TRIM(nama)) = 'meja billiard'",(e,r)=>{if(e)throw e;console.log(r);d.close();});

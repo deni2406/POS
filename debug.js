@@ -1,69 +1,18 @@
-const { callGas } = require("./gas");
+const sqlite3 = require("sqlite3").verbose();
+const path = require("path");
 
 async function debugKategori() {
-  console.log("================================");
-  console.log(" DEBUG KATEGORI MASTER BARANG");
-  console.log("================================");
-
+  const db = new sqlite3.Database(path.join(__dirname, "pos.db"), sqlite3.OPEN_READONLY);
   try {
-    const result = await callGas({
-      action: "get_barang"
-    });
-
-    console.log("SUCCESS:", result.success);
-    console.log("TOTAL  :", result.total);
-
-    if (!result.success) {
-      console.log("ERROR  :", result.error);
-      return;
-    }
-
-    console.log("\n10 DATA PERTAMA:");
-
-    result.data.slice(0, 10).forEach((item, index) => {
-      console.log(
-        `${index + 1}.`,
-        "Nama:",
-        item.nama,
-        "| Area/Kategori:",
-        item.kategori,
-        "| HPP:",
-        item.hpp,
-        "| Harga:",
-        item.hargaJual
-      );
-    });
-
-    const kategori = [
-      ...new Set(
-        result.data
-          .map(item => item.kategori)
-          .filter(Boolean)
-      )
-    ];
-
-    console.log("\n================================");
-    console.log("DAFTAR KATEGORI");
-    console.log("================================");
-
-    kategori.forEach((item, index) => {
-      console.log(`${index + 1}. ${item}`);
-    });
-
-    console.log("\nJumlah kategori:", kategori.length);
-
-    console.log("\n================================");
-    console.log("DEBUG SELESAI");
-    console.log("================================");
-
+    const rows = await new Promise((resolve, reject) => db.all(
+      "SELECT kategori, COUNT(*) AS jumlah FROM master_barang GROUP BY kategori ORDER BY kategori",
+      (error, data) => error ? reject(error) : resolve(data || [])));
+    console.log("Katalog lokal:", rows.reduce((sum, row) => sum + Number(row.jumlah), 0), "produk");
+    rows.forEach(row => console.log(`${row.kategori || "(tanpa kategori)"}: ${row.jumlah}`));
   } catch (error) {
-    console.error("\nDEBUG ERROR:");
-    console.error(error.message);
-
-    if (error.stack) {
-      console.error("\nSTACK:");
-      console.error(error.stack);
-    }
+    console.error("Gagal membaca katalog lokal:", error.message);
+  } finally {
+    db.close();
   }
 }
 
