@@ -1,0 +1,1 @@
+const s=require("sqlite3").verbose();const d=new s.Database("C:/POS/pos.db");d.all("SELECT * FROM sesi_meja WHERE nomor_meja=10 ORDER BY id DESC",(e,r)=>{if(e)console.error(e);else console.table(r);d.close()})

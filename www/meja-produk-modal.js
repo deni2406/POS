@@ -16,12 +16,26 @@
     
     return (
       nama === "MEJA BILLIARD" ||
+      nama === "MEJA PAGI" ||
+      nama === "MEJA MALAM" ||
       nama === "1 JAM" ||
       nama === "BILLIARD 1 JAM" ||
       kategori === "BILLIARD" ||
       kategori === "PAKET BILLIARD" ||
       (nama.includes("BILLIARD") && nama.includes("JAM"))
     );
+  }
+
+  function isMejaNonaktif(item) {
+    const nama = String(item && item.nama || "").trim().toLowerCase();
+    if (nama !== "meja pagi" && nama !== "meja malam") return false;
+    return typeof window.isMejaWaktuNonaktif === "function" && window.isMejaWaktuNonaktif(item.nama);
+  }
+
+  function badgeNonaktif(item) {
+    return isMejaNonaktif(item)
+      ? '<span style="display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 0.65rem; font-weight: 800; vertical-align: middle;">NONAKTIF</span>'
+      : "";
   }
 
   function initModal() {
@@ -161,7 +175,10 @@
     if (searchInput) {
       const keyword = searchInput.value.trim().toLowerCase();
       if (keyword) {
-        items = items.filter(item => String(item.nama || "").toLowerCase().includes(keyword));
+        items = items.filter(item =>
+          String(item.nama || "").toLowerCase().includes(keyword) ||
+          String(item.kategori || "").toLowerCase().includes(keyword)
+        );
       }
     }
 
@@ -174,7 +191,7 @@
       const isBilliard = isProdukBillard(item);
       return `
         <button class="meja-produk-item-btn" onclick='MejaProdukModal.tambahItemDraft(${JSON.stringify(item.nama)})'>
-          <div style="font-weight: bold; font-size: 0.9rem; color: #111827;">${item.nama}</div>
+          <div style="font-weight: bold; font-size: 0.9rem; color: #111827;">${item.nama}${badgeNonaktif(item)}</div>
           <div style="font-size: 0.8rem; color: #6b7280;">Rp${Number(item.hargaJual || 0).toLocaleString('id-ID')} &bull; <span style="color: ${isBilliard ? '#2563eb' : '#4b5563'}; font-weight: bold;">${isBilliard ? 'PAKET BILLIARD / DURASI' : 'PRODUK TAMBAHAN'}</span></div>
         </button>
       `;
@@ -195,7 +212,7 @@
       return `
         <div class="meja-draft-row">
           <div>
-            <div style="font-weight: bold; color: #111827; font-size: 0.9rem;">${item.nama}</div>
+            <div style="font-weight: bold; color: #111827; font-size: 0.9rem;">${item.nama}${badgeNonaktif(item)}</div>
             <div style="font-size: 0.75rem; color: #6b7280;">${isBilliard ? 'Paket Billiard (Durasi)' : 'Produk Tambahan'}</div>
           </div>
           <div class="meja-draft-controls">
@@ -253,10 +270,11 @@
 
   function buka() {
     initModal();
-    // Kosongkan keyword pencarian saat modal baru dibuka
+    // Setiap pembukaan dimulai dengan draft kosong dan katalog kategori meja.
+    draftItems = [];
     const searchInput = document.getElementById('mejaProdukSearch');
     if (searchInput) {
-      searchInput.value = '';
+      searchInput.value = 'meja';
     }
     renderKatalog();
     renderDraft();
@@ -278,23 +296,6 @@
 
   function mulaiMejaBaru() {
     draftItems = [];
-
-    const master = Array.isArray(masterBarang)
-      ? masterBarang.find(
-          item =>
-            String(item.nama || "").trim().toLowerCase() ===
-            "meja billiard"
-        )
-      : null;
-
-    if (master) {
-      draftItems.push({
-        nama: master.nama,
-        qty: 1,
-        kategori: master.kategori || ""
-      });
-    }
-
     renderDraft();
   }
 

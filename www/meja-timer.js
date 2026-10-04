@@ -294,10 +294,27 @@
           ? hitungWaktuSelesai(waktuMulaiVal, durasiJamVal)
           : null;
 
-      // Nilai akhir malformed dibuang; tanpa fallback yang valid, timer tetap tidak tersedia.
       waktuSelesaiVal = calculatedEnd
         ? calculatedEnd.toISOString()
         : null;
+    }
+
+    if (
+      !waktuSelesaiVal &&
+      waktuMulaiVal &&
+      durasiJamVal > 0 &&
+      jenisSesi !== "LOSS"
+    ) {
+      const calculatedEnd =
+        hitungWaktuSelesai(
+          waktuMulaiVal,
+          durasiJamVal
+        );
+
+      if (calculatedEnd) {
+        waktuSelesaiVal =
+          calculatedEnd.toISOString();
+      }
     }
 
     // Status database tetap mengikuti data sumber.

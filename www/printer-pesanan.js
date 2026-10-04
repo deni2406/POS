@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   console.log("[PRINTER PESANAN] Modul berhasil dimuat.");
 })();
 
@@ -28,6 +28,186 @@ const printerPesananState = {
   }
 };
 
+const printerPesananAlertState = {
+  bar: false,
+  dapur: false
+};
+
+function tampilkanAlertPrinterPesananOffline(jenis) {
+  if (printerPesananAlertState[jenis]) {
+    return;
+  }
+
+  printerPesananAlertState[jenis] = true;
+
+  alert(
+    `⚠️ PRINTER ${jenis.toUpperCase()} TIDAK TERHUBUNG\n\n` +
+    `Printer ${jenis.toUpperCase()} sedang offline atau tidak dapat dihubungkan.\n\n` +
+    `Transaksi tetap berhasil disimpan, tetapi tiket ${jenis.toUpperCase()} tidak tercetak.`
+  );
+}
+
+function resetAlertPrinterPesanan(jenis) {
+  printerPesananAlertState[jenis] = false;
+}
+
+const printerPesananReconnectPromise = {
+  bar: null,
+  dapur: null
+};
+
+
+async function disposePrinterPesananHash(jenis, hashKey) {
+  if (!hashKey) {
+    return;
+  }
+
+  const printerApi = window.PBMSBluetoothPrinter;
+
+  if (!printerApi || typeof printerApi.getPrinterPlugin !== "function") {
+    return;
+  }
+
+  const plugin = printerApi.getPrinterPlugin();
+
+  try {
+    await plugin.disconnectPrinter({
+      hashKey
+    });
+  } catch (error) {
+    console.warn(
+      `[PRINTER PESANAN] Disconnect ${jenis.toUpperCase()} setelah gagal print tidak berhasil:`,
+      error
+    );
+  }
+
+  try {
+    await plugin.disposePrinter({
+      hashKey
+    });
+  } catch (error) {
+    console.warn(
+      `[PRINTER PESANAN] Dispose ${jenis.toUpperCase()} setelah gagal print tidak berhasil:`,
+      error
+    );
+  }
+}
+
+async function reconnectPrinterPesanan(jenis) {
+  if (jenis !== "bar" && jenis !== "dapur") {
+    throw new Error("Jenis printer tidak valid.");
+  }
+
+  if (printerPesananReconnectPromise[jenis]) {
+    return printerPesananReconnectPromise[jenis];
+  }
+
+  const state = printerPesananState[jenis];
+  const config = ambilConfigPrinterPesanan();
+  const savedConfig = config?.[jenis] || {};
+
+  const address = state.address || savedConfig.address || "";
+  const name = savedConfig.name || "";
+
+  if (!address) {
+    throw new Error(
+      `Alamat printer ${jenis.toUpperCase()} tidak tersedia.`
+    );
+  }
+
+  state.address = address;
+
+  printerPesananReconnectPromise[jenis] = (async () => {
+    const result = await hubungkanPrinterPesanan(
+      jenis,
+      address,
+      name
+    );
+
+    if (!result?.success) {
+      state.address = address;
+
+      throw new Error(
+        result?.message ||
+        `Gagal melakukan auto-reconnect printer ${jenis.toUpperCase()}.`
+      );
+    }
+
+    return result;
+  })();
+
+  try {
+    return await printerPesananReconnectPromise[jenis];
+  } finally {
+    printerPesananReconnectPromise[jenis] = null;
+  }
+}
+
+async function ensurePrinterPesananReady(jenis) {
+  if (jenis !== "bar" && jenis !== "dapur") {
+    throw new Error("Jenis printer tidak valid.");
+  }
+
+  const printerApi = window.PBMSBluetoothPrinter;
+
+  if (!printerApi || typeof printerApi.getPrinterPlugin !== "function") {
+    throw new Error("API printer Bluetooth belum tersedia.");
+  }
+
+  const plugin = printerApi.getPrinterPlugin();
+  const state = printerPesananState[jenis];
+  const config = ambilConfigPrinterPesanan();
+  const savedConfig = config?.[jenis] || {};
+
+  if (!state.address && savedConfig.address) {
+    state.address = savedConfig.address;
+  }
+
+  if (!state.address) {
+    throw new Error(
+      `Printer ${jenis.toUpperCase()} belum dikonfigurasi.`
+    );
+  }
+
+  if (state.hashKey) {
+    try {
+      const connected = await plugin.isPrinterConnected({
+        hashKey: state.hashKey
+      });
+
+      if (connected?.value) {
+        state.connected = true;
+        return state.hashKey;
+      }
+    } catch (error) {
+      console.warn(
+        `[PRINTER PESANAN] Status ${jenis.toUpperCase()} tidak dapat diperiksa:`,
+        error
+      );
+    }
+
+    const staleHashKey = state.hashKey;
+
+    state.hashKey = null;
+    state.connected = false;
+
+    await disposePrinterPesananHash(
+      jenis,
+      staleHashKey
+    );
+  }
+
+  const result = await reconnectPrinterPesanan(jenis);
+
+  if (!result?.hashKey) {
+    throw new Error(
+      `Printer ${jenis.toUpperCase()} gagal disiapkan.`
+    );
+  }
+
+  return result.hashKey;
+}
+
 function ambilStatePrinterPesanan(jenis) {
   if (jenis !== "bar" && jenis !== "dapur") {
     throw new Error("Jenis printer tidak valid.");
@@ -52,32 +232,37 @@ async function hubungkanPrinterPesanan(jenis, address, name = "") {
   }
 
   const plugin = printerApi.getPrinterPlugin();
+  const state = printerPesananState[jenis];
+  const previousHashKey = state.hashKey;
+
+  state.address = address;
 
   try {
-    const state = printerPesananState[jenis];
-
-    if (state.hashKey) {
+    if (previousHashKey) {
       try {
         await plugin.disconnectPrinter({
-          hashKey: state.hashKey
+          hashKey: previousHashKey
         });
       } catch (error) {
         console.warn(
-          `[PRINTER PESANAN] Disconnect ${jenis} sebelumnya gagal:`,
+          `[PRINTER PESANAN] Disconnect ${jenis.toUpperCase()} sebelumnya gagal:`,
           error
         );
       }
 
       try {
         await plugin.disposePrinter({
-          hashKey: state.hashKey
+          hashKey: previousHashKey
         });
       } catch (error) {
         console.warn(
-          `[PRINTER PESANAN] Dispose ${jenis} sebelumnya gagal:`,
+          `[PRINTER PESANAN] Dispose ${jenis.toUpperCase()} sebelumnya gagal:`,
           error
         );
       }
+
+      state.hashKey = null;
+      state.connected = false;
     }
 
     const created = await plugin.createPrinter({
@@ -88,19 +273,49 @@ async function hubungkanPrinterPesanan(jenis, address, name = "") {
     const hashKey = created?.value;
 
     if (!hashKey) {
-      throw new Error(`HashKey printer ${jenis.toUpperCase()} tidak ditemukan.`);
+      throw new Error(
+        `HashKey printer ${jenis.toUpperCase()} tidak ditemukan.`
+      );
     }
 
-    await plugin.connectPrinter({
-      hashKey
-    });
+    try {
+      await plugin.connectPrinter({
+        hashKey
+      });
 
-    const connected = await plugin.isPrinterConnected({
-      hashKey
-    });
+      const connected = await plugin.isPrinterConnected({
+        hashKey
+      });
 
-    if (!connected?.value) {
-      throw new Error(`Printer ${jenis.toUpperCase()} gagal terhubung.`);
+      if (!connected?.value) {
+        throw new Error(
+          `Printer ${jenis.toUpperCase()} gagal terhubung.`
+        );
+      }
+    } catch (error) {
+      try {
+        await plugin.disconnectPrinter({
+          hashKey
+        });
+      } catch (disconnectError) {
+        console.warn(
+          `[PRINTER PESANAN] Disconnect ${jenis.toUpperCase()} baru gagal:`,
+          disconnectError
+        );
+      }
+
+      try {
+        await plugin.disposePrinter({
+          hashKey
+        });
+      } catch (disposeError) {
+        console.warn(
+          `[PRINTER PESANAN] Dispose ${jenis.toUpperCase()} baru gagal:`,
+          disposeError
+        );
+      }
+
+      throw error;
     }
 
     state.hashKey = hashKey;
@@ -116,11 +331,14 @@ async function hubungkanPrinterPesanan(jenis, address, name = "") {
 
     simpanConfigPrinterPesanan(config);
 
-    console.log(`[PRINTER PESANAN] ${jenis.toUpperCase()} terhubung:`, {
-      name,
-      address,
-      hashKey
-    });
+    console.log(
+      `[PRINTER PESANAN] ${jenis.toUpperCase()} terhubung:`,
+      {
+        name,
+        address,
+        hashKey
+      }
+    );
 
     return {
       success: true,
@@ -130,9 +348,9 @@ async function hubungkanPrinterPesanan(jenis, address, name = "") {
       hashKey
     };
   } catch (error) {
-    printerPesananState[jenis].hashKey = null;
-    printerPesananState[jenis].address = null;
-    printerPesananState[jenis].connected = false;
+    state.hashKey = null;
+    state.address = address;
+    state.connected = false;
 
     console.error(
       `[PRINTER PESANAN] Gagal menghubungkan ${jenis.toUpperCase()}:`,
@@ -142,6 +360,8 @@ async function hubungkanPrinterPesanan(jenis, address, name = "") {
     return {
       success: false,
       jenis,
+      name,
+      address,
       message:
         error?.message ||
         `Gagal menghubungkan printer ${jenis.toUpperCase()}.`
@@ -159,6 +379,100 @@ function ambilSemuaStatePrinterPesanan() {
 }
 
 window.ambilSemuaStatePrinterPesanan = ambilSemuaStatePrinterPesanan;
+
+async function cekStatusPrinterPesanan(jenis) {
+  if (jenis !== "bar" && jenis !== "dapur") {
+    throw new Error("Jenis printer tidak valid.");
+  }
+
+  const printerApi = window.PBMSBluetoothPrinter;
+
+  if (!printerApi || typeof printerApi.getPrinterPlugin !== "function") {
+    return {
+      connected: false,
+      jenis,
+      message: "API printer Bluetooth belum tersedia."
+    };
+  }
+
+  const plugin = printerApi.getPrinterPlugin();
+  const state = printerPesananState[jenis];
+  const config = ambilConfigPrinterPesanan();
+  const savedConfig = config?.[jenis] || {};
+
+  const address = state.address || savedConfig.address || "";
+  const name = savedConfig.name || "";
+
+  if (!address) {
+    return {
+      connected: false,
+      jenis,
+      message: `Printer ${jenis.toUpperCase()} belum dikonfigurasi.`
+    };
+  }
+
+  if (state.hashKey) {
+    try {
+      const result = await plugin.isPrinterConnected({
+        hashKey: state.hashKey
+      });
+
+      if (result?.value) {
+        state.connected = true;
+        state.address = address;
+
+        return {
+          connected: true,
+          jenis,
+          address,
+          name,
+          hashKey: state.hashKey
+        };
+      }
+    } catch (error) {
+      console.warn(
+        `[PRINTER PESANAN] Cek koneksi ${jenis.toUpperCase()} gagal:`,
+        error
+      );
+    }
+  }
+
+  try {
+    const hasil = await hubungkanPrinterPesanan(
+      jenis,
+      address,
+      name
+    );
+
+    if (hasil?.success) {
+      return {
+        connected: true,
+        jenis,
+        address,
+        name,
+        hashKey: hasil.hashKey
+      };
+    }
+
+    return {
+      connected: false,
+      jenis,
+      address,
+      name,
+      message: hasil?.message || "Gagal menghubungkan printer."
+    };
+  } catch (error) {
+    return {
+      connected: false,
+      jenis,
+      address,
+      name,
+      message: error?.message || String(error)
+    };
+  }
+}
+
+window.cekStatusPrinterPesanan = cekStatusPrinterPesanan;
 
 async function putuskanPrinterPesanan(jenis) {
   if (jenis !== "bar" && jenis !== "dapur") {
@@ -311,30 +625,11 @@ async function cetakTiketPesanan(jenis, data) {
   const plugin = printerApi.getPrinterPlugin();
   const state = printerPesananState[jenis];
 
-  if (!state.hashKey) {
-    return {
-      success: false,
-      jenis,
-      message: `Printer ${jenis.toUpperCase()} belum terhubung.`
-    };
-  }
-
   try {
-    const connected = await plugin.isPrinterConnected({
-      hashKey: state.hashKey
-    });
-
-    if (!connected?.value) {
-      state.connected = false;
-
-      return {
-        success: false,
-        jenis,
-        message: `Printer ${jenis.toUpperCase()} tidak terhubung.`
-      };
-    }
+    const hashKey = await ensurePrinterPesananReady(jenis);
 
     const nomorPesanan = ambilNomorPesananHarian(jenis);
+
     const teks = buatTiketPesanan({
       ...data,
       jenis,
@@ -352,11 +647,28 @@ async function cetakTiketPesanan(jenis, data) {
       0x0A
     ];
 
-    await plugin.sendToPrinter({
-      hashKey: state.hashKey,
-      data: printerData,
-      waitingTime: 1000
-    });
+    try {
+      await plugin.sendToPrinter({
+        hashKey,
+        data: printerData,
+        waitingTime: 1000
+      });
+
+    } catch (error) {
+      const failedHashKey = state.hashKey;
+
+      state.hashKey = null;
+      state.connected = false;
+
+      await disposePrinterPesananHash(
+        jenis,
+        failedHashKey
+      );
+
+      throw error;
+    }
+
+    resetAlertPrinterPesanan(jenis);
 
     console.log(
       `[PRINTER PESANAN] Tiket ${jenis.toUpperCase()} berhasil dikirim.`
@@ -364,13 +676,16 @@ async function cetakTiketPesanan(jenis, data) {
 
     return {
       success: true,
-      jenis
+      jenis,
+      nomorPesanan
     };
   } catch (error) {
     console.error(
       `[PRINTER PESANAN] Gagal mencetak tiket ${jenis.toUpperCase()}:`,
       error
     );
+
+    tampilkanAlertPrinterPesananOffline(jenis);
 
     return {
       success: false,
@@ -396,19 +711,34 @@ async function cetakPesananBerdasarkanKategori(data) {
 
   const kelompok = kelompokkanPesananByKategori(items);
 
+  console.log("[PRINTER PESANAN][TRACE] Kelompok pesanan:", {
+  bar: kelompok.bar,
+  dapur: kelompok.dapur
+});
+
   const hasil = {
     bar: null,
     dapur: null
   };
 
+  console.log(
+  "[PRINTER PESANAN][TRACE] Memanggil cetak BAR:",
+  kelompok.bar
+);
+
   if (kelompok.bar.length > 0) {
-    hasil.bar = await cetakTiketPesanan("bar", {
-      meja: data?.meja || "-",
-      sessionId: data?.sessionId || "-",
-      pemesan: data?.pemesan || "",
-      items: kelompok.bar
-    });
-  }
+  console.log(
+    "[PRINTER PESANAN][TRACE] Memanggil cetak BAR:",
+    kelompok.bar
+  );
+
+  hasil.bar = await cetakTiketPesanan("bar", {
+    meja: data?.meja || "-",
+    sessionId: data?.sessionId || "-",
+    pemesan: data?.pemesan || "",
+    items: kelompok.bar
+  });
+}
 
   if (kelompok.dapur.length > 0) {
     hasil.dapur = await cetakTiketPesanan("dapur", {
@@ -421,8 +751,14 @@ async function cetakPesananBerdasarkanKategori(data) {
 
   console.log("[PRINTER PESANAN] Hasil cetak:", hasil);
 
+  const barBerhasil =
+    hasil.bar === null || hasil.bar?.success === true;
+
+  const dapurBerhasil =
+    hasil.dapur === null || hasil.dapur?.success === true;
+
   return {
-    success: true,
+    success: barBerhasil && dapurBerhasil,
     kelompok,
     hasil
   };

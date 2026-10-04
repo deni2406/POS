@@ -76,12 +76,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px !important;
-      padding: 7px !important;
-      border: 1px solid rgba(148, 163, 184, .3) !important;
+      gap: 10px !important;
+      padding: 8px 10px !important;
+      border: 1px solid #e2e8f0 !important;
       border-radius: 12px !important;
-      background: rgba(15, 23, 42, .98) !important;
-      box-shadow: 0 10px 24px rgba(2, 6, 23, .28);
+      background: #ffffff !important;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, .15);
       white-space: nowrap;
     }
 
@@ -89,32 +89,32 @@
 
     #drawerBalanceChoices .drawer-balance-action {
       min-height: 36px;
-      padding: 8px 13px;
+      padding: 8px 14px;
       border: 1px solid transparent;
-      border-radius: 9px;
-      color: #fff;
-      font: inherit;
-      font-size: 12px;
-      font-weight: 750;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: inherit;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
       line-height: 1;
       cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, .18);
-      transition: background-color .15s ease, box-shadow .15s ease, transform .15s ease;
+      transition: background-color .15s ease, transform .15s ease;
     }
 
-    #drawerBalanceChoices .drawer-balance-action:hover { box-shadow: 0 4px 9px rgba(0, 0, 0, .24); }
     #drawerBalanceChoices .drawer-balance-action:active { transform: translateY(1px); }
-    #drawerBalanceChoices .drawer-balance-action:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-    #drawerBalanceChoices .drawer-balance-in { background: #15803d; border-color: #4ade80; }
-    #drawerBalanceChoices .drawer-balance-in:hover { background: #16a34a; }
-    #drawerBalanceChoices .drawer-balance-out { background: #b91c1c; border-color: #f87171; }
-    #drawerBalanceChoices .drawer-balance-out:hover { background: #dc2626; }
+    #drawerBalanceChoices .drawer-balance-action:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+    #drawerBalanceChoices .drawer-balance-in { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+    #drawerBalanceChoices .drawer-balance-in:hover { background: #d1fae5; }
+    #drawerBalanceChoices .drawer-balance-out { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    #drawerBalanceChoices .drawer-balance-out:hover { background: #fee2e2; }
 
     @media (max-width: 600px) {
       #drawerBalanceContainer { top: 50% !important; }
       #drawerBalanceButton { min-height: 34px; padding: 7px 10px !important; font-size: 12px; }
-      #drawerBalanceChoices { gap: 6px !important; padding: 6px !important; }
-      #drawerBalanceChoices .drawer-balance-action { min-height: 34px; padding: 8px 10px; font-size: 11px; }
     }
 
   </style>
@@ -1634,9 +1634,9 @@ z-index:5!important;
     <h2 id="openingBalanceTitle">Saldo KWh Awal</h2>
     <p>Masukkan saldo KWh awal sebelum mulai bertugas.</p>
     <label for="openingBalanceKwhDalamAwal">KWh Dalam Awal</label>
-    <input id="openingBalanceKwhDalamAwal" type="text" inputmode="decimal" autocomplete="off" placeholder="Masukkan KWh Dalam Awal">
+    <input id="openingBalanceKwhDalamAwal" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Masukkan KWh Dalam Awal">
     <label for="openingBalanceKwhLuarAwal">KWh Luar Awal</label>
-    <input id="openingBalanceKwhLuarAwal" type="text" inputmode="decimal" autocomplete="off" placeholder="Masukkan KWh Luar Awal">
+    <input id="openingBalanceKwhLuarAwal" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Masukkan KWh Luar Awal">
     <div id="openingBalanceError" role="alert" aria-live="polite"></div>
     <button id="openingBalanceSubmit" class="primary-btn" type="button" onclick="submitOpeningBalance()">KONFIRMASI</button>
   </div>
@@ -1760,25 +1760,12 @@ z-index:5!important;
         Saldo : <span id="drawerBalanceAmount">—</span>
       </button>
       <div id="drawerBalanceChoices" hidden style="position:absolute; transform:translateX(-50%);">
-        <button type="button" class="drawer-balance-action drawer-balance-in" onclick="bukaModalKasMasuk(event)">Uang Masuk</button>
-        <button type="button" class="drawer-balance-action drawer-balance-out" onclick="bukaModalKasKeluar(event)">Uang Keluar</button>
+        <button type="button" class="drawer-balance-action drawer-balance-in" onclick="bukaModalKasMasuk(event)"><svg aria-hidden="true" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v13m-5-5 5 5 5-5"/></svg>Uang Masuk</button>
+        <button type="button" class="drawer-balance-action drawer-balance-out" onclick="bukaModalKasKeluar(event)"><svg aria-hidden="true" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17V4m-5 5 5-5 5 5"/></svg>Uang Keluar</button>
       </div>
     </div>
 
     <div class="topbar-right">
-
-      <div
-        id="syncInfo"
-        class="sync-info"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-          <path d="M21.5 2v6h-6"></path>
-          <path d="M2.5 22v-6h6"></path>
-          <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8"></path>
-          <path d="M22 12.5a10 10 0 0 1-18.8 4.3L2.5 16"></path>
-        </svg>
-        <span id="syncInfoText">Database lokal</span>
-      </div>
 
       <div id="lampWatchdogContainer">
         <button id="lampWatchdogBtn" class="header-menu-item" type="button" aria-label="Notifikasi Lamp Watchdog" title="Notifikasi Lamp Watchdog" aria-expanded="false" aria-controls="lampWatchdogDropdown">
@@ -2441,8 +2428,8 @@ z-index:5!important;
       autocomplete="off"
     >
     <div style="display: flex; gap: 8px; margin-top: 15px;">
-      <button id="batalOtorisasiBtn" class="popup-table-btn" style="flex: 1; padding: 10px; background: #f3f4f6; font-weight: bold;" onclick="tutupPopupOtorisasiManager()">BATAL</button>
-      <button id="verifikasiTotpBtn" class="popup-table-btn" style="flex: 1; padding: 10px; background: #3b82f6; color: #ffffff; font-weight: bold;" onclick="prosesOtorisasiManager()">VERIFIKASI</button>
+      <button id="batalOtorisasiBtn" style="flex: 1; height: 42px; padding: 0 16px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db;" onclick="tutupPopupOtorisasiManager()">BATAL</button>
+      <button id="verifikasiTotpBtn" style="flex: 1; height: 42px; padding: 0 16px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; background: #2563eb; color: #ffffff; border: none; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.22);" onclick="prosesOtorisasiManager()">VERIFIKASI</button>
     </div>
   </div>
 </div>
@@ -2464,8 +2451,8 @@ z-index:5!important;
       <!-- Info transaksi yang dipilih -->
     </div>
     <div style="display: flex; gap: 8px; margin-top: 15px;">
-      <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #f3f4f6; font-weight: bold;" onclick="tutupPopupBatalTransaksi()">BATAL</button>
-      <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #ef4444; color: #ffffff; font-weight: bold;" onclick="lanjutkanBatalTransaksi()">LANJUTKAN</button>
+      <button style="flex: 1; height: 42px; padding: 0 16px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db;" onclick="tutupPopupBatalTransaksi()">BATAL</button>
+      <button style="flex: 1; height: 42px; padding: 0 16px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; background: #ef4444; color: #ffffff; border: none;" onclick="lanjutkanBatalTransaksi()">LANJUTKAN</button>
     </div>
   </div>
 </div>
@@ -2494,8 +2481,8 @@ z-index:5!important;
       autocomplete="off"
     >
     <div style="display: flex; gap: 8px; margin-top: 15px;">
-      <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #f3f4f6; font-weight: bold;" onclick="tutupPopupOtorisasiBatal()">BATAL</button>
-      <button id="verifikasiBatalTotpBtn" class="popup-table-btn" style="flex: 1; padding: 10px; background: #3b82f6; color: #ffffff; font-weight: bold;" onclick="prosesBatalTransaksi()">VERIFIKASI</button>
+      <button style="flex: 1; height: 42px; padding: 0 16px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db;" onclick="tutupPopupOtorisasiBatal()">BATAL</button>
+      <button id="verifikasiBatalTotpBtn" style="flex: 1; height: 42px; padding: 0 16px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; background: #2563eb; color: #ffffff; border: none; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.22);" onclick="prosesBatalTransaksi()">VERIFIKASI</button>
     </div>
   </div>
 </div>
@@ -2560,7 +2547,8 @@ z-index:5!important;
       id="saldoKwhDalamAkhir"
       class="actual-input"
       type="text"
-      inputmode="decimal"
+      inputmode="numeric"
+      pattern="[0-9]*"
       placeholder="0"
     ></div>
     <div><label class="form-label" for="saldoKwhLuarAkhir">KWh Luar Akhir</label>
@@ -2568,7 +2556,8 @@ z-index:5!important;
       id="saldoKwhLuarAkhir"
       class="actual-input"
       type="text"
-      inputmode="decimal"
+      inputmode="numeric"
+      pattern="[0-9]*"
       placeholder="0"
     ></div>
     </div>
@@ -2611,9 +2600,9 @@ z-index:5!important;
       <label class="form-label" for="kasKeterangan">Keterangan</label>
       <textarea id="kasKeterangan" class="form-input" rows="3" maxlength="200" placeholder="Keterangan tambahan (opsional)" style="resize: vertical;"></textarea>
       <p id="kasMasukMessage" role="status" aria-live="polite" style="min-height: 20px; margin: 2px 0 10px; color: #64748b; font-size: .84rem;"></p>
-      <div style="display:flex; justify-content:flex-end; gap:9px; margin-top:8px;">
-        <button type="button" class="popup-table-btn" style="width:auto; min-height:44px; padding:10px 17px;" onclick="tutupModalKasMasuk()">BATAL</button>
-        <button id="kasMasukSubmit" type="submit" class="kas-entry-submit" disabled style="width:auto; min-height:44px; margin:0; padding:10px 20px; background:#16a34a; opacity:.55; cursor:not-allowed;">SIMPAN</button>
+      <div style='display: flex; gap: 10px; margin-top: 15px;'>
+        <button type='button' style='flex: 1; height: 42px; padding: 0 16px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; display: flex; align-items: center; justify-content: center;' onclick="tutupModalKasMasuk()">BATAL</button>
+        <button id="kasMasukSubmit" type="submit" disabled style='flex: 1; height: 42px; padding: 0 16px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; background: #15803d; color: #ffffff; border: none; box-shadow: 0 2px 4px rgba(21, 128, 61, 0.22); display: flex; align-items: center; justify-content: center; opacity: .55;'>SIMPAN UANG MASUK</button>
       </div>
     </form>
   </section>
@@ -2631,9 +2620,9 @@ z-index:5!important;
       <label class="form-label" for="kasKeluarLaciKeterangan">Keterangan</label>
       <textarea id="kasKeluarLaciKeterangan" class="form-input" rows="3" maxlength="200" placeholder="Keterangan tambahan (opsional)" style="resize: vertical;"></textarea>
       <p id="kasKeluarLaciMessage" role="status" aria-live="polite" style="min-height:20px; margin:2px 0 10px; color:#64748b; font-size:.84rem;"></p>
-      <div style="display:flex; justify-content:flex-end; gap:9px; margin-top:8px;">
-        <button type="button" class="popup-table-btn" style="width:auto; min-height:44px; padding:10px 17px;" onclick="tutupModalKasKeluar()">BATAL</button>
-        <button id="kasKeluarLaciSubmit" type="submit" class="kas-entry-submit" disabled style="width:auto; min-height:44px; margin:0; padding:10px 20px; background:#b91c1c; opacity:.55; cursor:not-allowed;">SIMPAN</button>
+      <div style='display: flex; gap: 10px; margin-top: 15px;'>
+        <button type='button' style='flex: 1; height: 42px; padding: 0 16px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; display: flex; align-items: center; justify-content: center;' onclick="tutupModalKasKeluar()">BATAL</button>
+        <button id="kasKeluarLaciSubmit" type="submit" disabled style='flex: 1; height: 42px; padding: 0 16px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; background: #b91c1c; color: #ffffff; border: none; box-shadow: 0 2px 4px rgba(185, 28, 28, 0.22); display: flex; align-items: center; justify-content: center; opacity: .55;'>SIMPAN UANG KELUAR</button>
       </div>
     </form>
   </section>
@@ -3065,6 +3054,7 @@ z-index:5!important;
 <script src="/meja-produk-modal.js"></script>
 
 <!-- LOAD MODAL MEMBER -->
+<script src="/member-schedule.js"></script>
 <script src="/member.js"></script>
 
 <!-- LOAD MODAL MODULAR BARU -->
@@ -3116,7 +3106,6 @@ let nomorMeja = null; // Sinkronisasi untuk pembayaran backend
 // State Sesi Meja (Sumber Kebenaran Utama = SQLite via API)
 let mejaSessions = {};
 let activeMeja = null;
-let cekHargaSessionId = null;
 // Menyimpan sessionId sesi meja yang sudah di-STOP tetapi tidak lagi dikembalikan oleh GET /api/meja/sesi.
 // Dipakai hanya sebagai referensi pembayaran setelah STOP LOSS.
 const stoppedSessionIdsByMeja = {};
@@ -3397,6 +3386,7 @@ async function logoutKasir() {
   const rawSessionId = sessionStorage.getItem("pbms_session_id");
   const sessionId = rawSessionId ? rawSessionId.trim() : "";
   const deviceId = getOrCreateDeviceId().trim();
+  const kasirId = Number(sessionStorage.getItem("pbms_kasir_id") || (currentKasir && currentKasir.id));
 
   if (sessionId) {
     try {
@@ -3409,7 +3399,8 @@ async function logoutKasir() {
         },
         body: JSON.stringify({
           sessionId,
-          deviceId
+          deviceId,
+          kasirId
         })
       });
     } catch (e) {
@@ -3589,6 +3580,15 @@ function showNoCurrentOpenShiftMessage() {
   }
 }
 
+document.querySelectorAll("#openingBalanceKwhDalamAwal, #openingBalanceKwhLuarAwal, #saldoKwhDalamAkhir, #saldoKwhLuarAkhir").forEach(input => {
+  input.addEventListener("beforeinput", event => {
+    if (event.data !== null && event.data !== undefined && /[^0-9]/.test(event.data)) event.preventDefault();
+  });
+  input.addEventListener("input", () => {
+    input.value = input.value.replace(/[^0-9]/g, "");
+  });
+});
+
 function kunciInputTutupKasir() {
   ["actualCash", "saldoKwhDalamAkhir", "saldoKwhLuarAkhir"].forEach(id => {
     const input = document.getElementById(id);
@@ -3662,19 +3662,12 @@ async function submitOpeningBalance() {
   const kwhDalamAwalText = kwhDalamInput.value.trim();
   const kwhLuarAwalText = kwhLuarInput.value.trim();
   const parseOpeningKwh = (value, label, field) => {
-    if (!/^\d+(?:[.,]\d{1,2})?$/.test(value)) {
-      error.textContent = `${label} harus non-negatif dengan maksimal 2 angka desimal.`;
+    if (!/^\d+$/.test(value)) {
+      error.textContent = `${label} harus berupa angka (tanpa titik atau koma)`;
       field.focus();
       return null;
     }
-    const normalized = value.replace(",", ".");
-    const numberValue = Number(normalized);
-    if (!Number.isFinite(numberValue)) {
-      error.textContent = `${label} harus non-negatif dengan maksimal 2 angka desimal.`;
-      field.focus();
-      return null;
-    }
-    return numberValue;
+    return Number(value) / 100;
   };
   const kwhDalamAwal = parseOpeningKwh(kwhDalamAwalText, "KWh Dalam Awal", kwhDalamInput);
   if (kwhDalamAwal === null) {
@@ -4283,7 +4276,12 @@ async function loginKasir() {
 
   try {
 
-    const response =
+    const loginPayload = {
+      kasirId,
+      pin,
+      deviceId
+    };
+    let response =
       await fetch(
         apiUrl("/api/login"),
         {
@@ -4296,26 +4294,32 @@ async function loginKasir() {
           },
 
           body:
-            JSON.stringify({
-              kasirId,
-              pin,
-              deviceId
-            })
+            JSON.stringify(loginPayload)
         }
       );
 
 
-    const result =
+    let result =
       await response.json();
+
+    if (response.status === 409 || result.code === "SESSION_ACTIVE_OTHER_DEVICE") {
+      const pindah = confirm('Akun ini masih aktif di perangkat lain.\n\nApakah Anda ingin keluar dari perangkat lama dan masuk di perangkat ini?');
+      if (pindah) {
+        response = await fetch(apiUrl("/api/login"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...loginPayload, forceLogin: true })
+        });
+        result = await response.json();
+      } else {
+        throw new Error("Login dibatalkan. Akun masih aktif di perangkat lain.");
+      }
+    }
 
 
     if (
       !result.success
     ) {
-      if (response.status === 409 || result.code === "SESSION_ACTIVE_OTHER_DEVICE") {
-        throw new Error(result.message || "AKUN SEDANG DIGUNAKAN DI DEVICE LAIN.");
-      }
-
       throw new Error(
         result.message ||
         "Login gagal"
@@ -4830,7 +4834,7 @@ async function tampilkanBarang() {
 
               ${escapeHtml(
                 item.nama
-              )}
+              )}${isMejaWaktuNonaktif(item.nama) ? ' <span style="display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 0.65rem; font-weight: 800; vertical-align: middle;">NONAKTIF</span>' : ""}
 
             </div>
 
@@ -4869,10 +4873,17 @@ document
     }
   );
 
+setInterval(tampilkanBarang, 60000);
+
 
 // ==================================================
 // LOGIKA API MEJA & SESI (SQLITE BACKEND)
 // ==================================================
+
+function isItemMejaBilliard(value) {
+  const nama = typeof value === "string" ? value : value?.nama;
+  return ["Meja Billiard", "Meja Pagi", "Meja Malam"].includes(String(nama || "").trim());
+}
 
 async function fetchMejaSessions() {
   try {
@@ -4980,7 +4991,7 @@ async function fetchDetailSesi(sessionId, loadCart = false) {
           if (jenisSesiStr !== "LOSS") {
             const durasiMeja = Number(mejaSessions[activeMeja].durasiJam || 0);
             const itemMeja = itemsBaru.find(
-              x => String(x.nama || '').trim().toLowerCase() === 'meja billiard'
+              x => isItemMejaBilliard(x)
             );
             if (itemMeja && durasiMeja > 0) {
               itemMeja.qty = durasiMeja;
@@ -5801,7 +5812,7 @@ async function konfirmasiMulaiSesi(durasiJam = 1, draft = [], jenisSesiParam = n
 
     if (Array.isArray(draft) && draft.length > 0) {
       for (const item of draft) {
-        if (!item || !item.nama) continue;
+        if (!item || !item.nama || isItemMejaBilliard(item)) continue;
         const qty = Number(item.qty);
         if (!Number.isInteger(qty) || qty <= 0) continue;
 
@@ -5993,7 +6004,7 @@ async function simpanPesananMeja() {
     console.log("[PRINTER PESANAN] SERVER ITEMS:", detailResult.items);
 
     for (const item of cart) {
-      if (item.nama === "Meja Billiard" || item.nama === "Billiard Waktu Loss") continue;
+      if (isItemMejaBilliard(item) || item.nama === "Billiard Waktu Loss") continue;
 
       const namaKey = String(item.nama || "").trim().toLowerCase();
       const targetQty = Number(item.qty || 0);
@@ -6094,7 +6105,7 @@ async function simpanPesananMeja() {
 // ==================================================
 
 async function tambahBarang(item) {
-  if (item.nama === "Meja Billiard" || item.nama === "Billiard Waktu Loss") {
+  if (isItemMejaBilliard(item) || item.nama === "Billiard Waktu Loss") {
     if (
       !activeMeja ||
       !mejaSessions[activeMeja] ||
@@ -6155,7 +6166,7 @@ async function tambahQty(index) {
   }
 
   try {
-    if (item.nama === "Meja Billiard") {
+    if (isItemMejaBilliard(item)) {
       const resDurasi = await authenticatedFetch("/api/meja/tambah-durasi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -6223,7 +6234,7 @@ async function kurangQty(index) {
   const item = cart[index];
   if (!item) return;
 
-  if (item.nama === "Meja Billiard") {
+  if (isItemMejaBilliard(item)) {
     let session = mejaSessions[activeMeja];
     if (!session) {
       await fetchMejaSessions();
@@ -6466,6 +6477,25 @@ async function prosesOtorisasiManager() {
 // RENDER CART
 // ==================================================
 
+function isMejaWaktuNonaktif(nama) {
+  const namaNormal = String(nama || "").trim().toLowerCase();
+  if (namaNormal !== "meja pagi" && namaNormal !== "meja malam") return false;
+
+  const waktuMakassar = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Makassar",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(new Date());
+  const jam = Number(waktuMakassar.find(part => part.type === "hour").value);
+  const menit = Number(waktuMakassar.find(part => part.type === "minute").value);
+  const menitDalamHari = jam * 60 + menit;
+  const jadwalPagi = menitDalamHari >= 7 * 60 && menitDalamHari < 18 * 60;
+
+  return namaNormal === "meja pagi" ? !jadwalPagi : jadwalPagi;
+}
+window.isMejaWaktuNonaktif = isMejaWaktuNonaktif;
+
 function renderCart() {
   const container = document.getElementById("cartItems");
 
@@ -6564,7 +6594,7 @@ if (namaPemesanBox) {
       } else {
         subtotal = harga * item.qty;
       }
-    } else if (item.nama === "Meja Billiard" && activeMeja && mejaSessions[activeMeja]) {
+    } else if (isItemMejaBilliard(item) && activeMeja && mejaSessions[activeMeja]) {
       const jenisSesi = String(session.jenisSesi || session.jenis_sesi || "").trim().toUpperCase();
 
       if (jenisSesi === "LOSS") {
@@ -6610,7 +6640,7 @@ if (namaPemesanBox) {
       <div class="cart-item">
         <div>
           <div class="cart-item-name">
-            ${escapeHtml(item.nama)}
+            ${escapeHtml(item.nama)}${isMejaWaktuNonaktif(item.nama) ? ' <span style="display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 0.65rem; font-weight: 800; vertical-align: middle;">NONAKTIF</span>' : ""}
           </div>
           <div class="cart-item-price">
             ${hargaTampil}
@@ -6674,7 +6704,7 @@ function getTotal() {
         subtotal = h * item.qty;
       }
     } else if (
-      item.nama === "Meja Billiard" &&
+      isItemMejaBilliard(item) &&
       activeMeja &&
       mejaSessions[activeMeja]
     ) {
@@ -7046,25 +7076,19 @@ document
 
 async function cekHargaMeja() {
   const btn = document.getElementById("cekHargaMejaBtn");
-  const session = mejaSessions[activeMeja];
-  if (cekHargaSessionId === session.sessionId) return;
+  const session = activeMeja ? mejaSessions[activeMeja] : null;
+  if (!session) {
+    alert("Pilih meja terlebih dahulu.");
+    return;
+  }
 
   if (btn) {
     btn.disabled = true;
     btn.textContent = "MENGECEK...";
   }
 
-
-  if (!activeMeja || !mejaSessions[activeMeja]) {
-    alert("Pilih meja terlebih dahulu.");
-    return;
-  }
-
-
-  if (cekHargaSessionId !== session.sessionId && btn) {
-    btn.disabled = false;
-    btn.textContent = "CEK";
-  }
+  let cekHargaBerhasil = false;
+  try {
   const jenisSesi = String(session.jenisSesi || session.jenis_sesi || "").trim().toUpperCase();
 
   if (jenisSesi === "LOSS") {
@@ -7133,23 +7157,12 @@ async function cekHargaMeja() {
     return;
   }
 
-  const waktuMulai = session.waktuMulai || null;
+  const waktuMulai = session.waktuMulai || session.waktu_mulai;
+  const jamMakassar = waktuMulai ? Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Makassar", hour: "2-digit", hourCycle: "h23" }).format(new Date(waktuMulai))) : -1;
+  const bonusLayak = ["PLATINUM", "UMUM", "PELAJAR"].includes(kategori) && MEMBER_SCHEDULE.isNightHour(jamMakassar) && Math.floor(durasiJam / 3) > 0;
+  const currentBonus = cart.find(item => ["kopi bonus", "es teh bonus"].includes(String(item.nama || "").trim().toLowerCase()));
+  let bonusProduct = currentBonus?.nama || null;
 
-  if (!waktuMulai) {
-    alert("Waktu mulai sesi tidak tersedia.");
-    return;
-  }
-
-  const d = new Date(waktuMulai);
-  const jam = d.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  });
-
-  let cekHargaBerhasil = false;
-
-  try {
     const response = await authenticatedFetch("/api/meja/hitung-harga", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -7157,18 +7170,31 @@ async function cekHargaMeja() {
         sessionId: session.sessionId || session.session_id || null,
         kategori,
         durasiJam,
-        jam
+        bonusProduct
       })
     });
 
-    const result = await response.json();
+    let result = await response.json();
 
     if (!result.success) {
       throw new Error(result.message || "Harga member tidak tersedia.");
     }
 
+    if (bonusLayak) {
+      const pilihan = window.prompt("Harga berhasil. Pilih bonus: ketik 1 untuk Kopi atau 2 untuk Es Teh", bonusProduct === "Es Teh Bonus" ? "2" : "1");
+      if (pilihan !== "1" && pilihan !== "2") throw new Error("Pilih Kopi atau Es Teh untuk bonus sesi.");
+      bonusProduct = pilihan === "1" ? "Kopi Bonus" : "Es Teh Bonus";
+      const bonusResponse = await authenticatedFetch("/api/meja/hitung-harga", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: session.sessionId || session.session_id || null, kategori, durasiJam, bonusProduct })
+      });
+      result = await bonusResponse.json();
+      if (!result.success) throw new Error(result.message || "Gagal menerapkan bonus sesi.");
+    }
+
     const itemMeja = cart.find(
-      item => String(item.nama || "").trim().toLowerCase() === "meja billiard"
+      item => isItemMejaBilliard(item)
     );
 
     if (!itemMeja) {
@@ -7180,12 +7206,24 @@ async function cekHargaMeja() {
     itemMeja.harga = Number(result.hargaPerJam);
     itemMeja.subtotal = Number(result.total);
 
+    const bonusInCart = cart.find(item => ["kopi bonus", "es teh bonus"].includes(String(item.nama || "").trim().toLowerCase()));
+    if (result.bonusQty > 0 && result.bonusProduct) {
+      if (bonusInCart && bonusInCart.nama !== result.bonusProduct) cart.splice(cart.indexOf(bonusInCart), 1);
+      let bonusItem = cart.find(item => String(item.nama || "").trim().toLowerCase() === result.bonusProduct.toLowerCase());
+      if (!bonusItem) {
+        bonusItem = { nama: result.bonusProduct, qty: result.bonusQty, harga: 0, hargaJual: 0, subtotal: 0, kategori: "BONUS" };
+        cart.push(bonusItem);
+      }
+      bonusItem.qty = result.bonusQty;
+      bonusItem.harga = bonusItem.hargaJual = bonusItem.subtotal = 0;
+    } else if (bonusInCart) {
+      cart.splice(cart.indexOf(bonusInCart), 1);
+    }
+
     renderCart();
     updateSaveOrderButton();
 
     cekHargaBerhasil = true;
-    cekHargaSessionId = session.sessionId;
-
     alert(
       `Harga ${kategori} diterapkan: ${rupiah(result.hargaPerJam)}/jam —  jam = ${rupiah(result.total)}`
     );
@@ -7193,6 +7231,7 @@ async function cekHargaMeja() {
     alert("Gagal cek harga meja: " + error.message);
   } finally {
     if (btn) {
+      btn.disabled = false;
       if (cekHargaBerhasil) {
         btn.textContent = "SUDAH DICEK";
       } else {
@@ -7434,12 +7473,12 @@ try {
   const semuaItem = Array.isArray(cart) ? [...cart] : [];
 
   const itemMeja = semuaItem.find(
-    item => String(item.nama || "").trim() === "Meja Billiard"
+    item => isItemMejaBilliard(item)
   );
 
   const produk = semuaItem
   .filter(
-    item => String(item.nama || "").trim() !== "Meja Billiard"
+    item => !isItemMejaBilliard(item)
   )
   .map(item => {
     const master = masterBarang.find(
@@ -7807,28 +7846,64 @@ async function simpanFormKasMasuk(event) {
     const response = await authenticatedFetch("/api/kas-laci/uang-masuk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kodeSetoran: setoranKasMasukValid.kodeSetoran, nominal, keterangan: document.getElementById("kasKeterangan").value.trim() }) });
     const result = await response.json();
     if (!response.ok || !result.success) throw new Error(result.message || "Uang Masuk gagal disimpan.");
+// ==================================================
+// HELPER FORMAT STRUK KAS 32 KOLOM
+// ==================================================
+function formatStrukCenter32(text) {
+  const t = String(text || "").trim();
+  if (t.length >= 32) return t.slice(0, 32);
+  const padLeft = Math.floor((32 - t.length) / 2);
+  const padRight = 32 - t.length - padLeft;
+  return " ".repeat(padLeft) + t + " ".repeat(padRight);
+}
+
+function formatStrukRow32(label, value) {
+  const l = String(label || "").trim();
+  const v = String(value || "").trim();
+  const maxLabelWidth = 32 - v.length - 1;
+  const safeLabel = l.length > maxLabelWidth ? l.slice(0, maxLabelWidth) : l;
+  const spaces = Math.max(1, 32 - safeLabel.length - v.length);
+  return safeLabel + " ".repeat(spaces) + v;
+}
+
+function formatStrukWrap32(text) {
+  const words = String(text || "").trim().split(/\s+/);
+  const lines = [];
+  let cur = "";
+  words.forEach(w => {
+    if (!cur) {
+      cur = w;
+    } else if ((cur + " " + w).length <= 32) {
+      cur += " " + w;
+    } else {
+      lines.push(cur);
+      cur = w;
+    }
+  });
+  if (cur) lines.push(cur);
+  return lines;
+}
+
     const tanggalWaktu = new Date(result.waktu);
+    const tglStr = String(tanggalWaktu.getDate()).padStart(2, '0') + '/' + String(tanggalWaktu.getMonth() + 1).padStart(2, '0') + '/' + tanggalWaktu.getFullYear() + ' ' + String(tanggalWaktu.getHours()).padStart(2, '0') + ':' + String(tanggalWaktu.getMinutes()).padStart(2, '0');
     const notaUangMasuk = [
-      "POLLARD BILLIARD",
-      "BUKTI UANG MASUK",
-      "ID TRANSAKSI",
-      result.transactionId,
-      "KODE UNIK SETORAN",
-      result.kodeSetoran,
-      "DETAIL TRANSAKSI",
-      `Nominal Setoran Awal: ${rupiah(result.nominalAwal)}`,
-      `Uang Diambil: ${rupiah(result.nominalUangMasuk)}`,
-      `Total Saldo Kas Laci: ${rupiah(result.saldoKasLaci)}`,
-      "LAPORAN SETORAN KASIR",
-      `Sisa Setoran Kasir: ${rupiah(result.saldoSetoranSesudah)}`,
-      "INFORMASI TRANSAKSI",
-      `Kasir: ${result.kasir}`,
-      `Tanggal: ${tanggalWaktu.toLocaleDateString("id-ID")}`,
-      `Waktu: ${tanggalWaktu.toLocaleTimeString("id-ID")}`,
-      `Keterangan: ${result.keterangan || "-"}`,
-      "STATUS",
-      "TRANSAKSI BERHASIL",
-      "SIMPAN NOTA INI SEBAGAI BUKTI TRANSAKSI",
+      formatStrukCenter32("POLLARD BILLIARD"),
+      formatStrukCenter32("BUKTI UANG MASUK"),
+      "================================",
+      formatStrukRow32("ID Transaksi", result.transactionId),
+      formatStrukRow32("Kode Setoran", result.kodeSetoran),
+      formatStrukRow32("Tanggal", tglStr),
+      formatStrukRow32("Kasir", result.kasir),
+      "--------------------------------",
+      formatStrukRow32("Setoran Awal", rupiah(result.nominalAwal)),
+      formatStrukRow32("Uang Masuk", rupiah(result.nominalUangMasuk)),
+      formatStrukRow32("Sisa Setoran", rupiah(result.saldoSetoranSesudah)),
+      "--------------------------------",
+      formatStrukRow32("Saldo Laci", rupiah(result.saldoKasLaci)),
+      ...(result.keterangan ? ["Keterangan:", ...formatStrukWrap32(result.keterangan)] : []),
+      "================================",
+      formatStrukCenter32("TRANSAKSI BERHASIL"),
+      formatStrukCenter32("Simpan sebagai bukti sah"),
       "", "", ""
     ];
     let printerError = null;
@@ -7929,24 +8004,23 @@ async function simpanFormKasKeluar(event) {
     committed = true;
     document.getElementById("drawerBalanceAmount").textContent = rupiah(result.saldoKasLaciSesudah);
     const tanggalWaktu = new Date(result.waktu);
+    const tglKeluarStr = String(tanggalWaktu.getDate()).padStart(2, '0') + '/' + String(tanggalWaktu.getMonth() + 1).padStart(2, '0') + '/' + tanggalWaktu.getFullYear() + ' ' + String(tanggalWaktu.getHours()).padStart(2, '0') + ':' + String(tanggalWaktu.getMinutes()).padStart(2, '0');
     const notaUangKeluar = [
-      "POLLARD BILLIARD",
-      "BUKTI UANG KELUAR",
-      "ID TRANSAKSI",
-      result.transactionId,
-      "DETAIL TRANSAKSI",
-      `Saldo Kas Laci Sebelum: ${rupiah(result.saldoKasLaciSebelum)}`,
-      `Uang Keluar: ${rupiah(result.nominal)}`,
-      `Total Saldo Kas Laci: ${rupiah(result.saldoKasLaciSesudah)}`,
-      "KETERANGAN UANG KELUAR",
-      result.keterangan,
-      "INFORMASI TRANSAKSI",
-      `Kasir: ${result.kasir}`,
-      `Tanggal: ${tanggalWaktu.toLocaleDateString("id-ID")}`,
-      `Waktu: ${tanggalWaktu.toLocaleTimeString("id-ID")}`,
-      "STATUS",
-      "TRANSAKSI BERHASIL",
-      "SIMPAN NOTA INI SEBAGAI BUKTI TRANSAKSI",
+      formatStrukCenter32("POLLARD BILLIARD"),
+      formatStrukCenter32("BUKTI UANG KELUAR"),
+      "================================",
+      formatStrukRow32("ID Transaksi", result.transactionId),
+      formatStrukRow32("Tanggal", tglKeluarStr),
+      formatStrukRow32("Kasir", result.kasir),
+      "--------------------------------",
+      formatStrukRow32("Uang Keluar", rupiah(result.nominal)),
+      formatStrukRow32("Saldo Kasir", rupiah(result.saldoKasLaciSesudah)),
+      "--------------------------------",
+      "Keperluan:",
+      ...formatStrukWrap32(result.keterangan || "-"),
+      "================================",
+      formatStrukCenter32("TRANSAKSI BERHASIL"),
+      formatStrukCenter32("Simpan sebagai bukti sah"),
       "", "", ""
     ];
     let printerError = null;
@@ -8365,7 +8439,7 @@ function validasiTahapTutupKasir(tahap, data) {
       if (tx.nomor_meja != null) { const no = Number(tx.nomor_meja); if (!tables.has(no)) fail("Detail transaksi merujuk meja di luar 1–10."); tableSales.set(no, (tableSales.get(no) || 0) + tx.total); }
       if (tx.session_id) sessions.add(`${tx.nomor_meja}:${tx.session_id}`);
       tx.detail_produk.forEach(item => {
-        if (String(item.nama_barang).trim().toLowerCase() === "meja billiard") return;
+        if (["meja billiard", "meja pagi", "meja malam"].includes(String(item.nama_barang).trim().toLowerCase())) return;
         const p = products.get(item.nama_barang) || { qty: 0, subtotal: 0 }; p.qty += item.qty; p.subtotal += item.subtotal; products.set(item.nama_barang, p);
       });
     });
@@ -8504,7 +8578,7 @@ function buatTeksLaporanTutupKasir(data) {
   const categorySales = { BAR: 0, DAPUR: 0, KASIR: 0 };
   transactions.forEach(tx => {
     (tx.detail_produk || []).forEach(item => {
-      if (String(item.nama_barang || "").trim().toLowerCase() === "meja billiard") return;
+      if (["meja billiard", "meja pagi", "meja malam"].includes(String(item.nama_barang || "").trim().toLowerCase())) return;
       const master = Array.isArray(masterBarang)
         ? masterBarang.find(product =>
             String(product.nama || "").trim().toLowerCase() ===
@@ -8562,7 +8636,7 @@ function renderLaporanTutupKasir(data) {
   dataLaporanTutupKasirUntukCetak = data;
   const shift = data.shift || {}, sales = data.ringkasanPenjualan || {}, rec = data.rekonsiliasiKas || {};
   const tables = Array.from({ length: 10 }, (_, index) => (data.performaMeja || []).find(item => Number(item.nomor_meja) === index + 1) || { nomor_meja: index + 1, jumlah_sesi: 0, total_durasi_jam: 0, omzet: 0 });
-  const products = (data.rekapProduk || []).filter(item => String(item.nama_barang || "").trim().toLowerCase() !== "meja billiard");
+  const products = (data.rekapProduk || []).filter(item => !["meja billiard", "meja pagi", "meja malam"].includes(String(item.nama_barang || "").trim().toLowerCase()));
   const txs = data.transaksi || [];
   const salesDifference = data.selisihPenjualan;
   const salesDifferenceClass = salesDifference < 0 ? "sales-difference-negative" : salesDifference > 0 ? "sales-difference-positive" : "";

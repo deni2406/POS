@@ -1,0 +1,1 @@
+const s=require("sqlite3").verbose();const d=new s.Database("C:/POS/pos.db");d.all("SELECT name FROM sqlite_master WHERE type='table'",(e,r)=>{let i=0;function q(){if(i>=r.length)return d.close();let n=r[i++].name;d.all(`SELECT * FROM "${n}" WHERE session_id="SES-20260910-164616-815"`,(e,x)=>{if(x?.length){console.log(n);console.table(x)}q()})}q()})

@@ -7,6 +7,7 @@ const sqlite3 = require("sqlite3").verbose();
 const stockOpnameLocal = require("./stock-opname-local");
 const { respondLocalCatalogSync } = require("./catalog-local");
 const { selectLocalMemberPrice } = require("./harga-member-local");
+const MEMBER_SCHEDULE = require("./member-schedule");
 const stockOpnameSchema = require("./stock-opname-schema");
 const { callLegacyStockOpnameGas, localConflictResponse } = require("./stock-opname-legacy");
 const { getShadowDatabasePath } = require("./pbms-shadow/database-config");
@@ -1322,6 +1323,8 @@ async function getHargaMemberDariCache(kategoriInput, durasiJamInput, waktuMulai
 async function sinkronHargaMejaBilliard(sessionRow, durasiJam) {
   if (!sessionRow || !Number.isInteger(Number(durasiJam)) || Number(durasiJam) < 1) return;
 
+  const namaMeja = await getNamaBarangMejaSesi(sessionRow.session_id);
+
   const durasi = Number(durasiJam);
   const nowIso = new Date().toISOString();
 
@@ -1334,8 +1337,8 @@ async function sinkronHargaMejaBilliard(sessionRow, durasiJam) {
            subtotal = harga_jual * ?,
            updated_at = ?
        WHERE session_id = ?
-         AND LOWER(TRIM(nama_barang)) = 'meja billiard'`,
-      [durasi, durasi, nowIso, sessionRow.session_id]
+         AND LOWER(TRIM(nama_barang)) = LOWER(?)`,
+      [durasi, durasi, nowIso, sessionRow.session_id, namaMeja]
     );
     return;
   }
@@ -1353,8 +1356,8 @@ async function sinkronHargaMejaBilliard(sessionRow, durasiJam) {
            subtotal = harga_jual * ?,
            updated_at = ?
        WHERE session_id = ?
-         AND LOWER(TRIM(nama_barang)) = 'meja billiard'`,
-      [durasi, durasi, nowIso, sessionRow.session_id]
+       AND LOWER(TRIM(nama_barang)) = LOWER(?)`,
+      [durasi, durasi, nowIso, sessionRow.session_id, namaMeja]
     );
     return;
   }
@@ -1366,15 +1369,58 @@ async function sinkronHargaMejaBilliard(sessionRow, durasiJam) {
          subtotal = ?,
          updated_at = ?
      WHERE session_id = ?
-       AND LOWER(TRIM(nama_barang)) = 'meja billiard'`,
+     AND LOWER(TRIM(nama_barang)) = LOWER(?)`,
     [
       durasi,
       hasil.hargaPerJam,
       hasil.total,
       nowIso,
-      sessionRow.session_id
+      sessionRow.session_id,
+      namaMeja
     ]
   );
+}
+
+const NAMA_BARANG_MEJA = ["Meja Billiard", "Meja Pagi", "Meja Malam"];
+function namaMejaDariWaktuMulai(waktuMulai) {
+  const jam = jamMakassar(waktuMulai);
+  return jam >= 7 && jam < 18 ? "Meja Pagi" : "Meja Malam";
+}
+async function getNamaBarangMejaSesi(sessionId) {
+  const items = await getSessionItems(sessionId);
+  const meja = items.find(item => NAMA_BARANG_MEJA.includes(String(item.nama_barang || "").trim()));
+  // Rows lama tetap menggunakan nama barang Meja Billiard.
+  return meja?.nama_barang || "Meja Billiard";
+}
+
+function jamMakassar(waktu) {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Makassar", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date(waktu));
+  return Number(parts.find(part => part.type === "hour")?.value || 0);
+}
+
+async function sinkronBonusMalam(sessionRow, durasiJam, pilihan = null) {
+  if (!sessionRow?.session_id) return { bonusQty: 0, bonusProduct: null };
+  const kategori = String(sessionRow.kategori_member || "").trim().toUpperCase();
+  const jam = jamMakassar(sessionRow.waktu_mulai);
+  const qty = ["PLATINUM", "UMUM", "PELAJAR"].includes(kategori) && MEMBER_SCHEDULE.isNightHour(jam)
+    ? Math.floor(Number(durasiJam) / 3) : 0;
+  const existing = (await getSessionItems(sessionRow.session_id)).find(item => String(item.nama_barang || "").trim().toLowerCase() === "kopi bonus" || String(item.nama_barang || "").trim().toLowerCase() === "es teh bonus");
+  const product = pilihan || existing?.nama_barang || null;
+  if (qty < 1 || !product || !["Kopi Bonus", "Es Teh Bonus"].includes(product)) {
+    await runAsync(`DELETE FROM pesanan_meja WHERE session_id = ? AND LOWER(TRIM(nama_barang)) IN ('kopi bonus', 'es teh bonus')`, [sessionRow.session_id]);
+    return { bonusQty: 0, bonusProduct: null };
+  }
+  const now = new Date().toISOString();
+  const found = (await getSessionItems(sessionRow.session_id)).find(item => String(item.nama_barang || "").trim().toLowerCase() === product.toLowerCase());
+  await runAsync(`DELETE FROM pesanan_meja WHERE session_id = ? AND LOWER(TRIM(nama_barang)) IN ('kopi bonus', 'es teh bonus') AND LOWER(TRIM(nama_barang)) <> ?`, [sessionRow.session_id, product.toLowerCase()]);
+  if (found) {
+    await runAsync(`DELETE FROM pesanan_meja WHERE session_id = ? AND LOWER(TRIM(nama_barang)) = ? AND id <> ?`, [sessionRow.session_id, product.toLowerCase(), found.id]);
+    await runAsync(`UPDATE pesanan_meja SET qty = ?, harga_jual = 0, hpp = 0, subtotal = 0, updated_at = ? WHERE id = ?`, [qty, now, found.id]);
+  } else {
+    await runAsync(`DELETE FROM pesanan_meja WHERE session_id = ? AND LOWER(TRIM(nama_barang)) IN ('kopi bonus', 'es teh bonus')`, [sessionRow.session_id]);
+    await runAsync(`INSERT INTO pesanan_meja (session_id, nama_barang, qty, harga_jual, hpp, subtotal, created_at, updated_at) VALUES (?, ?, ?, 0, 0, 0, ?, ?)`, [sessionRow.session_id, product, qty, now, now]);
+  }
+  return { bonusQty: qty, bonusProduct: product };
 }
 
 function getSessionItems(sessionId) {
@@ -1598,6 +1644,37 @@ function tentukanStatusMember(member) {
   }
 
   return member.status || 'MENUNGGU_AKTIF';
+}
+
+function validasiBatasSesiMemberPagi(kategoriMember, waktuMulaiInput, waktuSelesaiInput) {
+  const kategori = String(kategoriMember || "").trim().toUpperCase();
+  if (!["PLATINUM", "UMUM", "PELAJAR"].includes(kategori)) return;
+
+  const waktuMulai = new Date(waktuMulaiInput);
+  const waktuSelesai = new Date(waktuSelesaiInput);
+  if (Number.isNaN(waktuMulai.getTime()) || Number.isNaN(waktuSelesai.getTime())) return;
+
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Makassar",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+  }).formatToParts(waktuMulai);
+  const part = (type) => parts.find(item => item.type === type)?.value || "0";
+  const year = Number(part("year"));
+  const month = Number(part("month"));
+  const day = Number(part("day"));
+  const hour = Number(part("hour"));
+  const minute = Number(part("minute"));
+
+  // Paket pagi berlaku mulai 07:00 sampai sebelum 18:00 WITA.
+  if (!MEMBER_SCHEDULE.isMorningHour(hour)) return;
+
+  // Makassar memakai UTC+08:00; pukul 19:00 setempat adalah 11:00 UTC.
+  const batasSelesai = Date.UTC(year, month - 1, day, 11, 0, 0, 0);
+  if (waktuSelesai.getTime() > batasSelesai) {
+    const sisaJamBulat = Math.max(0, Math.floor((batasSelesai - waktuMulai.getTime()) / 3600000));
+    throw new Error(`Sesi member pagi kategori ${kategori} harus selesai paling lambat pukul 19:00 WITA. Durasi maksimum dari waktu mulai ini ${sisaJamBulat} jam.`);
+  }
 }
 function cekStatusMemberHarian() {
   return new Promise((resolve, reject) => {
@@ -2055,6 +2132,17 @@ const server = https.createServer({
     }
   }
 
+  if (req.method === "GET" && req.url === "/member-schedule.js") {
+    try {
+      const js = fs.readFileSync(path.join(__dirname, "member-schedule.js"), "utf8");
+      res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8" });
+      return res.end(js);
+    } catch (error) {
+      res.writeHead(404);
+      return res.end("member-schedule.js tidak ditemukan");
+    }
+  }
+
   if (req.method === "GET" && req.url === "/member.js") {
     try {
       const js = fs.readFileSync(path.join(__dirname, "member.js"), "utf8");
@@ -2180,7 +2268,6 @@ const server = https.createServer({
 
       const trimmedSessionId = rawSessionId.trim();
       const trimmedDeviceId = rawDeviceId.trim();
-
       let foundSession = null;
       for (const session of activeLoginSessions.values()) {
         if (session.sessionId === trimmedSessionId) {
@@ -2253,6 +2340,7 @@ const server = https.createServer({
       const data = await getJsonBody(req);
       const rawSessionId = data.sessionId;
       const rawDeviceId = data.deviceId;
+      const requestedKasirId = data.kasirId != null ? Number(data.kasirId) : null;
 
       if (!rawSessionId || !rawDeviceId || typeof rawSessionId !== "string" || typeof rawDeviceId !== "string" || !rawSessionId.trim() || !rawDeviceId.trim()) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
@@ -2272,6 +2360,9 @@ const server = https.createServer({
 
       if (targetKasirId) {
         activeLoginSessions.delete(targetKasirId);
+      }
+      if (requestedKasirId !== null && Number.isFinite(requestedKasirId)) {
+        activeLoginSessions.delete(requestedKasirId);
       }
 
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -2305,6 +2396,7 @@ const server = https.createServer({
 
     try {
       const data = await getJsonBody(req);
+      const forceLogin = Boolean(data.forceLogin);
       const deviceId = data.deviceId;
       if (!deviceId || typeof deviceId !== "string" || !deviceId.trim()) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
@@ -2389,12 +2481,16 @@ const server = https.createServer({
                 const existingSession = activeLoginSessions.get(kasir.id);
                 if (now < existingSession.expiresAt) {
                   if (existingSession.deviceId !== trimmedDeviceId) {
-                    res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
-                    return res.end(JSON.stringify({
-                      success: false,
-                      code: "SESSION_ACTIVE_OTHER_DEVICE",
-                      message: "AKUN SEDANG DIGUNAKAN DI DEVICE LAIN."
-                    }));
+                    if (forceLogin) {
+                      activeLoginSessions.delete(kasir.id);
+                    } else {
+                      res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
+                      return res.end(JSON.stringify({
+                        success: false,
+                        code: "SESSION_ACTIVE_OTHER_DEVICE",
+                        message: "AKUN SEDANG DIGUNAKAN DI DEVICE LAIN."
+                      }));
+                    }
                   } else {
                     db.get(
                       `SELECT * FROM shift_kasir
@@ -2820,6 +2916,9 @@ const server = https.createServer({
       }
 
       if (result && result.success === true) {
+        if (req.url === "/api/lamp/off" || (req.url === "/api/lamp" && Number(data.status) === 0)) {
+          lastLampCommandState.set(Number(table), 0);
+        }
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         return res.end(JSON.stringify(result));
       } else {
@@ -2845,19 +2944,15 @@ const server = https.createServer({
       let updated;
       if (isShadowCatalogEnabled()) {
         data = await listShadowBarang(getShadowCatalogDatabase());
-        if (query && query.trim()) {
-          const keyword = query.trim().toLowerCase();
-          data = data.filter(item => String(item.nama || "").toLowerCase().includes(keyword));
-        }
         data = data.map(item => ({ ...item, updated_at: item.published_at ?? null }));
       } else {
         data = await getLocalBarang();
+      }
 
-        if (query && query.trim()) {
-          const keyword = query.trim().toLowerCase();
-          data = data.filter(item => String(item.nama || "").toLowerCase().includes(keyword));
-        }
-
+      data = data.filter(item => String(item.kategori || "").trim().toUpperCase() !== "BONUS");
+      if (query && query.trim()) {
+        const keyword = query.trim().toLowerCase();
+        data = data.filter(item => String(item.nama || "").toLowerCase().includes(keyword));
       }
 
       // Keep a single catalog ordering in both repositories. Stable sort keeps
@@ -3133,7 +3228,8 @@ const server = https.createServer({
           }
 
           const isLossItem = (nama === "billiard waktu loss");
-          const isTableServiceItem = (nama === "meja billiard" || nama === "1 jam");
+          const isTableServiceItem = (nama === "meja billiard" || nama === "meja pagi" || nama === "meja malam" || nama === "1 jam");
+          const isBonusItem = (nama === "kopi bonus" || nama === "es teh bonus");
 
           if (isLossItem) {
             if (!sessionIdInput || !tableSession) {
@@ -3220,7 +3316,10 @@ const server = https.createServer({
             continue;
           }
 
-          if (isTableServiceItem) {
+          if (isTableServiceItem || isBonusItem) {
+            if (isBonusItem && !tableSession) {
+              throw new Error("Bonus sesi hanya dapat dibayar bersama sesi meja yang valid");
+            }
             let serviceQty = clientQty;
             let serviceHarga = Number(item.hargaJual || item.harga_jual || 0);
             let serviceSubtotal = 0;
@@ -3239,6 +3338,11 @@ const server = https.createServer({
               serviceHarga = Number(matchingPesanan.harga_jual);
               serviceSubtotal = Number(matchingPesanan.subtotal);
               usesClientQty = false;
+              if (isBonusItem && (serviceHarga !== 0 || serviceSubtotal !== 0)) {
+                res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+                await runAsync("ROLLBACK");
+                return res.end(JSON.stringify({ success: false, code: "INVALID_BONUS_PRICE", message: "Bonus sesi wajib berharga Rp0" }));
+              }
               if (String(tableSession.jenis_sesi || "").trim().toUpperCase() === "KARYAWAN") {
                 serviceHarga = 0;
                 serviceSubtotal = 0;
@@ -3350,6 +3454,9 @@ const server = https.createServer({
         if (tableSession) {
           try {
             const lampRes = await lampOff(tableSession.nomor_meja);
+            if (lampRes && lampRes.success === true) {
+              lastLampCommandState.set(Number(tableSession.nomor_meja), 0);
+            }
             if (!lampRes || lampRes.success !== true) {
               writeLog(
                 "WARN",
@@ -3490,6 +3597,8 @@ const server = https.createServer({
           const isService =
             namaLower === "billiard waktu loss" ||
             namaLower === "meja billiard" ||
+            namaLower === "meja pagi" ||
+            namaLower === "meja malam" ||
             namaLower === "1 jam";
 
           if (isService) continue;
@@ -3817,7 +3926,7 @@ const server = https.createServer({
               const detailsByTx = new Map();
               const products = new Map();
               details.forEach(row => {
-                if (String(row.nama_barang || "").trim().toLowerCase() === "meja billiard") return;
+                if (["meja billiard", "meja pagi", "meja malam"].includes(String(row.nama_barang || "").trim().toLowerCase())) return;
                 if (!detailsByTx.has(row.transaksi_id)) detailsByTx.set(row.transaksi_id, []);
                 detailsByTx.get(row.transaksi_id).push({ nama_barang: row.nama_barang, qty: Number(row.qty || 0), harga_jual: Number(row.harga_jual || 0), subtotal: Number(row.subtotal || 0) });
                 const product = products.get(row.nama_barang) || { nama_barang: row.nama_barang, qty: 0, harga_jual: Number(row.harga_jual || 0), harga_jual_konsisten: true, subtotal: 0, _prices: new Set() };
@@ -4051,9 +4160,9 @@ const server = https.createServer({
             return res.end(JSON.stringify({ success: false, code: "PENDING_CLOSE_SNAPSHOT_MISMATCH", message: "Nilai snapshot penutupan tidak konsisten." }));
           }
           const nominalSetoran = Number(shift.nominal_aktual);
-          if (!Number.isSafeInteger(nominalSetoran) || nominalSetoran <= 0) {
+          if (!Number.isSafeInteger(nominalSetoran) || nominalSetoran < 0) {
             res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-            return res.end(JSON.stringify({ success: false, code: "NOMINAL_SETORAN_TIDAK_VALID", message: "Nominal Aktual harus berupa integer positif yang aman untuk Setoran." }));
+            return res.end(JSON.stringify({ success: false, code: "NOMINAL_SETORAN_TIDAK_VALID", message: "Nominal Aktual harus berupa integer non-negatif yang aman untuk Setoran." }));
           }
           const sendCloseSuccess = () => {
             snapshot.shift.status = "CLOSED";
@@ -4824,6 +4933,7 @@ const server = https.createServer({
       for (let i = 1; i <= 10; i++) {
         const activeSession = sessions.find(s => s.nomor_meja === i);
         if (activeSession) {
+          const namaBarangMeja = await getNamaBarangMejaSesi(activeSession.session_id);
           result.push({
             nomorMeja: i,
             status: "AKTIF",
@@ -4831,6 +4941,7 @@ const server = https.createServer({
             namaPemesan: activeSession.nama_pemesan,
             kasir: activeSession.kasir,
             waktuMulai: activeSession.waktu_mulai,
+            namaBarangMeja,
             durasiJam: activeSession.durasi_jam || 0,
             waktuSelesai: activeSession.waktu_selesai || null,
             jenisSesi: activeSession.jenis_sesi || "NORMAL",
@@ -4920,7 +5031,7 @@ const server = https.createServer({
           (session_id, nama_barang, qty, harga_jual, hpp, subtotal, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `,
-          [sessionId, "Meja Billiard", durasiJam, 0, 0, 0, nowIso, nowIso],
+          [sessionId, namaMejaDariWaktuMulai(waktuMulai), durasiJam, 0, 0, 0, nowIso, nowIso],
           (error) => {
             if (error) reject(error);
             else resolve();
@@ -5014,16 +5125,14 @@ const server = https.createServer({
         return res.end(JSON.stringify({ success: false, message: "Kategori member tidak valid" }));
       }
 
-      const nowIso = new Date().toISOString();
+      // Tarif sesi mengikuti waktu mulai yang tersimpan, bukan waktu tombol ditekan.
+      const nowIso = mejaSessionHarga?.waktu_mulai || new Date().toISOString();
       let cacheHarga;
 
       if (isExpiredHarga) {
         const masterBarang = await getLocalBarang();
-        const barangBilliard = masterBarang.find(b =>
-          String(b.nama || "").trim().toLowerCase() === "meja billiard" ||
-          String(b.nama || "").trim().toLowerCase() === "1 jam" ||
-          String(b.kategori || "").toLowerCase().includes("meja")
-        );
+        const namaBarangMeja = mejaSessionHarga ? await getNamaBarangMejaSesi(mejaSessionHarga.session_id) : namaMejaDariWaktuMulai(nowIso);
+        const barangBilliard = masterBarang.find(b => String(b.nama || "").trim() === namaBarangMeja);
 
         const hargaNormal = barangBilliard ? Number(barangBilliard.hargaJual || 0) : 0;
 
@@ -5031,7 +5140,7 @@ const server = https.createServer({
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           return res.end(JSON.stringify({
             success: false,
-            message: "Harga normal Meja Billiard tidak tersedia di database SQLite."
+            message: `Harga normal ${namaBarangMeja} tidak tersedia di database SQLite.`
           }));
         }
 
@@ -5062,6 +5171,7 @@ const server = https.createServer({
       }).format(new Date());
 
       if (rawSessionId) {
+        const namaBarangMeja = mejaSessionHarga ? await getNamaBarangMejaSesi(String(rawSessionId)) : "Meja Billiard";
         await new Promise((resolve, reject) => {
           db.run(
             `UPDATE pesanan_meja
@@ -5070,8 +5180,8 @@ const server = https.createServer({
                  subtotal = ?,
                  updated_at = datetime('now')
              WHERE session_id = ?
-               AND LOWER(TRIM(nama_barang)) = 'meja billiard'`,
-            [durasiJam, hargaPerJam, total, String(rawSessionId)],
+               AND LOWER(TRIM(nama_barang)) = LOWER(?)`,
+            [durasiJam, hargaPerJam, total, String(rawSessionId), namaBarangMeja],
             function(err) {
               if (err) return reject(err);
               resolve(this.changes);
@@ -5079,6 +5189,10 @@ const server = https.createServer({
           );
         });
       }
+
+      const bonus = rawSessionId && mejaSessionHarga
+        ? await sinkronBonusMalam(mejaSessionHarga, durasiJam, data.bonusProduct || null)
+        : { bonusQty: 0, bonusProduct: null };
 
       writeLog(
         "INFO",
@@ -5101,6 +5215,8 @@ const server = https.createServer({
         jam: nowJam,
         hargaPerJam,
         total,
+        bonusQty: bonus.bonusQty,
+        bonusProduct: bonus.bonusProduct,
         source: "SQLITE_DB"
       }));
 
@@ -5134,6 +5250,7 @@ const server = https.createServer({
       }
 
       const rawItems = await getSessionItems(sessionId);
+      const namaBarangMeja = await getNamaBarangMejaSesi(sessionId);
       const isKaryawan = String(mejaSession.jenis_sesi || "").trim().toUpperCase() === "KARYAWAN";
 
       const items = rawItems.map(item => {
@@ -5165,6 +5282,7 @@ const server = https.createServer({
           namaPemesan: mejaSession.nama_pemesan,
           kasir: mejaSession.kasir,
           waktuMulai: mejaSession.waktu_mulai,
+          namaBarangMeja,
           durasiJam: mejaSession.durasi_jam || 0,
           waktuSelesai: mejaSession.waktu_selesai || null,
           jenisSesi: mejaSession.jenis_sesi || "NORMAL",
@@ -5222,6 +5340,9 @@ const server = https.createServer({
         throw new Error("Meja sudah memiliki sesi AKTIF");
       }
 
+      const waktuMulaiDate = new Date();
+      const waktuMulai = waktuMulaiDate.toISOString();
+
       let memberInfo = null;
       let kategoriMember = null;
       let hargaPerJam = null;
@@ -5251,8 +5372,7 @@ const server = https.createServer({
         memberInfo = foundMember;
         kategoriMember = foundMember.status === "EXPIRED" ? null : String(foundMember.kategori || foundMember.kategoriId || "").trim().toUpperCase();
 
-        const waktuMulaiHarga = new Date().toISOString();
-        const cacheHarga = foundMember.status === "EXPIRED" ? { hargaPerJam: null, jam: null } : await getHargaMemberDariCache(kategoriMember, durasiJam, waktuMulaiHarga);
+        const cacheHarga = foundMember.status === "EXPIRED" ? { hargaPerJam: null, jam: null } : await getHargaMemberDariCache(kategoriMember, durasiJam, waktuMulai);
 
         if (!cacheHarga) {
           res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
@@ -5274,9 +5394,10 @@ const server = https.createServer({
       }
 
       const sessionId = generateSessionId();
-      const waktuMulaiDate = new Date();
-      const waktuMulai = waktuMulaiDate.toISOString();
       const waktuSelesai = isLoss ? null : new Date(waktuMulaiDate.getTime() + durasiJam * 3600 * 1000).toISOString();
+      if (!isLoss && kategoriMember) {
+        validasiBatasSesiMemberPagi(kategoriMember, waktuMulai, waktuSelesai);
+      }
 
       await new Promise((resolve, reject) => {
         db.run(
@@ -5317,15 +5438,11 @@ const server = https.createServer({
 
       if (!isLoss) {
         const masterBarang = await getLocalBarang();
-        const barangBilliard = masterBarang.find(b =>
-          String(b.nama || "").trim().toLowerCase() === "meja billiard" ||
-          String(b.nama || "").trim().toLowerCase() === "1 jam" ||
-          String(b.kategori || "").toLowerCase().includes("meja")
-        );
-
-        const namaBarangItem = "Meja Billiard";
-        const hppItem = barangBilliard ? Number(barangBilliard.hpp || 0) : 0;
-        const normalHargaJual = barangBilliard ? Number(barangBilliard.hargaJual || 0) : 0;
+        const namaBarangItem = namaMejaDariWaktuMulai(waktuMulai);
+        const barangBilliard = masterBarang.find(b => String(b.nama || "").trim() === namaBarangItem);
+        if (!barangBilliard) throw new Error(`Produk ${namaBarangItem} tidak ditemukan di Master Barang`);
+        const hppItem = Number(barangBilliard.hpp || 0);
+        const normalHargaJual = Number(barangBilliard.hargaJual || 0);
 
         const hargaJualFinal = normalHargaJual;
         const subtotalFinal = hargaJualFinal * durasiJam;
@@ -5472,6 +5589,9 @@ const server = https.createServer({
 
         try {
           const lampOffRes = await lampOff(nomorMejaAsal);
+          if (lampOffRes && lampOffRes.success === true) {
+            lastLampCommandState.set(Number(nomorMejaAsal), 0);
+          }
           if (!lampOffRes || lampOffRes.success !== true) {
             writeLog("WARN", "LAMP_OFF_FAILED", `Gagal mematikan lampu meja asal ${nomorMejaAsal} saat pindah meja`, { lampOffRes });
           }
@@ -5627,7 +5747,10 @@ const server = https.createServer({
       }
 
       try {
-        await lampOff(mejaSession.nomor_meja);
+        const lampOffRes = await lampOff(mejaSession.nomor_meja);
+        if (lampOffRes && lampOffRes.success === true) {
+          lastLampCommandState.set(Number(mejaSession.nomor_meja), 0);
+        }
       } catch (lampErr) {
         writeLog("ERROR", "LAMP_OFF_ERROR", `Gagal mematikan lampu meja ${mejaSession.nomor_meja}`, { error: lampErr.message });
       }
@@ -5697,6 +5820,7 @@ const server = https.createServer({
       } else {
         waktuSelesaiBaruDate = new Date(currentEnd.getTime() + durasiTambahJam * 3600 * 1000);
       }
+      validasiBatasSesiMemberPagi(mejaSession.kategori_member, mejaSession.waktu_mulai, waktuSelesaiBaruDate);
       const waktuSelesaiBaru = waktuSelesaiBaruDate.toISOString();
 
       await new Promise((resolve, reject) => {
@@ -5716,6 +5840,7 @@ const server = https.createServer({
 
       const sessionAfterDuration = await getSessionById(sessionId);
       await sinkronHargaMejaBilliard(sessionAfterDuration, durasiJamBaru);
+      await sinkronBonusMalam(sessionAfterDuration, durasiJamBaru);
 
       if (wasExpired) {
         const nomorMeja = mejaSession.nomor_meja;
@@ -5748,8 +5873,12 @@ const server = https.createServer({
         status: "AKTIF"
       }));
     } catch (error) {
-      res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
-      return res.end(JSON.stringify({ success: false, message: "Sesi aktif tidak ditemukan" }));
+      const batasPagiDitolak = String(error.message || "").startsWith("Sesi member pagi kategori ");
+      res.writeHead(batasPagiDitolak ? 400 : 404, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({
+        success: false,
+        message: batasPagiDitolak ? error.message : "Sesi aktif tidak ditemukan"
+      }));
     }
   }
 
@@ -5817,6 +5946,7 @@ const server = https.createServer({
 
       const sessionAfterDuration = await getSessionById(sessionId);
       await sinkronHargaMejaBilliard(sessionAfterDuration, durasiJamBaru);
+      await sinkronBonusMalam(sessionAfterDuration, durasiJamBaru);
 
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
       return res.end(JSON.stringify({
@@ -5936,20 +6066,27 @@ const server = https.createServer({
         throw new Error(`Barang tidak ditemukan di sistem: ${namaBarang}`);
       }
 
+      if (NAMA_BARANG_MEJA.some(nama => nama.toLowerCase() === namaBarang.toLowerCase())) {
+        const namaMejaSesi = await getNamaBarangMejaSesi(sessionId);
+        if (!namaMejaSesi) {
+          throw new Error("Sesi tidak memiliki item meja");
+        }
+
+        const durasiJam = Number(mejaSession.durasi_jam || 0);
+        if (durasiJam < 1) {
+          throw new Error("Durasi sesi Meja Billiard tidak valid");
+        }
+
+        await sinkronHargaMejaBilliard(mejaSession, durasiJam);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: true, message: "Harga meja disinkronkan" }));
+      }
+
       const items = await getSessionItems(sessionId);
       const existingItem = items.find(i => String(i.nama_barang || "").trim().toLowerCase() === namaBarang.toLowerCase());
       const now = new Date().toISOString();
 
       if (existingItem) {
-        if (namaBarang.toLowerCase() === "meja billiard") {
-          const durasiJam = Number(mejaSession.durasi_jam || 0);
-          if (durasiJam < 1) {
-            throw new Error("Durasi sesi Meja Billiard tidak valid");
-          }
-
-          await sinkronHargaMejaBilliard(mejaSession, durasiJam);
-          return;
-        }
 
         const newQty = existingItem.qty + qty;
         const newSubtotal = newQty * barang.hargaJual;
@@ -6005,7 +6142,7 @@ const server = https.createServer({
         throw new Error("Sesi tidak AKTIF atau tidak ditemukan");
       }
 
-      if (namaBarang.toLowerCase() === "meja billiard") {
+      if (NAMA_BARANG_MEJA.some(nama => nama.toLowerCase() === namaBarang.toLowerCase())) {
         const durasiJam = Number(mejaSession.durasi_jam || 0);
 
         if (durasiJam < 1) {
@@ -6067,6 +6204,7 @@ const server = https.createServer({
           } else {
             waktuSelesaiBaruDate = new Date(currentEnd.getTime() + tambahanJam * 3600 * 1000);
           }
+          validasiBatasSesiMemberPagi(mejaSession.kategori_member, mejaSession.waktu_mulai, waktuSelesaiBaruDate);
           waktuSelesaiBaru = waktuSelesaiBaruDate.toISOString();
 
           await runAsync(
@@ -6080,6 +6218,7 @@ const server = https.createServer({
 
           const sessionAfterDuration = await getSessionById(sessionId);
           await sinkronHargaMejaBilliard(sessionAfterDuration, durasiJamBaru);
+          await sinkronBonusMalam(sessionAfterDuration, durasiJamBaru);
         }
 
         await runAsync("COMMIT");
@@ -6131,6 +6270,9 @@ const server = https.createServer({
 
       try {
         const lampRes = await lampOff(nomorMeja);
+        if (lampRes && lampRes.success === true) {
+          lastLampCommandState.set(Number(nomorMeja), 0);
+        }
         if (!lampRes || lampRes.success !== true) {
           writeLog("WARN", "LAMP_OFF_FAILED", `Gagal mematikan lampu untuk meja ${nomorMeja} saat sesi ditutup`, { nomorMeja, lampRes });
         }
@@ -7557,6 +7699,13 @@ async function reconcileLampState() {
 
         const lastState =
           lastLampCommandState.get(table);
+
+        // A table with no active session starts in the known OFF state; avoid
+        // issuing a redundant OFF command during the watchdog's first pass.
+        if (!desiredLampState.has(table) && lastState === undefined) {
+          lastLampCommandState.set(Number(table), 0);
+          continue;
+        }
 
         // Recovery: active sessions must reissue ON after any non-ON command state.
         if (

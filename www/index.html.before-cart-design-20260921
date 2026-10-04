@@ -2455,6 +2455,197 @@ function loadKasirList() {
   // Menggunakan daftar kasir tetap pada HTML
 }
 
+async function cekSemuaPrinterSaatStartup() {
+  const status = {
+    kasir: false,
+    bar: false,
+    dapur: false
+  };
+
+  // =========================
+  // KASIR
+  // =========================
+  try {
+    if (typeof window.cekStatusPrinterBluetooth === "function") {
+      const result = await window.cekStatusPrinterBluetooth();
+      status.kasir = !!result?.connected;
+    }
+  } catch (error) {
+    console.warn("[PRINTER STARTUP] Check KASIR gagal:", error);
+  }
+
+  // =========================
+  // BAR & DAPUR
+  // =========================
+  try {
+    const config =
+      typeof window.ambilConfigPrinterPesanan === "function"
+        ? window.ambilConfigPrinterPesanan()
+        : null;
+
+    if (
+      config &&
+      typeof window.hubungkanPrinterPesanan === "function"
+    ) {
+      for (const jenis of ["bar", "dapur"]) {
+        const printerConfig = config[jenis];
+
+        if (!printerConfig?.address) {
+          status[jenis] = false;
+          continue;
+        }
+
+        try {
+          const result = await window.hubungkanPrinterPesanan(
+            jenis,
+            printerConfig.address,
+            printerConfig.name || ""
+          );
+
+          status[jenis] = !!result?.success;
+        } catch (error) {
+          console.warn(
+            `[PRINTER STARTUP] Check ${jenis.toUpperCase()} gagal:`,
+            error
+          );
+
+          status[jenis] = false;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn(
+      "[PRINTER STARTUP] Gagal membaca konfigurasi printer pesanan:",
+      error
+    );
+  }
+
+  console.log(
+    "[PRINTER STARTUP] Status semua printer:",
+    status
+  );
+
+  const printerOffline = [];
+
+  if (!status.kasir) {
+    printerOffline.push("KASIR");
+  }
+
+  if (!status.bar) {
+    printerOffline.push("BAR");
+  }
+
+  if (!status.dapur) {
+    printerOffline.push("DAPUR");
+  }
+
+  if (printerOffline.length > 0) {
+    alert(
+      "⚠️ PRINTER TIDAK TERHUBUNG\n\n" +
+      "Printer yang offline:\n" +
+      printerOffline.map((nama) => `• ${nama}`).join("\n")
+    );
+  }
+
+  return status;
+}
+
+async function cekSemuaPrinterSaatStartup() {
+  const status = {
+    kasir: false,
+    bar: false,
+    dapur: false
+  };
+
+  // =========================
+  // KASIR
+  // =========================
+  try {
+    if (typeof window.cekStatusPrinterBluetooth === "function") {
+      const result = await window.cekStatusPrinterBluetooth();
+      status.kasir = !!result?.connected;
+    }
+  } catch (error) {
+    console.warn("[PRINTER STARTUP] Check KASIR gagal:", error);
+  }
+
+  // =========================
+  // BAR & DAPUR
+  // =========================
+  try {
+    const config =
+      typeof window.ambilConfigPrinterPesanan === "function"
+        ? window.ambilConfigPrinterPesanan()
+        : null;
+
+    if (
+      config &&
+      typeof window.hubungkanPrinterPesanan === "function"
+    ) {
+      for (const jenis of ["bar", "dapur"]) {
+        const printerConfig = config[jenis];
+
+        if (!printerConfig?.address) {
+          status[jenis] = false;
+          continue;
+        }
+
+        try {
+          const result = await window.hubungkanPrinterPesanan(
+            jenis,
+            printerConfig.address,
+            printerConfig.name || ""
+          );
+
+          status[jenis] = !!result?.success;
+        } catch (error) {
+          console.warn(
+            `[PRINTER STARTUP] Check ${jenis.toUpperCase()} gagal:`,
+            error
+          );
+
+          status[jenis] = false;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn(
+      "[PRINTER STARTUP] Gagal membaca konfigurasi printer pesanan:",
+      error
+    );
+  }
+
+  console.log(
+    "[PRINTER STARTUP] Status semua printer:",
+    status
+  );
+
+  const printerOffline = [];
+
+  if (!status.kasir) {
+    printerOffline.push("KASIR");
+  }
+
+  if (!status.bar) {
+    printerOffline.push("BAR");
+  }
+
+  if (!status.dapur) {
+    printerOffline.push("DAPUR");
+  }
+
+  if (printerOffline.length > 0) {
+    alert(
+      "⚠️ PRINTER TIDAK TERHUBUNG\n\n" +
+      "Printer yang offline:\n" +
+      printerOffline.map((nama) => `• ${nama}`).join("\n")
+    );
+  }
+
+  return status;
+}
+
+
 document.addEventListener("DOMContentLoaded", async () => {
   loadKasirList();
   const sessionId = sessionStorage.getItem("pbms_session_id");
@@ -2499,6 +2690,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!activeMeja || !mejaSessions[activeMeja]) {
           await loadCartDraftServer();
         }
+
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        await cekSemuaPrinterSaatStartup();
+
         cekServer();
         updateMejaHeaderUI();
         updateSaveOrderButton();
@@ -2740,25 +2935,32 @@ async function hubungkanPrinterBluetoothUI() {
   }
 }
 
+let testPrintBluetoothSedangBerjalan = false;
 async function testPrintBluetoothUI() {
-  if (typeof window.cetakStrukBluetooth !== "function") {
-    alert("Modul cetak printer belum tersedia.");
+  if (testPrintBluetoothSedangBerjalan) {
     return;
   }
 
-  const now = new Date();
-  const timestamp = now.toLocaleString("id-ID");
-
-  const teksTest =
-    "================================\n" +
-    "        TEST PRINT PBMS\n" +
-    "================================\n" +
-    "Printer : RPP02N\n" +
-    "Status  : OK\n" +
-    "Waktu   : " + timestamp + "\n" +
-    "================================\n\n\n";
+  testPrintBluetoothSedangBerjalan = true;
 
   try {
+    if (typeof window.cetakStrukBluetooth !== "function") {
+      alert("Modul cetak printer belum tersedia.");
+      return;
+    }
+
+    const now = new Date();
+    const timestamp = now.toLocaleString("id-ID");
+
+    const teksTest =
+      "================================\n" +
+      "        TEST PRINT PBMS\n" +
+      "================================\n" +
+      "Printer : RPP02N\n" +
+      "Status  : OK\n" +
+      "Waktu   : " + timestamp + "\n" +
+      "================================\n\n\n";
+
     const hasil = await window.cetakStrukBluetooth(teksTest);
 
     if (hasil && hasil.success === true) {
@@ -2774,6 +2976,8 @@ async function testPrintBluetoothUI() {
   } catch (error) {
     console.error("testPrintBluetoothUI error:", error);
     alert("Terjadi kesalahan saat mencetak.");
+  } finally {
+    testPrintBluetoothSedangBerjalan = false;
   }
 }
 

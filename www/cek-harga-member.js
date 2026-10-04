@@ -1,0 +1,1 @@
+const sqlite3=require("sqlite3").verbose();const db=new sqlite3.Database("C:/POS/pos.db");db.all("SELECT kategori,jam,jam_selesai,durasi_jam,harga_per_jam,total FROM harga_member_cache ORDER BY kategori,jam,durasi_jam",[],(e,r)=>{if(e) console.error(e); else console.log(r);db.close();});

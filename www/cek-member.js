@@ -1,0 +1,1 @@
+const sqlite3=require("sqlite3").verbose();const db=new sqlite3.Database("C:/POS/pos.db");db.get("SELECT id,kode_member,nama,status,last_used_at FROM member WHERE kode_member=\"PLT-0036\"",[],(e,r)=>{if(e) console.error(e); else console.log(r);db.close();});

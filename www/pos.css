@@ -344,6 +344,146 @@
   margin-bottom: -5px !important;
 }
 
+/* Notification bell lamp watchdog */
+#lampWatchdogContainer {
+  position: relative;
+  overflow: visible;
+}
+
+#lampWatchdogBtn {
+  position: relative;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.14);
+  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+#lampWatchdogBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 11px rgba(15, 23, 42, 0.2);
+}
+
+#lampWatchdogBtn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+#lampWatchdogBtn.has-unread svg {
+  animation: lamp-watchdog-ring 2.8s ease-in-out infinite;
+  transform-origin: 50% 15%;
+}
+
+@keyframes lamp-watchdog-ring {
+  0%, 88%, 100% { transform: rotate(0); }
+  91% { transform: rotate(7deg); }
+  94% { transform: rotate(-6deg); }
+  97% { transform: rotate(3deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #lampWatchdogBtn, #lampWatchdogBtn.has-unread svg { animation: none; transition: none; }
+}
+
+#lampWatchdogBadge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 12px;
+  text-align: center;
+  box-sizing: content-box;
+}
+
+#lampWatchdogBadge[hidden],
+#lampWatchdogDropdown[hidden] {
+  display: none;
+}
+
+#lampWatchdogDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100003;
+  width: 360px;
+  max-width: min(92vw, 400px);
+  max-height: min(70vh, 560px);
+  overflow: hidden;
+  padding: 0;
+  background: #ffffff;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.2);
+  color: #243247;
+  font-size: 0.875rem;
+}
+
+#lampWatchdogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf1f5;
+  font-size: 0.95rem;
+}
+
+#lampWatchdogClearBtn {
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 5px 7px;
+  border-radius: 7px;
+}
+
+#lampWatchdogClearBtn:hover { background: #f1f5f9; color: #334155; }
+
+#lampWatchdogDetails {
+  max-height: calc(min(70vh, 560px) - 52px);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+
+.lamp-watchdog-notification {
+  padding: 11px 15px;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.lamp-watchdog-notification:last-child { border-bottom: 0; }
+.lamp-watchdog-notification.is-unread { background: #eff7ff; }
+
+.lamp-watchdog-summary {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #26364a;
+  text-align: left;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.lamp-watchdog-summary:hover { color: #1559a6; }
+.lamp-watchdog-alarm-detail { padding: 8px 0 1px; color: #64748b; font-size: 0.78rem; line-height: 1.45; }
+.lamp-watchdog-alarm-detail > div { padding: 2px 0; }
+.lamp-watchdog-alarm-detail strong { color: #475569; font-weight: 600; }
+
+@media (max-width: 480px) {
+  #lampWatchdogDropdown { position: fixed; top: 62px; left: 8px; right: 8px; width: auto; max-width: none; }
+}
+
 /* ==================================================
    FIX FINAL: ROOT LAYOUT & PAYMENT PANEL (ANDROID LANDSCAPE)
    MENGGUNAKAN FLEXBOX MURNI, HANYA CART-ITEMS YANG BISA SCROLL
