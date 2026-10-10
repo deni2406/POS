@@ -427,6 +427,13 @@
     let itemsHtml = "";
 
     draftProdukMeja.forEach(item => {
+      // Paket 3 Jam qty 1 menghasilkan durasi 3 jam.
+      // Produk billiard lain (Meja Billiard/Pagi/Malam) tetap dihitung per qty.
+      const namaPaket = String(item.nama || "").trim().toUpperCase();
+      if (namaPaket === "PAKET 3 JAM" || namaPaket === "PAKET 3 JAM NON MEMBER") {
+        durasiJamDraft += Number(item.qty || 0) * 3;
+        return;
+      }
       // Hitung durasi jam HANYA berdasarkan produk billiard
       if (window.MejaProdukModal && typeof window.MejaProdukModal.isProdukBillard === "function") {
         if (window.MejaProdukModal.isProdukBillard(item)) {

@@ -1,4 +1,4 @@
-const https = require("https");
+﻿const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -484,7 +484,7 @@ db.serialize(() => {
       kode_setoran TEXT NOT NULL UNIQUE COLLATE NOCASE,
       shift_id INTEGER NOT NULL,
       kasir_id INTEGER NOT NULL,
-      nominal_awal INTEGER NOT NULL CHECK (nominal_awal > 0),
+      nominal_awal INTEGER NOT NULL CHECK (nominal_awal >= 0),
       saldo_tersisa INTEGER NOT NULL CHECK (saldo_tersisa >= 0 AND saldo_tersisa <= nominal_awal),
       dibuat_at TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'AKTIF',
@@ -492,6 +492,68 @@ db.serialize(() => {
       FOREIGN KEY (kasir_id) REFERENCES kasir(id)
     )
   `);
+
+  // Migrasi otomatis: constraint lama nominal_awal > 0 menolak Tutup Kasir
+  // dengan totalCash = 0 (SQLITE_CONSTRAINT). Rebuild tabel dengan >= 0 bila masih memakai skema lama.
+  // FK dimatikan sementara karena tarik_tunai mereferensikan setoran(id) ON DELETE RESTRICT;
+  // DROP TABLE setoran melakukan DELETE implisit yang akan gagal bila FK aktif.
+  db.get(
+    `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'setoran'`,
+    [],
+    (masterError, masterRow) => {
+      if (masterError || !masterRow) return;
+      if (!/nominal_awal\s*>\s*0/.test(String(masterRow.sql || ""))) return;
+      writeLog("INFO", "DATABASE", "Migrasi setoran: constraint lama nominal_awal > 0 terdeteksi, rebuild dengan >= 0");
+      db.serialize(() => {
+        db.run(`PRAGMA foreign_keys = OFF`);
+        db.run(
+          `CREATE TABLE setoran_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kode_setoran TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            shift_id INTEGER NOT NULL,
+            kasir_id INTEGER NOT NULL,
+            nominal_awal INTEGER NOT NULL CHECK (nominal_awal >= 0),
+            saldo_tersisa INTEGER NOT NULL CHECK (saldo_tersisa >= 0 AND saldo_tersisa <= nominal_awal),
+            dibuat_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'AKTIF',
+            FOREIGN KEY (shift_id) REFERENCES shift_kasir(id),
+            FOREIGN KEY (kasir_id) REFERENCES kasir(id)
+          )`,
+          createNewError => {
+            if (createNewError) {
+              writeLog("ERROR", "DATABASE", "Gagal membuat setoran_new saat migrasi constraint", { error: createNewError.message });
+              db.run(`PRAGMA foreign_keys = ON`);
+              return;
+            }
+            db.run(`INSERT INTO setoran_new SELECT * FROM setoran`, copyError => {
+              if (copyError) {
+                writeLog("ERROR", "DATABASE", "Gagal menyalin data setoran ke setoran_new saat migrasi", { error: copyError.message });
+                db.run(`DROP TABLE IF EXISTS setoran_new`);
+                db.run(`PRAGMA foreign_keys = ON`);
+                return;
+              }
+              db.run(`DROP TABLE setoran`, dropError => {
+                if (dropError) {
+                  writeLog("ERROR", "DATABASE", "Gagal drop tabel setoran lama saat migrasi", { error: dropError.message });
+                  db.run(`DROP TABLE IF EXISTS setoran_new`);
+                  db.run(`PRAGMA foreign_keys = ON`);
+                  return;
+                }
+                db.run(`ALTER TABLE setoran_new RENAME TO setoran`, renameError => {
+                  db.run(`PRAGMA foreign_keys = ON`);
+                  if (renameError) {
+                    writeLog("ERROR", "DATABASE", "Gagal rename setoran_new menjadi setoran saat migrasi", { error: renameError.message });
+                    return;
+                  }
+                  writeLog("INFO", "DATABASE", "Migrasi constraint setoran nominal_awal selesai");
+                });
+              });
+            });
+          }
+        );
+      });
+    }
+  );
 
   db.run(`
     CREATE TABLE IF NOT EXISTS nomor_transaksi_sequence (
@@ -1587,28 +1649,6 @@ function tentukanStatusMember(member) {
   const getPart = (type) => witaParts.find(p => p.type === type)?.value || '';
   const todayStr = `${getPart('year')}-${getPart('month')}-${getPart('day')}`;
 
-  if (member.status === 'EXPIRED') {
-    if (!member.last_used_at) return 'EXPIRED';
-
-    const lastUsed = new Date(member.last_used_at);
-    if (Number.isNaN(lastUsed.getTime())) return 'EXPIRED';
-
-    const lastParts = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Makassar',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    }).formatToParts(lastUsed);
-
-    const lastUsedDate = `${lastParts.find(p => p.type === 'year')?.value}-${lastParts.find(p => p.type === 'month')?.value}-${lastParts.find(p => p.type === 'day')?.value}`;
-
-    if (lastUsedDate < todayStr) {
-      return 'AKTIF';
-    }
-
-    return 'EXPIRED';
-  }
-
   const tanggalAktif = member.tanggal_aktif;
 
   if (tanggalAktif && todayStr < tanggalAktif) {
@@ -1616,31 +1656,59 @@ function tentukanStatusMember(member) {
   }
 
   if (member.status === 'MENUNGGU_AKTIF') {
-    if (!tanggalAktif || todayStr >= tanggalAktif) {
+    if (!tanggalAktif) return 'MENUNGGU_AKTIF';
+    const tglDate = new Date(`${tanggalAktif}T00:00:00Z`);
+    const todayD = new Date(`${todayStr}T00:00:00Z`);
+    const diff = Math.floor((todayD.getTime() - tglDate.getTime()) / 86400000);
+    if (diff === 0 || diff > 7) return 'EXPIRED';
+    return 'AKTIF';
+  }
+
+  let baseDateStr = member.last_used_at;
+  if (!baseDateStr) {
+    baseDateStr = member.tanggal_aktif;
+  }
+
+  if (baseDateStr) {
+    const lastUsedWita = (function (dateStr) {
+      const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return null;
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Makassar',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(d);
+      const g = (t) => parts.find(p => p.type === t)?.value || '';
+      return `${g('year')}-${g('month')}-${g('day')}`;
+    })(baseDateStr);
+
+    if (!lastUsedWita) {
+      if (member.status === 'AKTIF' && tanggalAktif && todayStr >= tanggalAktif) {
+        return 'AKTIF';
+      }
+      return member.status || 'MENUNGGU_AKTIF';
+    }
+
+    const baseDate = new Date(`${lastUsedWita}T00:00:00Z`);
+    const todayDate = new Date(`${todayStr}T00:00:00Z`);
+    const diffDays = Math.floor((todayDate.getTime() - baseDate.getTime()) / 86400000);
+
+    if (diffDays === 0) {
+      return 'EXPIRED';
+    }
+    if (!member.last_used_at) {
+      if (diffDays >= 7) return 'EXPIRED';
+    } else {
+      if (diffDays > 7) return 'EXPIRED';
+    }
+    if (member.status === 'AKTIF' || member.status === 'EXPIRED') {
       return 'AKTIF';
     }
   }
 
-  if (member.status === 'AKTIF') {
-    let baseDateStr = member.last_used_at;
-    if (!baseDateStr) {
-      baseDateStr = member.tanggal_aktif;
-    }
-
-    if (baseDateStr) {
-      const baseDate = new Date(baseDateStr.split('T')[0]);
-      const todayDate = new Date(`${todayStr}T00:00:00Z`);
-      const diffTime = todayDate.getTime() - baseDate.getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
-
-      if (diffDays >= 7) {
-        return 'EXPIRED';
-      }
-    }
-
-    if (tanggalAktif && todayStr >= tanggalAktif) {
-      return 'AKTIF';
-    }
+  if (member.status === 'AKTIF' && tanggalAktif && todayStr >= tanggalAktif) {
+    return 'AKTIF';
   }
 
   return member.status || 'MENUNGGU_AKTIF';
@@ -1925,6 +1993,37 @@ const server = https.createServer({
     return res.end();
   }
 
+  // ── Stock Opname kategori — parsing pathname murni (abaikan query string) ─
+  const parsedUrl = require("url").parse(req.url, true);
+  const pathname = parsedUrl.pathname;
+
+  if (req.method === "GET" && pathname === "/api/stock-opname/kategori") {
+    if (!validateLoginSession(req, res)) return;
+    try {
+      const query = "SELECT DISTINCT kategori FROM master_barang WHERE kategori IS NOT NULL AND TRIM(kategori) != '' ORDER BY kategori ASC";
+      db.all(query, [], (err, rows) => {
+        if (res.headersSent) return;
+        if (err) {
+          console.error('[SO ERROR] Query kategori gagal:', err.message);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true, data: [] }));
+        }
+        const categories = (rows || [])
+          .map(r => r.kategori)
+          .filter(k => k && String(k).trim() !== '');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, data: categories }));
+      });
+    } catch (err) {
+      console.error('[SO ERROR] Exception pada /api/stock-opname/kategori:', err);
+      if (!res.headersSent) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, data: [] }));
+      }
+    }
+    return;
+  }
+
   // STATIC FILE HANDLERS
   if (req.method === "GET" && req.url === "/") {
     try {
@@ -2059,7 +2158,7 @@ const server = https.createServer({
     }
   }
 
-  if (req.method === "GET" && req.url === "/stock-opname.js") {
+  if (req.method === "GET" && req.url.split("?")[0] === "/stock-opname.js") {
     try {
       const js = fs.readFileSync(path.join(__dirname, "stock-opname.js"), "utf8");
       res.writeHead(200, {
@@ -2074,7 +2173,7 @@ const server = https.createServer({
     }
   }
 
-  if (req.method === "GET" && req.url === "/stock-opname.css") {
+  if (req.method === "GET" && req.url.split("?")[0] === "/stock-opname.css") {
     try {
       const css = fs.readFileSync(path.join(__dirname, "stock-opname.css"), "utf8");
       res.writeHead(200, {
@@ -2206,6 +2305,61 @@ const server = https.createServer({
     return;
   }
 
+  if (req.method === "GET" && req.url === "/api/shift/history") {
+    db.all(
+      `SELECT s.id, s.kasir_id, k.nama AS nama_kasir, s.buka_at, s.tutup_at, s.kode_tutup, s.nominal_aktual
+       FROM shift_kasir s
+       JOIN kasir k ON k.id = s.kasir_id
+       WHERE s.status = 'CLOSED'
+       ORDER BY s.id DESC
+       LIMIT 20`,
+      [],
+      (error, rows) => {
+        if (error) {
+          writeLog("ERROR", "GET_SHIFT_HISTORY", "Gagal mengambil riwayat shift tertutup", { error: error.message });
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: error.message }));
+        }
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({
+          success: true,
+          data: rows
+        }));
+      }
+    );
+    return;
+  }
+
+  if (req.method === "GET" && req.url.startsWith("/api/shift/snapshot/")) {
+    const shiftId = req.url.slice("/api/shift/snapshot/".length);
+    db.get(
+      `SELECT pending_close_snapshot FROM shift_kasir WHERE id = ?`,
+      [shiftId],
+      (error, row) => {
+        if (error) {
+          writeLog("ERROR", "GET_SHIFT_SNAPSHOT", "Gagal mengambil snapshot penutupan shift", { error: error.message, shiftId });
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: error.message }));
+        }
+        if (!row || row.pending_close_snapshot == null) {
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: "Snapshot tidak ditemukan untuk shift ini." }));
+        }
+        let snapshot;
+        try {
+          snapshot = JSON.parse(row.pending_close_snapshot);
+        } catch (parseError) {
+          writeLog("ERROR", "GET_SHIFT_SNAPSHOT", "Snapshot penutupan shift bukan JSON valid", { error: parseError.message, shiftId });
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: "Snapshot tidak valid untuk shift ini." }));
+        }
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: true, snapshot }));
+      }
+    );
+    return;
+  }
+
   if (req.method === "GET" && req.url === "/api/lamp-watchdog/alarms") {
     db.all(
       `SELECT id, table_number, command, failure_count, status, error_message,
@@ -2293,15 +2447,21 @@ const server = https.createServer({
         return res.end(JSON.stringify({ success: false, valid: false, code: "DEVICE_MISMATCH", message: "Session bukan milik device ini." }));
       }
 
-      db.get(`SELECT aktif FROM kasir WHERE id = ?`, [foundSession.kasirId], (err, kasirRow) => {
+      db.get(`SELECT id, nama, aktif FROM kasir WHERE id = ?`, [foundSession.kasirId], (err, kasirRow) => {
         if (err || !kasirRow || !kasirRow.aktif) {
           activeLoginSessions.delete(foundSession.kasirId);
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           return res.end(JSON.stringify({ success: false, valid: false, code: "SESSION_NOT_FOUND", message: "Kasir tidak aktif atau tidak ditemukan" }));
         }
+        foundSession.kasirNama = kasirRow.nama;
 
         db.get(`SELECT id, status, opening_confirmed, pending_close_snapshot FROM shift_kasir
-                WHERE kasir_id = ? AND (status = 'PENDING_CLOSE' OR (status = 'OPEN'))
+                WHERE kasir_id = ?
+                  AND (
+                    (status = 'OPEN' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                    OR
+                    (status = 'PENDING_CLOSE' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                  )
                 ORDER BY CASE WHEN status = 'PENDING_CLOSE' THEN 0 ELSE 1 END, id DESC LIMIT 1`, [foundSession.kasirId], (shiftError, shift) => {
           if (shiftError) {
             res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
@@ -2317,6 +2477,7 @@ const server = https.createServer({
             valid: true,
             sessionId: foundSession.sessionId,
             kasirId: foundSession.kasirId,
+            nama: foundSession.kasirNama,
             username: foundSession.username,
             loginAt: foundSession.loginAt,
             expiresAt: foundSession.expiresAt,
@@ -2495,7 +2656,11 @@ const server = https.createServer({
                     db.get(
                       `SELECT * FROM shift_kasir
                        WHERE kasir_id = ?
-                       AND (status = 'PENDING_CLOSE' OR (status = 'OPEN'))
+                         AND (
+                           (status = 'OPEN' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                           OR
+                           (status = 'PENDING_CLOSE' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                         )
                        ORDER BY CASE WHEN status = 'PENDING_CLOSE' THEN 0 ELSE 1 END, id DESC
                        LIMIT 1`,
                       [kasir.id],
@@ -2525,7 +2690,11 @@ const server = https.createServer({
                            WHERE NOT EXISTS (
                              SELECT 1 FROM shift_kasir
                              WHERE kasir_id = ?
-                               AND (status = 'PENDING_CLOSE' OR (status = 'OPEN'))
+                               AND (
+                                 (status = 'OPEN' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                                 OR
+                                 (status = 'PENDING_CLOSE' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                               )
                            )`,
                           [kasir.id, new Date().toISOString(), kasir.id],
                           function (openError) {
@@ -2535,7 +2704,12 @@ const server = https.createServer({
                             }
                             db.get(
                               `SELECT * FROM shift_kasir
-                               WHERE kasir_id = ? AND (status = 'PENDING_CLOSE' OR (status = 'OPEN'))
+                               WHERE kasir_id = ?
+                                 AND (
+                                   (status = 'OPEN' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                                   OR
+                                   (status = 'PENDING_CLOSE' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                                 )
                                ORDER BY CASE WHEN status = 'PENDING_CLOSE' THEN 0 ELSE 1 END, id DESC LIMIT 1`,
                               [kasir.id],
                               (selectError, currentShift) => {
@@ -2586,7 +2760,11 @@ const server = https.createServer({
               db.get(
                 `SELECT * FROM shift_kasir
                  WHERE kasir_id = ?
-                 AND (status = 'PENDING_CLOSE' OR (status = 'OPEN'))
+                   AND (
+                     (status = 'OPEN' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                     OR
+                     (status = 'PENDING_CLOSE' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                   )
                  ORDER BY CASE WHEN status = 'PENDING_CLOSE' THEN 0 ELSE 1 END, id DESC
                  LIMIT 1`,
                 [kasir.id],
@@ -2616,7 +2794,11 @@ const server = https.createServer({
                      WHERE NOT EXISTS (
                        SELECT 1 FROM shift_kasir
                        WHERE kasir_id = ?
-                         AND (status = 'PENDING_CLOSE' OR (status = 'OPEN'))
+                         AND (
+                           (status = 'OPEN' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                           OR
+                           (status = 'PENDING_CLOSE' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                         )
                      )`,
                     [kasir.id, new Date().toISOString(), kasir.id],
                     function (openError) {
@@ -2626,7 +2808,12 @@ const server = https.createServer({
                       }
                       db.get(
                         `SELECT * FROM shift_kasir
-                         WHERE kasir_id = ? AND (status = 'PENDING_CLOSE' OR (status = 'OPEN'))
+                         WHERE kasir_id = ?
+                           AND (
+                             (status = 'OPEN' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                             OR
+                             (status = 'PENDING_CLOSE' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                           )
                          ORDER BY CASE WHEN status = 'PENDING_CLOSE' THEN 0 ELSE 1 END, id DESC LIMIT 1`,
                         [kasir.id],
                         (selectError, currentShift) => {
@@ -2679,7 +2866,7 @@ const server = https.createServer({
       }
 
       db.get(
-        `SELECT id FROM shift_kasir WHERE kasir_id = ? AND status = 'OPEN' ORDER BY id DESC LIMIT 1`,
+        `SELECT id FROM shift_kasir WHERE kasir_id = ? AND status = 'OPEN' AND date(buka_at, '+8 hours') = date('now', '+8 hours') ORDER BY id DESC LIMIT 1`,
         [session.kasirId],
         (shiftError, shift) => {
           if (shiftError) {
@@ -2781,8 +2968,9 @@ const server = https.createServer({
            FROM shift_kasir
            WHERE kasir_id = ?
              AND (
-               status = 'PENDING_CLOSE'
-               OR (status = 'OPEN')
+               (status = 'OPEN' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+               OR
+               (status = 'PENDING_CLOSE' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
              )
            ORDER BY CASE WHEN status = 'PENDING_CLOSE' THEN 0 ELSE 1 END, id DESC
            LIMIT 1`,
@@ -2888,6 +3076,249 @@ const server = https.createServer({
   }
 
   // SENSITIVE & PROTECTED API ENDPOINTS
+  if (req.method === "POST" && req.url === "/api/lamp/test-check") {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+
+    if (lampTestRunning) {
+      res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ success: false, code: "LAMP_TEST_RUNNING", message: "Lampu sedang dalam pemeriksaan, silakan tunggu hingga selesai." }));
+    }
+
+    lampTestRunning = true;
+
+    try {
+      // Wait for watchdog to complete current cycle before sending test commands
+      const watchdogWaitStart = Date.now();
+      let watchdogCleared = false;
+      const watchdogPoll = async () => {
+        while (Date.now() - watchdogWaitStart < 5000) {
+          if (!lampWatchdogRunning) return true;
+          await new Promise(r => setTimeout(r, 100));
+        }
+        return false;
+      };
+      watchdogCleared = await watchdogPoll();
+
+      if (!watchdogCleared) {
+        writeLog("ERROR", "LAMP_TEST_CHECK", "Watchdog belum selesai dalam 5 detik, test tidak dijalankan");
+        res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({
+          success: false,
+          status: "GAGAL",
+          testedAt: new Date().toISOString(),
+          message: "Watchdog tidak selesai dalam batas waktu, command test tidak dikirim."
+        }));
+      }
+
+      // Determining active tables and test tables
+      const activeRows = await new Promise((resolve, reject) => {
+        db.all(
+          `SELECT nomor_meja FROM sesi_meja WHERE status = 'AKTIF'`,
+          [],
+          (error, rows) => {
+            if (error) reject(error);
+            else resolve(rows || []);
+          }
+        );
+      });
+
+      const allTables = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+      const activeTables = activeRows
+        .map(r => Number(r.nomor_meja))
+        .filter(n => Number.isInteger(n) && n >= 1 && n <= 10);
+      const testTables = allTables.filter(n => !activeTables.includes(n)).sort((a, b) => a - b);
+
+      if (testTables.length === 0) {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({
+          success: true,
+          status: "TIDAK_ADA_MEJA_TEST",
+          testedAt: new Date().toISOString(),
+          activeTables,
+          testTables: [],
+          results: [],
+          summary: { onSuccess: 0, onFailure: 0, offSuccess: 0, offFailure: 0, skipped: 0 }
+        }));
+      }
+
+      const results = [];
+      const tablesTurnedOn = new Set();
+      let onSuccess = 0;
+      let onFailure = 0;
+      let offSuccess = 0;
+      let offFailure = 0;
+      let skipped = 0;
+      let fatalError = null;
+      let cleanupFailure = 0;
+
+      const isTableActive = async (table) => {
+        const row = await new Promise((resolve, reject) => {
+          db.get(
+            `SELECT 1 FROM sesi_meja WHERE nomor_meja = ? AND status = 'AKTIF'`,
+            [table],
+            (error, r) => {
+              if (error) reject(error);
+              else resolve(r);
+            }
+          );
+        });
+        return !!row;
+      };
+
+      try {
+        // SEQUENTIAL PER-TABLE: ON → wait 2s → re-check → OFF → wait 2s → next
+        for (const table of testTables) {
+          // 1. Re-check active status before ON
+          let tableActiveNow = false;
+          try {
+            tableActiveNow = await isTableActive(table);
+          } catch (checkErr) {
+            results.push({ table, phase: "ON", success: false, skipped: true, reason: "ACTIVE_CHECK_FAILED", timestamp: new Date().toISOString() });
+            skipped++;
+            continue;
+          }
+
+          if (tableActiveNow) {
+            results.push({ table, phase: "ON", success: false, skipped: true, reason: "TABLE_BECAME_ACTIVE", timestamp: new Date().toISOString() });
+            skipped++;
+            continue;
+          }
+
+          // 2. lampOn
+          let onSucceeded = false;
+          try {
+            const onResult = await lampOn(table);
+            if (onResult && onResult.success === true) {
+              onSucceeded = true;
+              onSuccess++;
+              tablesTurnedOn.add(table);
+              results.push({ table, phase: "ON", success: true, skipped: false, timestamp: new Date().toISOString() });
+            } else {
+              onFailure++;
+              results.push({ table, phase: "ON", success: false, skipped: false, error: onResult ? onResult.message || onResult.error : "Lamp ON command failed", timestamp: new Date().toISOString() });
+            }
+          } catch (onErr) {
+            onFailure++;
+            results.push({ table, phase: "ON", success: false, skipped: false, error: onErr.message, timestamp: new Date().toISOString() });
+          }
+
+          // 3. Wait 2 seconds
+          await new Promise(r => setTimeout(r, 2000));
+
+          // 4. Re-check active status before OFF — only if ON succeeded
+          if (onSucceeded) {
+            let activeBeforeOff = false;
+            try {
+              activeBeforeOff = await isTableActive(table);
+            } catch (checkErr) {
+              results.push({ table, phase: "OFF", success: false, skipped: true, reason: "ACTIVE_CHECK_FAILED", timestamp: new Date().toISOString() });
+              skipped++;
+              continue;
+            }
+
+            if (activeBeforeOff) {
+              results.push({ table, phase: "OFF", success: false, skipped: true, reason: "TABLE_BECAME_ACTIVE", timestamp: new Date().toISOString() });
+              skipped++;
+              continue;
+            }
+
+            // 5. lampOff
+            try {
+              const offResult = await lampOff(table);
+              if (offResult && offResult.success === true) {
+                offSuccess++;
+                tablesTurnedOn.delete(table);
+                results.push({ table, phase: "OFF", success: true, skipped: false, timestamp: new Date().toISOString() });
+              } else {
+                offFailure++;
+                results.push({ table, phase: "OFF", success: false, skipped: false, error: offResult ? offResult.message || offResult.error : "Lamp OFF command failed", timestamp: new Date().toISOString() });
+              }
+            } catch (offErr) {
+              offFailure++;
+              results.push({ table, phase: "OFF", success: false, skipped: false, error: offErr.message, timestamp: new Date().toISOString() });
+            }
+
+            // 6. Wait 2 seconds before next table
+            await new Promise(r => setTimeout(r, 2000));
+          }
+        }
+
+        // DETERMINE STATUS
+        const totalFailures = onFailure + offFailure + cleanupFailure;
+        const status = totalFailures > 0 ? "GAGAL" : "NORMAL";
+
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({
+          success: totalFailures === 0,
+          status,
+          testedAt: new Date().toISOString(),
+          activeTables,
+          testTables,
+          results,
+          summary: { onSuccess, onFailure, offSuccess, offFailure, cleanupFailure, skipped }
+        }));
+      } catch (fatalErr) {
+        fatalError = fatalErr;
+      }
+
+      // CLEANUP: if any tables were turned ON, turn them OFF (re-check active status first)
+      if (tablesTurnedOn.size > 0) {
+        for (const table of tablesTurnedOn) {
+          let tableActiveNow = false;
+          try {
+            tableActiveNow = await isTableActive(table);
+          } catch (checkErr) {
+            writeLog("WARN", "LAMP_TEST_CLEANUP", `Gagal cek status meja ${table} saat cleanup`, { error: checkErr.message });
+            continue;
+          }
+
+          if (tableActiveNow) continue;
+
+          try {
+            const cleanupResult = await lampOff(table);
+            if (cleanupResult && cleanupResult.success === true) {
+              writeLog("INFO", "LAMP_TEST_CLEANUP", `Meja ${table} dimatikan sebagai cleanup`);
+            } else {
+              cleanupFailure++;
+              writeLog("WARN", "LAMP_TEST_CLEANUP", `Gagal mematikan meja ${table} saat cleanup`, { cleanupResult });
+            }
+          } catch (cleanupErr) {
+            cleanupFailure++;
+            writeLog("ERROR", "LAMP_TEST_CLEANUP", `Error saat cleanup meja ${table}`, { error: cleanupErr.message });
+          }
+        }
+      }
+
+      if (fatalError) {
+        writeLog("ERROR", "LAMP_TEST_CHECK", "Fatal error during lamp test", { error: fatalError.message });
+        res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({
+          success: false,
+          status: "GAGAL",
+          testedAt: new Date().toISOString(),
+          activeTables,
+          testTables,
+          results,
+          summary: { onSuccess, onFailure, offSuccess, offFailure, cleanupFailure, skipped },
+          message: fatalError.message
+        }));
+      }
+    } catch (outerError) {
+      writeLog("ERROR", "LAMP_TEST_CHECK", "Outer error during lamp test", { error: outerError.message });
+      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({
+        success: false,
+        status: "GAGAL",
+        testedAt: new Date().toISOString(),
+        message: outerError.message
+      }));
+    } finally {
+      lampTestRunning = false;
+    }
+    return;
+  }
+
   if (req.method === "POST" && (req.url === "/api/lamp" || req.url === "/api/lamp/on" || req.url === "/api/lamp/off")) {
     const session = validateLoginSession(req, res);
     if (!session) return;
@@ -3024,8 +3455,9 @@ const server = https.createServer({
         db.get(
           `SELECT id, status, opening_confirmed FROM shift_kasir
            WHERE kasir_id = ? AND (
-             status = 'PENDING_CLOSE' OR
-             (status = 'OPEN')
+             (status = 'OPEN' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+             OR
+             (status = 'PENDING_CLOSE' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
            )
            ORDER BY CASE WHEN status = 'PENDING_CLOSE' THEN 0 ELSE 1 END, id DESC LIMIT 1`,
           [session.kasirId],
@@ -3116,7 +3548,12 @@ const server = https.createServer({
 
       const currentShift = await new Promise((resolve, reject) => {
         db.get(`SELECT id, status, opening_confirmed FROM shift_kasir
-                WHERE kasir_id = ? AND (status = 'PENDING_CLOSE' OR (status = 'OPEN'))
+                WHERE kasir_id = ?
+                  AND (
+                    (status = 'OPEN' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                    OR
+                    (status = 'PENDING_CLOSE' AND date(buka_at, '+8 hours') = date('now', '+8 hours'))
+                  )
                 ORDER BY CASE WHEN status = 'PENDING_CLOSE' THEN 0 ELSE 1 END, id DESC LIMIT 1`, [session.kasirId], (err, row) => {
           if (err) reject(err);
           else resolve(row || null);
@@ -3382,7 +3819,8 @@ const server = https.createServer({
             throw new Error(`Qty barang tidak valid: ${item.nama}`);
           }
 
-          const barang = masterBarang.find(x => String(x.nama || "").trim().toLowerCase() === nama);
+          const namaLookup = nama === "paket 3 jam" ? "paket 3 jam non member" : nama;
+          const barang = masterBarang.find(x => String(x.nama || "").trim().toLowerCase() === namaLookup);
           if (!barang) {
             throw new Error(`Barang tidak ditemukan: ${item.nama}`);
           }
@@ -3603,10 +4041,11 @@ const server = https.createServer({
 
           if (isService) continue;
 
+          const masterNamaLookup = namaBarang.trim() === "Paket 3 Jam" ? "Paket 3 Jam Non Member" : namaBarang;
           const master = await new Promise((resolve, reject) => {
             db.get(
               `SELECT id FROM master_barang WHERE LOWER(TRIM(nama)) = LOWER(TRIM(?)) LIMIT 1`,
-              [namaBarang],
+              [masterNamaLookup],
               (err, row) => {
                 if (err) reject(err);
                 else resolve(row);
@@ -3834,6 +4273,36 @@ const server = https.createServer({
     return;
   }
 
+// ==================================================
+// HELPER SALDO KAS LACI (sumber saldo resmi untuk Rekap Kas Tutup Kasir)
+//
+// Saldo kas laci dihitung dari kas_laci_config.saldo_awal + seluruh
+// kas_laci_transaksi (UANG_MASUK - UANG_KELUAR). Parameter `waktu`
+// membatasi perhitungan ke transaksi laci dengan waktu <= nilai itu,
+// sehingga dapat diambil saldo laci PERSIS pada saat shift dibuka
+// (bukan saldo saat ini yang sudah mencakup transaksi selama shift).
+// ==================================================
+function getKasLaciSaldo(waktu = null) {
+  return new Promise((resolve, reject) => {
+    const params = waktu == null ? [] : [waktu];
+    const batasWaktu = waktu == null ? "" : " AND t.waktu <= ?";
+    db.get(
+      `SELECT c.saldo_awal
+            + COALESCE(SUM(CASE WHEN t.jenis = 'UANG_MASUK' THEN t.nominal
+                                WHEN t.jenis = 'UANG_KELUAR' THEN -t.nominal ELSE 0 END), 0) AS saldo
+       FROM kas_laci_config c
+       LEFT JOIN kas_laci_transaksi t ON (1 = 1${batasWaktu})
+       WHERE c.id = 1
+       GROUP BY c.saldo_awal`,
+      params,
+      (error, row) => {
+        if (error) return reject(error);
+        resolve(Number(row && row.saldo || 0));
+      }
+    );
+  });
+}
+
   if (req.method === "POST" && req.url === "/api/kasir/tutup-preview") {
     const session = validateLoginSession(req, res);
     if (!session) return;
@@ -3852,262 +4321,273 @@ const server = https.createServer({
         return res.end(JSON.stringify({ success: false, code: "SHIFT_WRITE_IN_PROGRESS", message: "Tunggu transaksi atau perubahan kas selesai sebelum melihat hasil tutup kasir." }));
       }
 
-      db.get(
-        `SELECT s.*, k.nama AS kasir FROM shift_kasir s JOIN kasir k ON k.id = s.kasir_id
-         WHERE s.id = ? AND s.kasir_id = ? AND s.status IN ('OPEN', 'PENDING_CLOSE')`,
-        [shiftId, session.kasirId],
-        (shiftError, shift) => {
-          if (shiftError) {
-            res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-            return res.end(JSON.stringify({ success: false, message: shiftError.message }));
-          }
-          if (!shift) {
-            res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
-            return res.end(JSON.stringify({ success: false, code: "SHIFT_MISMATCH", message: "Shift sudah ditutup atau bukan milik kasir session" }));
-          }
-          if (shift.status === "OPEN" && Number(shift.opening_confirmed) !== 1) {
-            res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
-            return res.end(JSON.stringify({ success: false, code: "OPENING_BALANCE_NOT_CONFIRMED", message: "Saldo awal shift harus dikonfirmasi sebelum tutup kasir." }));
-          }
+      const shiftRow = await new Promise((resolve, reject) => {
+        db.get(
+          `SELECT s.*, k.nama AS kasir FROM shift_kasir s JOIN kasir k ON k.id = s.kasir_id
+           WHERE s.id = ? AND s.kasir_id = ? AND s.status IN ('OPEN', 'PENDING_CLOSE')`,
+          [shiftId, session.kasirId],
+          (shiftError, shift) => shiftError ? reject(shiftError) : resolve(shift)
+        );
+      });
+      const shift = shiftRow;
+      if (!shift) {
+        res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, code: "SHIFT_MISMATCH", message: "Shift sudah ditutup atau bukan milik kasir session" }));
+      }
+      if (shift.status === "OPEN" && Number(shift.opening_confirmed) !== 1) {
+        res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, code: "OPENING_BALANCE_NOT_CONFIRMED", message: "Saldo awal shift harus dikonfirmasi sebelum tutup kasir." }));
+      }
 
-          if (shift.status === "PENDING_CLOSE") {
-            try {
-              const snapshot = JSON.parse(shift.pending_close_snapshot || "");
-              res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-              return res.end(JSON.stringify(snapshot));
-            } catch (snapshotError) {
-              writeLog("ERROR", "KASIR_PENDING_CLOSE", "Snapshot tutup kasir tidak valid", { shiftId, error: snapshotError.message });
-              res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-              return res.end(JSON.stringify({ success: false, code: "PENDING_CLOSE_SNAPSHOT_INVALID", message: "Snapshot tutup kasir tidak dapat dibaca. Hubungi manager." }));
-            }
-          }
-
-          let nominalAktual, saldoKwhDalamAkhir, saldoKwhLuarAkhir;
-          try {
-            nominalAktual = safeNonNegative(data.nominalAktual, "nominalAktual");
-            saldoKwhDalamAkhir = kwhDecimalToScaled(data.saldo_kwh_dalam_akhir);
-            saldoKwhLuarAkhir = kwhDecimalToScaled(data.saldo_kwh_luar_akhir);
-          } catch (validationError) {
-            res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-            return res.end(JSON.stringify({ success: false, message: validationError.message }));
-          }
-
-          db.all(
-            `SELECT t.*, tt.kode_setoran, tt.nominal AS nominal_tarik_tunai
-             FROM transaksi t
-             LEFT JOIN tarik_tunai tt ON tt.transaksi_id = t.id
-             WHERE t.shift_id = ? ORDER BY t.id`,
-            [shiftId],
-            (txError, allTransactions) => {
-            if (txError) {
-              res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-              return res.end(JSON.stringify({ success: false, message: txError.message }));
-            }
-            // /api/transaksi/batalkan menyimpan status_sync = 'BATAL'.
-            // Abaikan transaksi batal dari seluruh angka dan rincian preview.
-            const transactions = allTransactions.filter(tx => !["BATAL", "CANCELLED"].includes(String(tx.status_sync || "").trim().toUpperCase()));
-            const txIds = transactions.map(tx => tx.id);
-            const sessionsById = new Map();
-            const respondWithDetails = details => {
-              db.get(`SELECT
-                        (SELECT COALESCE(SUM(nominal), 0) FROM kas_masuk WHERE shift_id = ?) AS masuk,
-                        (SELECT COALESCE(SUM(nominal), 0) FROM kas_keluar WHERE shift_id = ?) AS keluar,
-                        (SELECT COUNT(*) FROM kas_masuk WHERE shift_id = ?) AS jumlah_masuk,
-                        (SELECT COUNT(*) FROM kas_keluar WHERE shift_id = ?) AS jumlah_keluar,
-                        (SELECT COALESCE(SUM(kwh_didapat), 0) FROM pembelian_kwh WHERE shift_id = ? AND jenis_kwh = 'DALAM') AS total_kwh_dalam,
-                        (SELECT COALESCE(SUM(kwh_didapat), 0) FROM pembelian_kwh WHERE shift_id = ? AND jenis_kwh = 'LUAR') AS total_kwh_luar,
-                        (SELECT COUNT(*) FROM pembelian_kwh WHERE shift_id = ? AND jenis_kwh = 'DALAM') AS jumlah_topup_dalam,
-                        (SELECT COUNT(*) FROM pembelian_kwh WHERE shift_id = ? AND jenis_kwh = 'LUAR') AS jumlah_topup_luar`,
-                [shiftId, shiftId, shiftId, shiftId, shift.id, shift.id, shift.id, shift.id], (kasError, kas) => {
-              if (kasError) {
-                res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-                return res.end(JSON.stringify({ success: false, message: kasError.message }));
-              }
-              const detailsByTx = new Map();
-              const products = new Map();
-              details.forEach(row => {
-                if (["meja billiard", "meja pagi", "meja malam"].includes(String(row.nama_barang || "").trim().toLowerCase())) return;
-                if (!detailsByTx.has(row.transaksi_id)) detailsByTx.set(row.transaksi_id, []);
-                detailsByTx.get(row.transaksi_id).push({ nama_barang: row.nama_barang, qty: Number(row.qty || 0), harga_jual: Number(row.harga_jual || 0), subtotal: Number(row.subtotal || 0) });
-                const product = products.get(row.nama_barang) || { nama_barang: row.nama_barang, qty: 0, harga_jual: Number(row.harga_jual || 0), harga_jual_konsisten: true, subtotal: 0, _prices: new Set() };
-                product.qty += Number(row.qty || 0);
-                product.subtotal += Number(row.subtotal || 0);
-                product._prices.add(Number(row.harga_jual || 0));
-                products.set(row.nama_barang, product);
-              });
-              const tableRows = Array.from({ length: 10 }, (_, index) => ({ nomor_meja: index + 1, jumlah_sesi: 0, total_durasi_jam: 0, omzet: 0, _sessions: new Set() }));
-              const transaksiDetail = transactions.map(tx => {
-                const tableSession = sessionsById.get(tx.session_id);
-                const tableNo = Number(tableSession && tableSession.nomor_meja || tx.nomor_meja || 0);
-                const row = tableRows[tableNo - 1];
-                if (row) row.omzet += Number(tx.total || 0);
-                return { nomor_transaksi: tx.nomor_transaksi, tanggal: tx.tanggal, jam: tx.jam, waktu: [tx.tanggal, tx.jam].filter(Boolean).join(" "), nomor_meja: tableNo || null, session_id: tx.session_id || null, total: Number(tx.total || 0), metode_pembayaran: tx.metode_pembayaran, tipe_transaksi: tx.tipe_transaksi || "PENJUALAN", kode_setoran: tx.kode_setoran || null, nominal_tarik_tunai: Number(tx.nominal_tarik_tunai || 0), cash_amount: Number(tx.cash_amount || 0), qris_amount: Number(tx.qris_amount || 0), detail_produk: detailsByTx.get(tx.id) || [] };
-              });
-              transactions.forEach(tx => {
-                const tableSession = sessionsById.get(tx.session_id);
-                const tableNo = Number(tableSession && tableSession.nomor_meja || tx.nomor_meja || 0);
-                const row = tableRows[tableNo - 1];
-                if (row && tableSession && tx.session_id && !row._sessions.has(tx.session_id)) {
-                  row._sessions.add(tx.session_id);
-                  row.jumlah_sesi += 1;
-                  row.total_durasi_jam += Number(tableSession.durasi_jam || 0);
-                }
-              });
-              const transactionSummary = summarizeTransactions(transactions);
-              const cash = transactionSummary.totalCash;
-              const qris = transactionSummary.totalQris;
-              const total = transactionSummary.totalPenjualan;
-              const selisihPenjualan = nominalAktual - cash;
-              const uangSeharusnya = Number(shift.saldo_awal || 0) + Number(kas.masuk || 0) + cash - Number(kas.keluar || 0);
-              const saldoKwhDalamAwalScaled = Number(shift.saldo_kwh_dalam_awal || 0);
-              const saldoKwhLuarAwalScaled = Number(shift.saldo_kwh_luar_awal || 0);
-              const totalKwhDalamTopupScaled = Number(kas.total_kwh_dalam || 0);
-              const totalKwhLuarTopupScaled = Number(kas.total_kwh_luar || 0);
-              const saldoKwhDalamTersediaScaled = saldoKwhDalamAwalScaled + totalKwhDalamTopupScaled;
-              const saldoKwhLuarTersediaScaled = saldoKwhLuarAwalScaled + totalKwhLuarTopupScaled;
-              const penggunaanKwhDalamScaled = saldoKwhDalamTersediaScaled - saldoKwhDalamAkhir;
-              const penggunaanKwhLuarScaled = saldoKwhLuarTersediaScaled - saldoKwhLuarAkhir;
-              const signedKwhScaledToDecimal = value =>
-                Math.sign(value) * kwhScaledToDecimal(Math.abs(value));
-              const produk = Array.from(products.values()).map(item => {
-                item.harga_jual_konsisten = item._prices.size === 1;
-                if (!item.harga_jual_konsisten) item.harga_jual = null;
-                delete item._prices;
-                return item;
-              });
-              tableRows.forEach(item => delete item._sessions);
-              const preview = { success: true,
-                shift: { shiftId: Number(shift.id), kasir: shift.kasir, buka_at: shift.buka_at, status: "PENDING_CLOSE", saldo_awal: Number(shift.saldo_awal || 0), saldo_kwh_dalam_awal: kwhScaledToDecimal(saldoKwhDalamAwalScaled), saldo_kwh_luar_awal: kwhScaledToDecimal(saldoKwhLuarAwalScaled) },
-                ringkasanPenjualan: { ...transactionSummary, nominalAktual },
-                selisihPenjualan,
-                rekapProduk: produk, transaksi: transaksiDetail,
-                performaMeja: tableRows,
-                kas: { masuk: Number(kas.masuk || 0), keluar: Number(kas.keluar || 0) },
-                rekonsiliasiKas: { uangSeharusnya, nominalAktual, selisih: nominalAktual - uangSeharusnya },
-                kwh: {
-                  dalam: {
-                    awal: kwhScaledToDecimal(saldoKwhDalamAwalScaled),
-                    totalTokenTopup: kwhScaledToDecimal(totalKwhDalamTopupScaled),
-                    tokenTopupTersedia: Number(kas.jumlah_topup_dalam || 0) > 0,
-                    tersedia: kwhScaledToDecimal(saldoKwhDalamTersediaScaled),
-                    akhir: kwhScaledToDecimal(saldoKwhDalamAkhir),
-                    penggunaan: signedKwhScaledToDecimal(penggunaanKwhDalamScaled)
-                  },
-                  luar: {
-                    awal: kwhScaledToDecimal(saldoKwhLuarAwalScaled),
-                    totalTokenTopup: kwhScaledToDecimal(totalKwhLuarTopupScaled),
-                    tokenTopupTersedia: Number(kas.jumlah_topup_luar || 0) > 0,
-                    tersedia: kwhScaledToDecimal(saldoKwhLuarTersediaScaled),
-                    akhir: kwhScaledToDecimal(saldoKwhLuarAkhir),
-                    penggunaan: signedKwhScaledToDecimal(penggunaanKwhLuarScaled)
-                  }
-                },
-                generatedAt: new Date().toISOString()
-              };
-              const persistSnapshot = attempt => {
-                if (attempt >= 10) {
-                  res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-                  return res.end(JSON.stringify({ success: false, message: "Tidak dapat membuat kode unik tutup kasir setelah beberapa percobaan." }));
-                }
-                const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-                const code = Array.from(crypto.randomBytes(6), byte => alphabet[byte % alphabet.length]).join("");
-                const pendingAt = new Date().toISOString();
-                preview.kode_tutup = code;
-                preview.pendingCloseAt = pendingAt;
-                preview.shift.kode_tutup = code;
-                const snapshot = JSON.stringify(preview);
-                db.run(
-                  `UPDATE shift_kasir
-                   SET status = 'PENDING_CLOSE', pending_close_at = ?, pending_close_snapshot = ?, kode_tutup = ?,
-                       nominal_aktual = ?, saldo_kwh_dalam_akhir = ?, saldo_kwh_luar_akhir = ?
-                   WHERE id = ? AND kasir_id = ? AND status = 'OPEN' AND kode_tutup IS NULL
-                     AND pending_close_snapshot IS NULL
-                     AND (SELECT COUNT(*) FROM transaksi WHERE shift_id = ?) = ?
-                     AND (SELECT COUNT(*) FROM transaksi WHERE shift_id = ? AND UPPER(COALESCE(status_sync, '')) NOT IN ('BATAL', 'CANCELLED')) = ?
-                     AND (SELECT COUNT(*) FROM kas_masuk WHERE shift_id = ?) = ?
-                     AND (SELECT COUNT(*) FROM kas_keluar WHERE shift_id = ?) = ?`,
-                  [pendingAt, snapshot, code, nominalAktual, saldoKwhDalamAkhir, saldoKwhLuarAkhir,
-                    shiftId, session.kasirId, shiftId, allTransactions.length, shiftId, transactions.length,
-                    shiftId, Number(kas.jumlah_masuk || 0), shiftId, Number(kas.jumlah_keluar || 0)],
-                  function (persistError) {
-                    if (persistError && /UNIQUE|CONSTRAINT/i.test(persistError.message)) {
-                      preview.kode_tutup = undefined;
-                      preview.pendingCloseAt = undefined;
-                      preview.shift.kode_tutup = undefined;
-                      return persistSnapshot(attempt + 1);
-                    }
-                    if (persistError) {
-                      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-                      return res.end(JSON.stringify({ success: false, message: persistError.message }));
-                    }
-                    if (this.changes === 1) {
-                      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-                      return res.end(snapshot);
-                    }
-                    db.get(`SELECT status, pending_close_snapshot FROM shift_kasir WHERE id = ? AND kasir_id = ?`, [shiftId, session.kasirId], (currentError, current) => {
-                      if (currentError) {
-                        res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-                        return res.end(JSON.stringify({ success: false, message: currentError.message }));
-                      }
-                      if (current && current.status === "PENDING_CLOSE") {
-                        try {
-                          const saved = JSON.parse(current.pending_close_snapshot || "");
-                          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-                          return res.end(JSON.stringify(saved));
-                        } catch (snapshotError) {
-                          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-                          return res.end(JSON.stringify({ success: false, code: "PENDING_CLOSE_SNAPSHOT_INVALID", message: "Snapshot tutup kasir tidak dapat dibaca." }));
-                        }
-                      }
-                      res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
-                      return res.end(JSON.stringify({ success: false, code: "PREVIEW_DATA_CHANGED", message: "Data shift berubah saat preview. Muat ulang dan lakukan LIHAT HASIL kembali." }));
-                    });
-                  }
-                );
-              };
-              const kwhValidationErrors = [];
-              if (saldoKwhDalamAkhir >= saldoKwhDalamTersediaScaled) {
-                kwhValidationErrors.push(saldoKwhDalamAkhir > saldoKwhDalamTersediaScaled
-                  ? "KWh Dalam: KWh Akhir melebihi KWh Tersedia; periksa KWh Akhir atau catat pembelian token yang belum tercatat."
-                  : "KWh Dalam: pemakaian KWh tidak terdeteksi; KWh Akhir harus lebih kecil karena listrik digunakan selama shift.");
-              }
-              if (saldoKwhLuarAkhir >= saldoKwhLuarTersediaScaled) {
-                kwhValidationErrors.push(saldoKwhLuarAkhir > saldoKwhLuarTersediaScaled
-                  ? "KWh Luar: KWh Akhir melebihi KWh Tersedia; periksa KWh Akhir atau catat pembelian token yang belum tercatat."
-                  : "KWh Luar: pemakaian KWh tidak terdeteksi; KWh Akhir harus lebih kecil karena listrik digunakan selama shift.");
-              }
-              if (kwhValidationErrors.length) {
-                res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-                return res.end(JSON.stringify({ success: false, message: kwhValidationErrors.join(" ") }));
-              }
-              persistSnapshot(0);
-              });
-            };
-            const loadDetails = () => {
-              if (!txIds.length) return respondWithDetails([]);
-              const placeholders = txIds.map(() => "?").join(",");
-              db.all(`SELECT transaksi_id, nama_barang, qty, harga_jual, subtotal FROM detail_transaksi WHERE transaksi_id IN (${placeholders}) ORDER BY transaksi_id, id`, txIds, (detailError, details) => {
-                if (detailError) {
-                  res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-                  return res.end(JSON.stringify({ success: false, message: detailError.message }));
-                }
-                respondWithDetails(details);
-              });
-            };
-            const sessionIds = Array.from(new Set(transactions.map(tx => tx.session_id).filter(Boolean)));
-            if (!sessionIds.length) return loadDetails();
-            const placeholders = sessionIds.map(() => "?").join(",");
-            db.all(`SELECT session_id, nomor_meja, durasi_jam FROM sesi_meja WHERE session_id IN (${placeholders})`, sessionIds, (sessionError, rows) => {
-              if (sessionError) {
-                res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-                return res.end(JSON.stringify({ success: false, message: sessionError.message }));
-              }
-              rows.forEach(row => sessionsById.set(row.session_id, row));
-              loadDetails();
-            });
-          });
+      if (shift.status === "PENDING_CLOSE") {
+        try {
+          const snapshot = JSON.parse(shift.pending_close_snapshot || "");
+          snapshot.shift = {
+            ...snapshot.shift,
+            shiftId: Number(shift.id),
+            kasir: shift.kasir,
+            buka_at: shift.buka_at,
+            status: "PENDING_CLOSE",
+            pending_close_at: shift.pending_close_at,
+            tutup_at: shift.tutup_at,
+          };
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify(snapshot));
+        } catch (snapshotError) {
+          writeLog("ERROR", "KASIR_PENDING_CLOSE", "Snapshot tutup kasir tidak valid", { shiftId, error: snapshotError.message });
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, code: "PENDING_CLOSE_SNAPSHOT_INVALID", message: "Snapshot tutup kasir tidak dapat dibaca. Hubungi manager." }));
         }
-      );
+      }
+
+      let nominalAktual;
+      try {
+        nominalAktual = safeNonNegative(data.nominalAktual, "nominalAktual");
+      } catch (validationError) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: validationError.message }));
+      }
+      const saldoKwhDalamAkhir = 0;
+      const saldoKwhLuarAkhir = 0;
+
+      // SALDO KAS LACI adalah sumber saldo resmi untuk Rekap Kas Tutup Kasir.
+      // saldoKasLaciAwal  = saldo laci PERSIS saat shift dibuka (bukan saldo saat ini,
+      //                     agar tidak mencakup transaksi laci selama shift).
+      // saldoKasLaciSeharusnya = saldo laci resmi saat ini
+      //                     = kas_laci_config.saldo_awal + seluruh kas_laci_transaksi
+      //                       (UANG_MASUK - UANG_KELUAR), menjadi SALDO KAS AKHIR rekap.
+      const saldoKasLaciAwal = await getKasLaciSaldo(shift.buka_at);
+      const saldoKasLaciSeharusnya = await getKasLaciSaldo();
+
+      db.all(
+        `SELECT t.*, tt.kode_setoran, tt.nominal AS nominal_tarik_tunai
+         FROM transaksi t
+         LEFT JOIN tarik_tunai tt ON tt.transaksi_id = t.id
+         WHERE t.shift_id = ? ORDER BY t.id`,
+        [shiftId],
+        (txError, allTransactions) => {
+        if (txError) {
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: txError.message }));
+        }
+        // /api/transaksi/batalkan menyimpan status_sync = 'BATAL'.
+        // Abaikan transaksi batal dari seluruh angka dan rincian preview.
+        const transactions = allTransactions.filter(tx => !["BATAL", "CANCELLED"].includes(String(tx.status_sync || "").trim().toUpperCase()));
+        const txIds = transactions.map(tx => tx.id);
+        const sessionsById = new Map();
+        const respondWithDetails = details => {
+          db.get(`SELECT
+                    (SELECT COALESCE(SUM(nominal), 0) FROM kas_masuk WHERE shift_id = ?) AS masuk,
+                    (SELECT COALESCE(SUM(nominal), 0) FROM kas_keluar WHERE shift_id = ?) AS keluar,
+                    (SELECT COUNT(*) FROM kas_masuk WHERE shift_id = ?) AS jumlah_masuk,
+                    (SELECT COUNT(*) FROM kas_keluar WHERE shift_id = ?) AS jumlah_keluar,
+                    (SELECT COALESCE(SUM(kwh_didapat), 0) FROM pembelian_kwh WHERE shift_id = ? AND jenis_kwh = 'DALAM') AS total_kwh_dalam,
+                    (SELECT COALESCE(SUM(kwh_didapat), 0) FROM pembelian_kwh WHERE shift_id = ? AND jenis_kwh = 'LUAR') AS total_kwh_luar,
+                    (SELECT COUNT(*) FROM pembelian_kwh WHERE shift_id = ? AND jenis_kwh = 'DALAM') AS jumlah_topup_dalam,
+                    (SELECT COUNT(*) FROM pembelian_kwh WHERE shift_id = ? AND jenis_kwh = 'LUAR') AS jumlah_topup_luar`,
+            [shiftId, shiftId, shiftId, shiftId, shift.id, shift.id, shift.id, shift.id], (kasError, kas) => {
+          if (kasError) {
+            res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+            return res.end(JSON.stringify({ success: false, message: kasError.message }));
+          }
+          const detailsByTx = new Map();
+          const products = new Map();
+          details.forEach(row => {
+            if (["meja billiard", "meja pagi", "meja malam"].includes(String(row.nama_barang || "").trim().toLowerCase())) return;
+            if (!detailsByTx.has(row.transaksi_id)) detailsByTx.set(row.transaksi_id, []);
+            detailsByTx.get(row.transaksi_id).push({ nama_barang: row.nama_barang, qty: Number(row.qty || 0), harga_jual: Number(row.harga_jual || 0), subtotal: Number(row.subtotal || 0) });
+            const product = products.get(row.nama_barang) || { nama_barang: row.nama_barang, qty: 0, harga_jual: Number(row.harga_jual || 0), harga_jual_konsisten: true, subtotal: 0, _prices: new Set() };
+            product.qty += Number(row.qty || 0);
+            product.subtotal += Number(row.subtotal || 0);
+            product._prices.add(Number(row.harga_jual || 0));
+            products.set(row.nama_barang, product);
+          });
+          const tableRows = Array.from({ length: 10 }, (_, index) => ({ nomor_meja: index + 1, jumlah_sesi: 0, total_durasi_jam: 0, omzet: 0, _sessions: new Set() }));
+          const transaksiDetail = transactions.map(tx => {
+            const tableSession = sessionsById.get(tx.session_id);
+            const tableNo = Number(tableSession && tableSession.nomor_meja || tx.nomor_meja || 0);
+            const row = tableRows[tableNo - 1];
+            if (row) row.omzet += Number(tx.total || 0);
+            return { nomor_transaksi: tx.nomor_transaksi, tanggal: tx.tanggal, jam: tx.jam, waktu: [tx.tanggal, tx.jam].filter(Boolean).join(" "), nomor_meja: tableNo || null, session_id: tx.session_id || null, total: Number(tx.total || 0), metode_pembayaran: tx.metode_pembayaran, tipe_transaksi: tx.tipe_transaksi || "PENJUALAN", kode_setoran: tx.kode_setoran || null, nominal_tarik_tunai: Number(tx.nominal_tarik_tunai || 0), cash_amount: Number(tx.cash_amount || 0), qris_amount: Number(tx.qris_amount || 0), detail_produk: detailsByTx.get(tx.id) || [] };
+          });
+          transactions.forEach(tx => {
+            const tableSession = sessionsById.get(tx.session_id);
+            const tableNo = Number(tableSession && tableSession.nomor_meja || tx.nomor_meja || 0);
+            const row = tableRows[tableNo - 1];
+            if (row && tableSession && tx.session_id && !row._sessions.has(tx.session_id)) {
+              row._sessions.add(tx.session_id);
+              row.jumlah_sesi += 1;
+              row.total_durasi_jam += Number(tableSession.durasi_jam || 0);
+            }
+          });
+          const transactionSummary = summarizeTransactions(transactions);
+          const cash = transactionSummary.totalCash;
+          const qris = transactionSummary.totalQris;
+          const total = transactionSummary.totalPenjualan;
+          const selisihPenjualan = nominalAktual - cash;
+          // SALDO KAS AKHIR rekap = saldo kas laci resmi saat ini.
+          // Rumus lama shift.saldo_awal + kas_masuk + totalCash - kas_keluar TIDAK
+          // lagi dipakai; Kas Masuk/Keluar (tabel kas_masuk/kas_keluar) hanya
+          // informasi rekap, bukan sumber saldo.
+          const uangSeharusnya = saldoKasLaciSeharusnya;
+          const saldoKwhDalamAwalScaled = Number(shift.saldo_kwh_dalam_awal || 0);
+          const saldoKwhLuarAwalScaled = Number(shift.saldo_kwh_luar_awal || 0);
+          const totalKwhDalamTopupScaled = Number(kas.total_kwh_dalam || 0);
+          const totalKwhLuarTopupScaled = Number(kas.total_kwh_luar || 0);
+          const saldoKwhDalamTersediaScaled = saldoKwhDalamAwalScaled + totalKwhDalamTopupScaled;
+          const saldoKwhLuarTersediaScaled = saldoKwhLuarAwalScaled + totalKwhLuarTopupScaled;
+          const penggunaanKwhDalamScaled = saldoKwhDalamTersediaScaled - saldoKwhDalamAkhir;
+          const penggunaanKwhLuarScaled = saldoKwhLuarTersediaScaled - saldoKwhLuarAkhir;
+          const signedKwhScaledToDecimal = value =>
+            Math.sign(value) * kwhScaledToDecimal(Math.abs(value));
+          const produk = Array.from(products.values()).map(item => {
+            item.harga_jual_konsisten = item._prices.size === 1;
+            if (!item.harga_jual_konsisten) item.harga_jual = null;
+            delete item._prices;
+            return item;
+          });
+          tableRows.forEach(item => delete item._sessions);
+          const preview = { success: true,
+            shift: { shiftId: Number(shift.id), kasir: shift.kasir, buka_at: shift.buka_at, status: shift.status, pending_close_at: shift.pending_close_at, tutup_at: shift.tutup_at, saldo_awal: saldoKasLaciAwal, saldo_kwh_dalam_awal: kwhScaledToDecimal(saldoKwhDalamAwalScaled), saldo_kwh_luar_awal: kwhScaledToDecimal(saldoKwhLuarAwalScaled) },
+            ringkasanPenjualan: { ...transactionSummary, nominalAktual },
+            selisihPenjualan,
+            rekapProduk: produk, transaksi: transaksiDetail,
+            performaMeja: tableRows,
+            kas: { masuk: Number(kas.masuk || 0), keluar: Number(kas.keluar || 0) },
+            kasLaci: {
+              saldoAwal: saldoKasLaciAwal,
+              saldoAkhir: saldoKasLaciSeharusnya,
+              sumber: "kas_laci_config.saldo_awal + kas_laci_transaksi (UANG_MASUK - UANG_KELUAR)"
+            },
+            rekonsiliasiKas: { uangSeharusnya, nominalAktual, selisih: nominalAktual - uangSeharusnya },
+            kwh: {
+              dalam: {
+                awal: kwhScaledToDecimal(saldoKwhDalamAwalScaled),
+                totalTokenTopup: kwhScaledToDecimal(totalKwhDalamTopupScaled),
+                tokenTopupTersedia: Number(kas.jumlah_topup_dalam || 0) > 0,
+                tersedia: kwhScaledToDecimal(saldoKwhDalamTersediaScaled),
+                akhir: kwhScaledToDecimal(saldoKwhDalamAkhir),
+                penggunaan: signedKwhScaledToDecimal(penggunaanKwhDalamScaled)
+              },
+              luar: {
+                awal: kwhScaledToDecimal(saldoKwhLuarAwalScaled),
+                totalTokenTopup: kwhScaledToDecimal(totalKwhLuarTopupScaled),
+                tokenTopupTersedia: Number(kas.jumlah_topup_luar || 0) > 0,
+                tersedia: kwhScaledToDecimal(saldoKwhLuarTersediaScaled),
+                akhir: kwhScaledToDecimal(saldoKwhLuarAkhir),
+                penggunaan: signedKwhScaledToDecimal(penggunaanKwhLuarScaled)
+              }
+            },
+            generatedAt: new Date().toISOString()
+          };
+          const persistSnapshot = attempt => {
+            if (attempt >= 10) {
+              res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+              return res.end(JSON.stringify({ success: false, message: "Tidak dapat membuat kode unik tutup kasir setelah beberapa percobaan." }));
+            }
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            const code = Array.from(crypto.randomBytes(6), byte => alphabet[byte % alphabet.length]).join("");
+            const pendingAt = new Date().toISOString();
+            preview.kode_tutup = code;
+            preview.pendingCloseAt = pendingAt;
+            preview.shift.kode_tutup = code;
+            preview.shift.status = "PENDING_CLOSE";
+            const snapshot = JSON.stringify(preview);
+            db.run(
+              `UPDATE shift_kasir
+               SET status = 'PENDING_CLOSE', pending_close_at = ?, pending_close_snapshot = ?, kode_tutup = ?,
+                   nominal_aktual = ?, saldo_kwh_dalam_akhir = ?, saldo_kwh_luar_akhir = ?
+               WHERE id = ? AND kasir_id = ? AND status = 'OPEN' AND kode_tutup IS NULL
+                 AND pending_close_snapshot IS NULL
+                 AND (SELECT COUNT(*) FROM transaksi WHERE shift_id = ?) = ?
+                 AND (SELECT COUNT(*) FROM transaksi WHERE shift_id = ? AND UPPER(COALESCE(status_sync, '')) NOT IN ('BATAL', 'CANCELLED')) = ?
+                 AND (SELECT COUNT(*) FROM kas_masuk WHERE shift_id = ?) = ?
+                 AND (SELECT COUNT(*) FROM kas_keluar WHERE shift_id = ?) = ?`,
+              [pendingAt, snapshot, code, nominalAktual, saldoKwhDalamAkhir, saldoKwhLuarAkhir,
+                shiftId, session.kasirId, shiftId, allTransactions.length, shiftId, transactions.length,
+                shiftId, Number(kas.jumlah_masuk || 0), shiftId, Number(kas.jumlah_keluar || 0)],
+              function (persistError) {
+                if (persistError && /UNIQUE|CONSTRAINT/i.test(persistError.message)) {
+                  preview.kode_tutup = undefined;
+                  preview.pendingCloseAt = undefined;
+                  preview.shift.kode_tutup = undefined;
+                  return persistSnapshot(attempt + 1);
+                }
+                if (persistError) {
+                  res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+                  return res.end(JSON.stringify({ success: false, message: persistError.message }));
+                }
+                if (this.changes === 1) {
+                  res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+                  return res.end(snapshot);
+                }
+                db.get(`SELECT status, pending_close_snapshot FROM shift_kasir WHERE id = ? AND kasir_id = ?`, [shiftId, session.kasirId], (currentError, current) => {
+                  if (currentError) {
+                    res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+                    return res.end(JSON.stringify({ success: false, message: currentError.message }));
+                  }
+                  if (current && current.status === "PENDING_CLOSE") {
+                    try {
+                      const saved = JSON.parse(current.pending_close_snapshot || "");
+                      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+                      return res.end(JSON.stringify(saved));
+                    } catch (snapshotError) {
+                      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+                      return res.end(JSON.stringify({ success: false, code: "PENDING_CLOSE_SNAPSHOT_INVALID", message: "Snapshot tutup kasir tidak dapat dibaca." }));
+                    }
+                  }
+                  res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
+                  return res.end(JSON.stringify({ success: false, code: "PREVIEW_DATA_CHANGED", message: "Data shift berubah saat preview. Muat ulang dan lakukan LIHAT HASIL kembali." }));
+                });
+              }
+            );
+          };
+          persistSnapshot(0);
+          });
+        };
+        const loadDetails = () => {
+          if (!txIds.length) return respondWithDetails([]);
+          const placeholders = txIds.map(() => "?").join(",");
+          db.all(`SELECT transaksi_id, nama_barang, qty, harga_jual, subtotal FROM detail_transaksi WHERE transaksi_id IN (${placeholders}) ORDER BY transaksi_id, id`, txIds, (detailError, details) => {
+            if (detailError) {
+              res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+              return res.end(JSON.stringify({ success: false, message: detailError.message }));
+            }
+            respondWithDetails(details);
+          });
+        };
+        const sessionIds = Array.from(new Set(transactions.map(tx => tx.session_id).filter(Boolean)));
+        if (!sessionIds.length) return loadDetails();
+        const placeholders = sessionIds.map(() => "?").join(",");
+        db.all(`SELECT session_id, nomor_meja, durasi_jam FROM sesi_meja WHERE session_id IN (${placeholders})`, sessionIds, (sessionError, rows) => {
+          if (sessionError) {
+            res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+            return res.end(JSON.stringify({ success: false, message: sessionError.message }));
+          }
+          rows.forEach(row => sessionsById.set(row.session_id, row));
+          loadDetails();
+        });
+      });
     } catch (error) {
       res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
       return res.end(JSON.stringify({ success: false, message: error.message }));
@@ -4143,29 +4623,18 @@ const server = https.createServer({
             res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
             return res.end(JSON.stringify({ success: false, code: "PENDING_CLOSE_SNAPSHOT_INVALID", message: "Snapshot tutup kasir tidak dapat dibaca." }));
           }
-          let snapshotKwhDalamAkhirScaled, snapshotKwhLuarAkhirScaled;
-          try {
-            snapshotKwhDalamAkhirScaled = kwhDecimalToScaled(snapshot && snapshot.kwh && snapshot.kwh.dalam && snapshot.kwh.dalam.akhir);
-            snapshotKwhLuarAkhirScaled = kwhDecimalToScaled(snapshot && snapshot.kwh && snapshot.kwh.luar && snapshot.kwh.luar.akhir);
-          } catch (snapshotError) {
-            res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-            return res.end(JSON.stringify({ success: false, code: "PENDING_CLOSE_SNAPSHOT_INVALID", message: "Snapshot tutup kasir tidak dapat dibaca." }));
-          }
-          if (!snapshot || !snapshot.rekonsiliasiKas || Number(shift.nominal_aktual) !== Number(snapshot.rekonsiliasiKas.nominalAktual) ||
-              (Number(shift.saldo_kwh_dalam_akhir) !== Number(snapshot.kwh && snapshot.kwh.dalam && snapshot.kwh.dalam.akhir) &&
-                Number(shift.saldo_kwh_dalam_akhir) !== snapshotKwhDalamAkhirScaled) ||
-              (Number(shift.saldo_kwh_luar_akhir) !== Number(snapshot.kwh && snapshot.kwh.luar && snapshot.kwh.luar.akhir) &&
-                Number(shift.saldo_kwh_luar_akhir) !== snapshotKwhLuarAkhirScaled)) {
+          if (!snapshot || !snapshot.rekonsiliasiKas || Number(shift.nominal_aktual) !== Number(snapshot.rekonsiliasiKas.nominalAktual)) {
             res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
             return res.end(JSON.stringify({ success: false, code: "PENDING_CLOSE_SNAPSHOT_MISMATCH", message: "Nilai snapshot penutupan tidak konsisten." }));
           }
-          const nominalSetoran = Number(shift.nominal_aktual);
+          const nominalSetoran = Number(snapshot.ringkasanPenjualan.totalCash || 0);
           if (!Number.isSafeInteger(nominalSetoran) || nominalSetoran < 0) {
             res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
             return res.end(JSON.stringify({ success: false, code: "NOMINAL_SETORAN_TIDAK_VALID", message: "Nominal Aktual harus berupa integer non-negatif yang aman untuk Setoran." }));
           }
           const sendCloseSuccess = () => {
             snapshot.shift.status = "CLOSED";
+            snapshot.shift.tutup_at = new Date().toISOString();
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
             return res.end(JSON.stringify({
               success: true,
@@ -5119,8 +5588,21 @@ const server = https.createServer({
         : null;
       const isExpiredHarga = memberHarga?.status === "EXPIRED";
       const kategoriSesi = String(mejaSessionHarga?.kategori_member || "").trim().toUpperCase();
-      const kategori = memberKodeHarga ? kategoriSesi : String(rawKategori).trim().toUpperCase();
-      if (!isExpiredHarga && !["PLATINUM", "UMUM", "PELAJAR"].includes(kategori)) {
+      // Kategori dihitung dari member terkait sesi, bukan dari input frontend.
+      const kategoriMemberHarga = mejaSessionHarga?.member_id
+        ? String(
+          (await getMemberListCached()).find(m =>
+            String(m.id ?? "").trim() === String(mejaSessionHarga.member_id).trim() ||
+            String(m.kodeMember ?? m.kode_member ?? "").trim() === String(mejaSessionHarga.member_id).trim()
+          )?.kategori || ""
+        ).trim().toUpperCase()
+        : "";
+      // Non-member (memberKodeHarga kosong): pakai harga normal meja dari master_barang.
+      // Member aktif: pakai kategori dari cache member; fallback kategoriSesi atau UMUM.
+      const kategori = memberKodeHarga
+        ? (kategoriMemberHarga ? kategoriMemberHarga : (kategoriSesi || "UMUM"))
+        : "";
+      if (!isExpiredHarga && kategori && !["PLATINUM", "UMUM", "PELAJAR"].includes(kategori)) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         return res.end(JSON.stringify({ success: false, message: "Kategori member tidak valid" }));
       }
@@ -5129,7 +5611,8 @@ const server = https.createServer({
       const nowIso = mejaSessionHarga?.waktu_mulai || new Date().toISOString();
       let cacheHarga;
 
-      if (isExpiredHarga) {
+      if (isExpiredHarga || !memberKodeHarga) {
+        // Non-member / member expired → harga normal meja
         const masterBarang = await getLocalBarang();
         const namaBarangMeja = mejaSessionHarga ? await getNamaBarangMejaSesi(mejaSessionHarga.session_id) : namaMejaDariWaktuMulai(nowIso);
         const barangBilliard = masterBarang.find(b => String(b.nama || "").trim() === namaBarangMeja);
@@ -5311,7 +5794,7 @@ const server = https.createServer({
       const jenisSesi = String(data.jenisSesi || "NORMAL").trim().toUpperCase();
       const isLoss = jenisSesi === "LOSS";
 
-      const durasiJam = isLoss
+      const durasiJamAwal = isLoss
         ? 0
         : (
             data.durasiJam !== undefined &&
@@ -5321,6 +5804,17 @@ const server = https.createServer({
               : 1
           );
       const memberIdInput = data.memberId ? String(data.memberId).trim() : null;
+
+      // Paket 3 Jam: sesi paket non member, durasi 3 jam,
+      // tanpa baris Meja Pagi/Meja Malam otomatis. Paket disimpan satu kali
+      // dari master_barang sebagai bagian pembukaan sesi.
+      const paket3JamDiminta = String(data.paket || data.namaPaket || "").trim() === "Paket 3 Jam";
+      if (paket3JamDiminta && isLoss) {
+        throw new Error("Paket 3 Jam tidak dapat digunakan pada sesi LOSS");
+      }
+
+      const durasiJam = paket3JamDiminta && !isLoss ? 3 : durasiJamAwal;
+      const pilihanBonus = String(data.pilihanBonus || data.bonus || "").trim();
 
       if (!nomorMeja || nomorMeja < 1 || nomorMeja > 10) {
         throw new Error("Nomor meja harus 1-10");
@@ -5347,9 +5841,15 @@ const server = https.createServer({
       let kategoriMember = null;
       let hargaPerJam = null;
 
+      // Non-member: both must be NULL — kategori_member NULL = harga normal meja
+      if (!memberIdInput) {
+        kategoriMember = null;
+        hargaPerJam = null;
+      }
+
       if (!isLoss && memberIdInput) {
         const members = await getMemberListCached();
-        const foundMember = members.find(m => m.id === memberIdInput || m.kodeMember === memberIdInput);
+        const foundMember = members.find(m => String(m.id) === String(memberIdInput) || String(m.kodeMember) === String(memberIdInput));
 
         if (!foundMember) {
           res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
@@ -5399,69 +5899,186 @@ const server = https.createServer({
         validasiBatasSesiMemberPagi(kategoriMember, waktuMulai, waktuSelesai);
       }
 
-      await new Promise((resolve, reject) => {
-        db.run(
-          `
-          INSERT INTO sesi_meja
-          (session_id, nomor_meja, nama_pemesan, kasir, waktu_mulai, durasi_jam, waktu_selesai, jenis_sesi, member_id, kategori_member, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTIF')
-          `,
-          [sessionId, nomorMeja, namaPemesan, session.username, waktuMulai, durasiJam, waktuSelesai, jenisSesi, memberIdInput, kategoriMember],
-          (error) => {
-            if (error) reject(error);
-            else resolve();
+      let barangBonus = null;
+      let inPaketTransaction = false;
+
+      if (!isLoss && paket3JamDiminta) {
+        // Seluruh alur Paket 3 Jam (sesi_meja + pesanan_meja + update member)
+        // dibungkus satu transaksi atomik. BEGIN dijalankan SEBELUM INSERT
+        // sesi_meja, dan COMMIT hanya setelah semua query sukses, sehingga
+        // jika salah satu gagal tidak ada record sesi_meja maupun
+        // pesanan_meja yang tertinggal di database.
+        inPaketTransaction = true;
+        try {
+          await runAsync("BEGIN IMMEDIATE TRANSACTION");
+
+          const masterBarangPaket = await getLocalBarang();
+          const barangPaket = masterBarangPaket.find(b => String(b.nama || "").trim() === "Paket 3 Jam Non Member");
+          if (!barangPaket || Number(barangPaket.hargaJual) !== 70000) {
+            throw new Error("Produk Paket 3 Jam Non Member tidak valid di master_barang");
           }
-        );
-      });
+          if (kategoriMember && !pilihanBonus) {
+            throw new Error("Pilihan bonus (Kopi Bonus / Es Teh Bonus) wajib dipilih untuk Member");
+          }
+          const hppPaket = Number(barangPaket.hpp || 0);
+          const hargaPaket = Number(barangPaket.hargaJual);
+          const nowIsoPaket = new Date().toISOString();
 
-      if (!isLoss && memberIdInput) {
-        await new Promise((resolve, reject) => {
-          db.run(
-            `UPDATE member
-             SET last_used_at = ?,
-                 total_kunjungan = COALESCE(total_kunjungan, 0) + 1,
-                 updated_at = ?
-             WHERE id = ? OR kode_member = ?`,
-            [waktuMulai, waktuMulai, memberIdInput, String(memberIdInput)],
-            (error) => error ? reject(error) : resolve()
+          if (kategoriMember && pilihanBonus) {
+            const masterBonusList = await getLocalBarang();
+            const lowerPilihan = String(pilihanBonus).trim().toLowerCase();
+            const bonusPopcorn = ["popcorn bonus", "bonus popcorn", "popcorn"].includes(lowerPilihan);
+            let ditemukan = null;
+            if (bonusPopcorn) {
+              // Cari "Popcorn Bonus" dahulu, fallback ke "Popcorn"
+              const namaVariasi = ["Popcorn Bonus", "Popcorn"];
+              for (const nama of namaVariasi) {
+                ditemukan = masterBonusList.find(b => String(b.nama || "").trim().toLowerCase() === nama.toLowerCase());
+                if (ditemukan) break;
+              }
+            } else {
+              ditemukan = masterBonusList.find(b => String(b.nama || "").trim().toLowerCase() === lowerPilihan);
+            }
+            if (ditemukan && ["kopi bonus", "es teh bonus", "popcorn bonus", "bonus popcorn", "popcorn"].includes(String(ditemukan.nama || "").trim().toLowerCase())) {
+              barangBonus = ditemukan;
+            } else {
+              throw new Error("Barang bonus tidak valid di master_barang");
+            }
+          }
+
+          await runAsync(
+            `
+            INSERT INTO sesi_meja
+            (session_id, nomor_meja, nama_pemesan, kasir, waktu_mulai, durasi_jam, waktu_selesai, jenis_sesi, member_id, kategori_member, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTIF')
+            `,
+            [sessionId, nomorMeja, namaPemesan, session.username, waktuMulai, durasiJam, waktuSelesai, jenisSesi, memberIdInput, kategoriMember]
           );
-        });
 
-        writeLog("INFO", "MEMBER_ACTIVITY", "Aktivitas member diperbarui saat bermain", {
-          memberId: memberIdInput,
-          lastUsedAt: waktuMulai
-        });
-      }
-      if (isLoss) {
-        writeLog("INFO", "OPEN_LOSS", `Sesi WAKTU LOSS dibuka pada meja ${nomorMeja}`, { sessionId, nomorMeja, namaPemesan, kasir: session.username });
-      }
+          if (memberIdInput) {
+            await runAsync(
+              `UPDATE member
+               SET last_used_at = ?,
+                   total_kunjungan = COALESCE(total_kunjungan, 0) + 1,
+                   updated_at = ?
+               WHERE id = ? OR kode_member = ?`,
+              [waktuMulai, waktuMulai, memberIdInput, String(memberIdInput)]
+            );
+          }
 
-      if (!isLoss) {
-        const masterBarang = await getLocalBarang();
-        const namaBarangItem = namaMejaDariWaktuMulai(waktuMulai);
-        const barangBilliard = masterBarang.find(b => String(b.nama || "").trim() === namaBarangItem);
-        if (!barangBilliard) throw new Error(`Produk ${namaBarangItem} tidak ditemukan di Master Barang`);
-        const hppItem = Number(barangBilliard.hpp || 0);
-        const normalHargaJual = Number(barangBilliard.hargaJual || 0);
-
-        const hargaJualFinal = normalHargaJual;
-        const subtotalFinal = hargaJualFinal * durasiJam;
-        const nowIso = new Date().toISOString();
-
-        await new Promise((resolve, reject) => {
-          db.run(
+          await runAsync(
             `
             INSERT INTO pesanan_meja
             (session_id, nama_barang, qty, harga_jual, hpp, subtotal, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `,
-            [sessionId, namaBarangItem, durasiJam, hargaJualFinal, hppItem, subtotalFinal, nowIso, nowIso],
+            [sessionId, "Paket 3 Jam Non Member", 1, hargaPaket, hppPaket, hargaPaket, nowIsoPaket, nowIsoPaket]
+          );
+
+          if (barangBonus) {
+            const hppBonus = Number(barangBonus.hpp || 0);
+            const nowIsoBonus = new Date().toISOString();
+            await runAsync(
+              `
+              INSERT INTO pesanan_meja
+              (session_id, nama_barang, qty, harga_jual, hpp, subtotal, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              `,
+              [sessionId, barangBonus.nama, 1, 0, hppBonus, 0, nowIsoBonus, nowIsoBonus]
+            );
+          }
+
+          await runAsync("COMMIT");
+          inPaketTransaction = false;
+        } catch (txPaketErr) {
+          if (inPaketTransaction) {
+            try {
+              await runAsync("ROLLBACK");
+            } catch (rollbackErr) {
+              writeLog("ERROR", "MEJA_BUKA_ROLLBACK_FAIL", `Gagal rollback transaksi Paket 3 Jam meja ${nomorMeja}`, {
+                sessionId,
+                error: rollbackErr.message
+              });
+            }
+          }
+          writeLog("ERROR", "MEJA_BUKA_PAKEK_TX_FAIL", `Transaksi Paket 3 Jam gagal untuk meja ${nomorMeja}`, {
+            sessionId,
+            error: txPaketErr.message
+          });
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: txPaketErr.message }));
+        }
+
+        writeLog("INFO", "OPEN_PAKET_3JAM", `Sesi Paket 3 Jam dibuka pada meja ${nomorMeja}`, { sessionId, nomorMeja, namaPemesan, kasir: session.username });
+        if (memberIdInput) {
+          writeLog("INFO", "MEMBER_ACTIVITY", "Aktivitas member diperbarui saat bermain", {
+            memberId: memberIdInput,
+            lastUsedAt: waktuMulai
+          });
+        }
+      } else {
+        await new Promise((resolve, reject) => {
+          db.run(
+            `
+            INSERT INTO sesi_meja
+            (session_id, nomor_meja, nama_pemesan, kasir, waktu_mulai, durasi_jam, waktu_selesai, jenis_sesi, member_id, kategori_member, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTIF')
+            `,
+            [sessionId, nomorMeja, namaPemesan, session.username, waktuMulai, durasiJam, waktuSelesai, jenisSesi, memberIdInput, kategoriMember],
             (error) => {
               if (error) reject(error);
               else resolve();
             }
           );
         });
+
+        if (!isLoss && memberIdInput) {
+          await new Promise((resolve, reject) => {
+            db.run(
+              `UPDATE member
+               SET last_used_at = ?,
+                   total_kunjungan = COALESCE(total_kunjungan, 0) + 1,
+                   updated_at = ?
+               WHERE id = ? OR kode_member = ?`,
+              [waktuMulai, waktuMulai, memberIdInput, String(memberIdInput)],
+              (error) => error ? reject(error) : resolve()
+            );
+          });
+
+          writeLog("INFO", "MEMBER_ACTIVITY", "Aktivitas member diperbarui saat bermain", {
+            memberId: memberIdInput,
+            lastUsedAt: waktuMulai
+          });
+        }
+        if (isLoss) {
+          writeLog("INFO", "OPEN_LOSS", `Sesi WAKTU LOSS dibuka pada meja ${nomorMeja}`, { sessionId, nomorMeja, namaPemesan, kasir: session.username });
+        } else {
+          const masterBarang = await getLocalBarang();
+          const namaBarangItem = namaMejaDariWaktuMulai(waktuMulai);
+          const barangBilliard = masterBarang.find(b => String(b.nama || "").trim() === namaBarangItem);
+          if (!barangBilliard) throw new Error(`Produk ${namaBarangItem} tidak ditemukan di Master Barang`);
+          const hppItem = Number(barangBilliard.hpp || 0);
+          const normalHargaJual = Number(barangBilliard.hargaJual || 0);
+
+          const hargaJualFinal = normalHargaJual;
+          const subtotalFinal = hargaJualFinal * durasiJam;
+          const nowIso = new Date().toISOString();
+
+          await new Promise((resolve, reject) => {
+            db.run(
+              `
+              INSERT INTO pesanan_meja
+              (session_id, nama_barang, qty, harga_jual, hpp, subtotal, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              `,
+              [sessionId, namaBarangItem, durasiJam, hargaJualFinal, hppItem, subtotalFinal, nowIso, nowIso],
+              (error) => {
+                if (error) reject(error);
+                else resolve();
+              }
+            );
+          });
+        }
       }
 
       try {
@@ -5491,6 +6108,11 @@ const server = https.createServer({
         responseObj.memberId = memberIdInput;
         responseObj.kategoriMember = kategoriMember;
         responseObj.hargaPerJam = hargaPerJam;
+      }
+
+      if (!isLoss && paket3JamDiminta) {
+        responseObj.paket = "Paket 3 Jam";
+        responseObj.bonus = barangBonus ? barangBonus.nama : null;
       }
 
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -5789,6 +6411,158 @@ const server = https.createServer({
       const data = await getJsonBody(req);
       const sessionId = data.sessionId;
       const durasiTambahJam = Number(data.durasiTambahJam);
+      const paket3JamDiminta = String(data.paket || data.namaPaket || "").trim() === "Paket 3 Jam";
+
+      // Cabang khusus: Paket 3 Jam
+      if (paket3JamDiminta) {
+        if (!sessionId) {
+          res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: "Sesi aktif tidak ditemukan" }));
+        }
+
+        const mejaSession = await getSessionById(sessionId);
+        if (!mejaSession || mejaSession.status !== "AKTIF") {
+          res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: "Sesi aktif tidak ditemukan" }));
+        }
+
+        if (String(mejaSession.jenis_sesi || "").toUpperCase() === "LOSS") {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: "Tidak dapat menambah durasi pada sesi LOSS" }));
+        }
+
+
+        const masterPaket = await new Promise((resolve, reject) => {
+          db.get(
+            `SELECT nama, hpp, harga_jual FROM master_barang WHERE nama = ? LIMIT 1`,
+            ["Paket 3 Jam Non Member"],
+            (err, row) => {
+              if (err) reject(err);
+              else resolve(row);
+            }
+          );
+        });
+
+        if (!masterPaket || Number(masterPaket.harga_jual) !== 70000) {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: "Produk Paket 3 Jam tidak valid di master_barang" }));
+        }
+
+        const paketHpp = Number(masterPaket.hpp || 0);
+        const paketDurasiJam = 3;
+        const paketHarga = 70000;
+        const durasiJamLamaPaket = Number(mejaSession.durasi_jam || 0);
+        const durasiJamBaruPaket = durasiJamLamaPaket + paketDurasiJam;
+        const waktuSelesaiLamaPaket = mejaSession.waktu_selesai || new Date().toISOString();
+
+        await runAsync("BEGIN IMMEDIATE TRANSACTION");
+        let waktuSelesaiBaruPaket;
+        try {
+          const sesiAktifUlang = await new Promise((resolve, reject) => {
+            db.get(
+              `SELECT * FROM sesi_meja WHERE session_id = ? AND status = 'AKTIF'`,
+              [sessionId],
+              (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+              }
+            );
+          });
+
+          if (!sesiAktifUlang) {
+            await runAsync("ROLLBACK");
+            res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+            return res.end(JSON.stringify({ success: false, message: "Sesi aktif tidak ditemukan" }));
+          }
+
+          const paketDuplikat = await new Promise((resolve, reject) => {
+            db.get(
+              `SELECT id FROM pesanan_meja WHERE session_id = ? AND nama_barang IN (?, ?) LIMIT 1`,
+              [sessionId, "Paket 3 Jam", "Paket 3 Jam Non Member"],
+              (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+              }
+            );
+          });
+
+          if (paketDuplikat) {
+            await runAsync("ROLLBACK");
+            res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+            return res.end(JSON.stringify({ success: false, message: "Paket 3 Jam sudah ditambahkan pada sesi ini" }));
+          }
+
+          const nowPaket = new Date();
+          const currentEndPaket = new Date(sesiAktifUlang.waktu_selesai || nowPaket.toISOString());
+          let waktuSelesaiBaruDatePaket;
+          if (nowPaket >= currentEndPaket) {
+            waktuSelesaiBaruDatePaket = new Date(nowPaket.getTime() + paketDurasiJam * 3600 * 1000);
+          } else {
+            waktuSelesaiBaruDatePaket = new Date(currentEndPaket.getTime() + paketDurasiJam * 3600 * 1000);
+          }
+          validasiBatasSesiMemberPagi(sesiAktifUlang.kategori_member, sesiAktifUlang.waktu_mulai, waktuSelesaiBaruDatePaket);
+          waktuSelesaiBaruPaket = waktuSelesaiBaruDatePaket.toISOString();
+
+          const updatePaketRes = await runAsync(
+            `
+            UPDATE sesi_meja
+            SET durasi_jam = durasi_jam + ?, waktu_selesai = ?
+            WHERE session_id = ? AND status = 'AKTIF'
+            `,
+            [paketDurasiJam, waktuSelesaiBaruPaket, sessionId]
+          );
+
+          if (!updatePaketRes || Number(updatePaketRes.changes) === 0) {
+            await runAsync("ROLLBACK");
+            res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+            return res.end(JSON.stringify({ success: false, message: "Sesi aktif tidak ditemukan" }));
+          }
+
+          const nowIsoPaket = new Date().toISOString();
+          await runAsync(
+            `INSERT INTO pesanan_meja (session_id, nama_barang, qty, harga_jual, hpp, subtotal, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [sessionId, "Paket 3 Jam Non Member", 1, paketHarga, paketHpp, paketHarga, nowIsoPaket, nowIsoPaket]
+          );
+
+          await runAsync("COMMIT");
+        } catch (paketTxErr) {
+          try { await runAsync("ROLLBACK"); } catch (rollbackErr) {}
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: paketTxErr.message || "Gagal menambah durasi paket" }));
+        }
+
+        const wasExpiredPaket = new Date() >= new Date(waktuSelesaiLamaPaket);
+        if (wasExpiredPaket) {
+          const nomorMejaPaket = mejaSession.nomor_meja;
+          try {
+            const lampRes = await lampOn(nomorMejaPaket);
+            if (lampRes && lampRes.success === true) lastLampCommandState.set(Number(nomorMejaPaket), 1);
+            if (lampRes && lampRes.success === true) {
+              expiredLampSessions.delete(sessionId);
+              writeLog("INFO", "LAMP_ON_EXTENDED", `Lampu dinyalakan kembali untuk meja ${nomorMejaPaket} karena durasi ditambah`, { sessionId });
+            } else {
+              writeLog("WARN", "LAMP_ON_FAILED", `Gagal menyalakan kembali lampu untuk meja ${nomorMejaPaket} saat durasi ditambah`, { lampRes });
+            }
+          } catch (lampErr) {
+            writeLog("ERROR", "LAMP_ON_ERROR", `Error saat menyalakan kembali lampu untuk meja ${nomorMejaPaket} saat durasi ditambah`, { error: lampErr.message });
+          }
+        }
+
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({
+          success: true,
+          sessionId: mejaSession.session_id,
+          nomorMeja: mejaSession.nomor_meja,
+          namaPemesan: mejaSession.nama_pemesan,
+          waktuMulai: mejaSession.waktu_mulai,
+          durasiJamLama: durasiJamLamaPaket,
+          durasiTambahJam: paketDurasiJam,
+          durasiJam: durasiJamBaruPaket,
+          waktuSelesaiLama: waktuSelesaiLamaPaket,
+          waktuSelesai: waktuSelesaiBaruPaket,
+          status: "AKTIF"
+        }));
+      }
 
       if (!sessionId || !Number.isInteger(durasiTambahJam) || durasiTambahJam < 1) {
         res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
@@ -5804,6 +6578,12 @@ const server = https.createServer({
       if (String(mejaSession.jenis_sesi || "").toUpperCase() === "LOSS") {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         return res.end(JSON.stringify({ success: false, message: "Tidak dapat menambah durasi pada sesi LOSS" }));
+      }
+
+      const sesiPaketItems = await getSessionItems(sessionId);
+      if (sesiPaketItems.some(item => { const n = String(item.nama_barang || "").trim().toLowerCase(); return n === "paket 3 jam" || n === "paket 3 jam non member"; })) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: "Paket 3 Jam hanya via /api/meja/buka atau /api/meja/tambah-durasi" }));
       }
 
       const durasiJamLama = Number(mejaSession.durasi_jam || 0);
@@ -5916,6 +6696,12 @@ const server = https.createServer({
         return res.end(JSON.stringify({ success: false, message: "Tidak dapat mengurangi durasi pada sesi LOSS" }));
       }
 
+      const sesiPaketKurang = await getSessionItems(sessionId);
+      if (sesiPaketKurang.some(item => { const n = String(item.nama_barang || "").trim().toLowerCase(); return n === "paket 3 jam" || n === "paket 3 jam non member"; })) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: "Paket 3 Jam harus tetap 3 jam dengan billing Rp70.000" }));
+      }
+
       const durasiJamLama = Number(mejaSession.durasi_jam || 0);
 
       if (durasiJamLama - durasiKurangJam < 1) {
@@ -5974,6 +6760,11 @@ const server = https.createServer({
       const data = await getJsonBody(req);
       const sessionId = String(data.sessionId || "").trim();
       const namaBarang = String(data.namaBarang || "").trim();
+
+      if (['paket 3 jam', 'paket 3 jam non member'].includes(String(namaBarang).trim().toLowerCase())) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: 'Paket 3 Jam hanya via /api/meja/buka atau /api/meja/tambah-durasi' }));
+      }
 
       if (!sessionId || !namaBarang) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
@@ -6050,6 +6841,11 @@ const server = https.createServer({
       const sessionId = data.sessionId;
       const namaBarang = String(data.namaBarang || "").trim();
       const qty = Number(data.qty);
+
+      if (['paket 3 jam', 'paket 3 jam non member'].includes(String(namaBarang).trim().toLowerCase())) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: 'Paket 3 Jam hanya via /api/meja/buka atau /api/meja/tambah-durasi' }));
+      }
 
       if (!sessionId || !namaBarang || !qty || qty <= 0) {
         throw new Error("Data pesanan tidak valid");
@@ -6132,6 +6928,11 @@ const server = https.createServer({
       const sessionId = data.sessionId;
       const namaBarang = String(data.namaBarang || "").trim();
       const qtyBaru = Number(data.qty);
+
+      if (['paket 3 jam', 'paket 3 jam non member'].includes(String(namaBarang).trim().toLowerCase())) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: 'Paket 3 Jam hanya via /api/meja/buka atau /api/meja/tambah-durasi' }));
+      }
 
       if (!sessionId || !namaBarang || isNaN(qtyBaru)) {
         throw new Error("Data pesanan tidak valid");
@@ -6289,6 +7090,39 @@ const server = https.createServer({
   }
 
   // MEMBER API ENDPOINTS
+    // GET /api/member/top-bulanan (Top Member Bulanan / Arsip)
+    if (req.method === "GET" && req.url.startsWith("/api/member/top-bulanan")) {
+      const session = validateLoginSession(req, res);
+      if (!session) return;
+
+      const parsedUrl = require("url").parse(req.url, true);
+      const queryPeriode = parsedUrl.query.periode;
+      const limit = parseInt(parsedUrl.query.limit) || 10;
+      const currentPeriode = new Date().toISOString().slice(0, 7);
+
+      if (queryPeriode && queryPeriode !== currentPeriode) {
+        const sql = "SELECT a.kode_member, COALESCE(m.nama, 'Nama tidak ditemukan') AS nama, a.total_kunjungan, a.total_pengeluaran, a.periode FROM member_pengeluaran_bulanan a LEFT JOIN member m ON LOWER(a.kode_member) = LOWER(m.kode_member) WHERE a.periode = ? ORDER BY a.total_pengeluaran DESC LIMIT ?";
+        db.all(sql, [queryPeriode, limit], (err, rows) => {
+          if (err) {
+            res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+            return res.end(JSON.stringify({ success: false, message: err.message }));
+          }
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: true, periode: queryPeriode, data: rows }));
+        });
+      } else {
+        const sql = "SELECT kode_member, nama, total_kunjungan, total_pengeluaran FROM member_cache ORDER BY total_pengeluaran DESC LIMIT ?";
+        db.all(sql, [limit], (err, rows) => {
+          if (err) {
+            res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+            return res.end(JSON.stringify({ success: false, message: err.message }));
+          }
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: true, periode: currentPeriode, data: rows }));
+        });
+      }
+      return;
+    }
   if (req.method === "GET" && req.url === "/api/member/kategori") {
     const session = validateLoginSession(req, res);
     if (!session) return;
@@ -6667,20 +7501,47 @@ const server = https.createServer({
           : 0
     );
 
-    if (
-      !Number.isFinite(totalPlus) ||
-      !Number.isFinite(totalMinus) ||
-      !Number.isFinite(totalKerugian)
-    ) {
-      throw new Error("Summary hasil Stock Opname tidak valid.");
-    }
+    // FIX-SO-SUBMIT-NAN-SANIZATION-V1: jangan throw — nilai tak-finit (NaN/undefined/Infinity)
+    // dibersihkan ke 0 + clamp negatif, agar tidak memicu 500 "Summary hasil Stock Opname tidak valid."
+    const safeTotalPlus = Number.isFinite(totalPlus) ? Math.max(0, totalPlus) : 0;
+    const safeTotalMinus = Number.isFinite(totalMinus) ? Math.max(0, totalMinus) : 0;
+    const safeTotalKerugian = Number.isFinite(totalKerugian) ? Math.max(0, totalKerugian) : 0;
 
     return {
-      totalPlus,
-      totalMinus,
-      totalKerugian
+      totalPlus: safeTotalPlus,
+      totalMinus: safeTotalMinus,
+      totalKerugian: safeTotalKerugian
     };
   }
+
+  // ── Stock Opname Read-Only API ──────────────────────────────────────────────
+
+  // GET /api/stock-opname/items?kategori=NAME — daftar barang per kategori
+  if (req.method === "GET" && req.url.startsWith("/api/stock-opname/items")) {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+    try {
+      const url = new URL(req.url, `http://localhost:${config.PORT}`);
+      const kategori = String(url.searchParams.get("kategori") || "").trim();
+      if (!kategori) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: "Kategori wajib diisi" }));
+      }
+      // BLIND SO: kategori 'BONUS' di-exclude; stok ditampilkan 0 agar kasir tidak melihat stok riil sebelum menghitung.
+      // Stok riil (stok_aktual) tetap dihitung backend saat submit berdasarkan id_barang.
+      const rows = await new Promise((resolve, reject) => db.all(
+        "SELECT id, id_barang, nama, kategori, 0 AS stok, hpp AS harga_modal, 'Pcs' AS satuan FROM master_barang WHERE kategori = ? AND UPPER(COALESCE(kategori, '')) != 'BONUS' ORDER BY nama ASC",
+        [kategori], (error, result) => error ? reject(error) : resolve(result || [])
+      ));
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ success: true, data: rows }));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ success: false, message: "Gagal mengambil daftar barang", error: err.message }));
+    }
+  }
+
+  // ── Stock Opname Local & Legacy ─────────────────────────────────────────────
 
   // Local SQLite Stock Opname draft endpoints. Legacy calculation/finalization is disabled.
   if (req.method === "GET" && req.url === "/api/stock-opname/local/barang") {
@@ -6812,6 +7673,258 @@ const server = https.createServer({
           message: error.message
         })
       );
+    }
+  }
+
+  // ── Stock Opname Submit ──────────────────────────────────
+  // POST /api/stock-opname/submit — atomic save + stock update (aligned to real DB schema)
+  if (req.method === "POST" && req.url === "/api/stock-opname/submit") {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+    try {
+      const data = await getJsonBody(req);
+      const kategori = String(data.kategori || "SEMUA BARANG").trim();
+      const items = Array.isArray(data.items) ? data.items : [];
+      const petugas = String(data.petugas || (session && session.nama ? session.nama : "Kasir")).trim();
+
+      if (items.length === 0) {
+        if (!res.headersSent) {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: "Data item stock opname tidak boleh kosong." }));
+        }
+        return;
+      }
+
+      const soId = "SO-" + Date.now();
+      const now = new Date().toISOString();
+
+      // BLIND SO: frontend mengirim stok_sistem = 0 (stok riil tidak ditampilkan saat form input).
+      // Item dari form memakai `produk_id` = PK INTEGER (id) dari /api/stock-opname/items,
+      // bukan id_barang (TEXT). Backend re-resolve stok_aktual & hpp riil dari master_barang
+      // (cocokkan via id ATAU id_barang) sehingga selisih & kerugian HPP tetap akurat.
+      const keyOf = (it) => it.id != null ? String(it.id)
+        : (it.produk_id != null ? String(it.produk_id)
+        : (it.idBarang != null ? String(it.idBarang)
+        : (it.id_barang != null ? String(it.id_barang)
+        : (it.produkId != null ? String(it.produkId) : null))));
+      const itemKeys = [];
+      for (const item of items) {
+        const k = keyOf(item);
+        if (k != null && !itemKeys.includes(k)) itemKeys.push(k);
+      }
+      const dbInfoMap = new Map(); // key -> { id, idBarang, stokRiil, hpp }
+      if (itemKeys.length > 0) {
+        const placeholders = itemKeys.map(() => "?").join(", ");
+        const dbRows = await new Promise((resolve, reject) => db.all(
+          "SELECT id, id_barang, stok_aktual, hpp FROM master_barang WHERE id IN (" + placeholders + ") OR id_barang IN (" + placeholders + ")",
+          itemKeys.concat(itemKeys), (error, result) => error ? reject(error) : resolve(result || [])
+        ));
+        for (const r of dbRows) {
+          const info = { id: r.id, idBarang: r.id_barang != null ? String(r.id_barang) : null,
+            stokRiil: Number.isFinite(Number(r.stok_aktual)) ? Number(r.stok_aktual) : 0,
+            hpp: Number.isFinite(Number(r.hpp)) ? Number(r.hpp) : 0 };
+          if (r.id != null) dbInfoMap.set(String(r.id), info);
+          if (info.idBarang != null) dbInfoMap.set(info.idBarang, info);
+        }
+      }
+
+      let totalPlus = 0;
+      let totalMinus = 0;
+      let totalKerugian = 0;
+
+      const resolvedItems = items.map(item => {
+        const key = keyOf(item);
+        const info = key != null ? dbInfoMap.get(key) : null;
+        const stokRiil = info ? info.stokRiil : 0;
+        const hpp = info ? info.hpp : (Number.isFinite(Number(item.harga_modal)) ? Number(item.harga_modal)
+          : (Number.isFinite(Number(item.hpp)) ? Number(item.hpp) : 0));
+        const stokFisik = Number.isFinite(Number(item.stok_fisik)) ? Number(item.stok_fisik) : 0;
+        const selisih = stokFisik - stokRiil;
+        if (selisih > 0) totalPlus += selisih;
+        else if (selisih < 0) { totalMinus += Math.abs(selisih); totalKerugian += Math.abs(selisih) * hpp; }
+        return { item, key, idMaster: info ? info.id : null, idBarang: info ? info.idBarang : null, stokRiil, stokFisik, selisih, hpp };
+      });
+
+      // Sanitasi total summary: NaN/undefined tidak boleh lolos ke DB (SQLite bind error),
+      // bersihkan ke 0 + clamp negatif (lembaga tidak boleh menghasilkan nilai minus di rekap).
+      totalPlus = Number.isFinite(totalPlus) ? Math.max(0, totalPlus) : 0;
+      totalMinus = Number.isFinite(totalMinus) ? Math.max(0, totalMinus) : 0;
+      totalKerugian = Number.isFinite(totalKerugian) ? Math.max(0, totalKerugian) : 0;
+
+      // Helper: proses satu item (INSERT detail + UPDATE master_barang) dalam satu Promise
+      const processItem = (itemData, soId, now) => {
+        return new Promise((resolve, reject) => {
+          const { item, idMaster, idBarang, stokRiil, stokFisik, selisih, hpp } = itemData;
+          const rugiModal = selisih < 0 ? Math.abs(selisih) * hpp : 0;
+
+          // Anti-undefined SQLite bind: setiap parameter harus terisolasi sebelum masuk db.run.
+          const safeIdMaster = idMaster != null ? idMaster : null;
+          const safeIdBarang = idBarang != null ? String(idBarang) : null;
+          const safeNamaBarang = (item.nama != null || item.nama_barang != null || item.namaBarang != null)
+            ? String(item.nama != null ? item.nama : (item.nama_barang != null ? item.nama_barang : item.namaBarang))
+            : "Barang Tanpa Nama";
+          const safeSatuan = item.satuan != null ? String(item.satuan) : "Pcs";
+          const safeStokRiil = Number.isFinite(Number(stokRiil)) ? Number(stokRiil) : 0;
+          const safeStokFisik = Number.isFinite(Number(stokFisik)) ? Number(stokFisik) : 0;
+          const safeSelisih = Number.isFinite(Number(selisih)) ? Number(selisih) : 0;
+          const safeRugiModal = Number.isFinite(Number(rugiModal)) ? Number(rugiModal) : 0;
+
+          db.run(
+            "INSERT INTO stock_opname_detail (so_id, local_master_barang_id, id_barang, nama_barang, satuan, jumlah_barang_aktual, jumlah_hasil_so, selisih_barang, kerugian_hpp, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [soId, safeIdMaster, safeIdBarang, safeNamaBarang, safeSatuan, safeStokRiil, safeStokFisik, safeSelisih, safeRugiModal, now, now],
+            err => {
+              if (err) return reject(err);
+              if (idMaster != null) {
+                db.run(
+                  "UPDATE master_barang SET stok_aktual = ?, updated_at = ? WHERE id = ?",
+                  [safeStokFisik, now, safeIdMaster],
+                  err2 => err2 ? reject(err2) : resolve()
+                );
+              } else if (idBarang != null) {
+                db.run(
+                  "UPDATE master_barang SET stok_aktual = ?, updated_at = ? WHERE id_barang = ?",
+                  [safeStokFisik, now, safeIdBarang],
+                  err2 => err2 ? reject(err2) : resolve()
+                );
+              } else {
+                resolve();
+              }
+            }
+          );
+        });
+      };
+
+      await new Promise((resolve, reject) => db.run("BEGIN TRANSACTION", err => err ? reject(err) : resolve()));
+
+      try {
+        // 1. INSERT header into stock_opname
+        await new Promise((resolve, reject) => {
+          db.run(
+            "INSERT INTO stock_opname (so_id, kategori, petugas, tanggal, status, is_final, total_plus, total_minus, total_kerugian, created_at, updated_at, source) VALUES (?, ?, ?, ?, 'COMPLETED', 1, ?, ?, ?, ?, ?, 'POS')",
+            [soId, kategori, petugas, now, totalPlus, totalMinus, totalKerugian, now, now],
+            function (err) {
+              if (err) return reject(err);
+              resolve();
+            }
+          );
+        });
+
+        // 2. Per-item: INSERT detail + UPDATE master_barang — gunakan Promise.all
+        const itemPromises = resolvedItems.map(itemData => processItem(itemData, soId, now));
+
+        await Promise.all(itemPromises);
+
+        await new Promise((resolve, reject) => db.run("COMMIT", err => err ? reject(err) : resolve()));
+      } catch (txnErr) {
+        await new Promise((resolve) => db.run("ROLLBACK", () => resolve()));
+        throw txnErr;
+      }
+
+      writeLog("INFO", "SO_SUBMIT_SUCCESS", "Stock Opname " + soId + " untuk " + kategori + " berhasil disimpan", { kategori, itemCount: items.length, soId });
+      if (!res.headersSent) {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: true, message: "Stock Opname berhasil disimpan", data: { so_id: soId, total_kerugian: totalKerugian } }));
+      }
+    } catch (err) {
+      writeLog("ERROR", "SO_SUBMIT_ERROR", err.message);
+      if (!res.headersSent) {
+        res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: "Gagal memproses stock opname", error: err.message }));
+      }
+    }
+  }
+
+  // ── Stock Opname History & Monthly Recap ────────────────────────────────────
+
+  // GET /api/stock-opname/history — 30 transaksi terbaru
+  if (req.method === "GET" && req.url === "/api/stock-opname/history") {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+    try {
+      const rows = await new Promise((resolve, reject) => db.all(
+        `SELECT
+            so.id,
+            so.so_id,
+            COALESCE(so.tanggal, so.created_at) as tanggal,
+            so.kategori,
+            COALESCE(so.petugas, 'Kasir/Admin') as nama_kasir,
+            (SELECT COUNT(*) FROM stock_opname_detail sod WHERE sod.so_id = so.so_id) as total_item,
+            (COALESCE(so.total_plus, 0) - COALESCE(so.total_minus, 0)) as total_selisih_qty,
+            COALESCE(so.total_kerugian, 0) as total_kerugian_modal,
+            '' as catatan
+          FROM stock_opname so
+          ORDER BY so.id DESC
+          LIMIT 30`,
+        [],
+        (err, result) => err ? reject(err) : resolve(result || [])
+      ));
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ success: true, data: rows }));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ success: false, message: "Gagal mengambil riwayat stock opname", error: err.message }));
+    }
+  }
+
+  // GET /api/stock-opname/detail/:id — rincian satu transaksi SO
+  if (req.method === "GET" && /^\/api\/stock-opname\/detail\/\d+$/.test(req.url)) {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+    const id = parseInt(req.url.split("/").pop(), 10);
+    if (isNaN(id)) {
+      res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ success: false, message: "ID tidak valid" }));
+    }
+    try {
+      const rows = await new Promise((resolve, reject) => db.all(
+        `SELECT
+            d.id,
+            d.so_id AS stock_opname_id,
+            d.local_master_barang_id AS produk_id,
+            COALESCE(d.nama_barang, p.nama) AS nama,
+            d.jumlah_barang_aktual AS stok_sistem,
+            d.jumlah_hasil_so AS stok_fisik,
+            d.selisih_barang AS selisih,
+            COALESCE(p.hpp, 0) AS harga_modal,
+            d.kerugian_hpp AS total_rugi_modal,
+            COALESCE(d.satuan, 'Pcs') AS satuan
+          FROM stock_opname_detail d
+          LEFT JOIN master_barang p ON d.local_master_barang_id = p.id
+          WHERE d.so_id = ?
+          ORDER BY d.id ASC`,
+        [id],
+        (err, result) => err ? reject(err) : resolve(result || [])
+      ));
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ success: true, data: rows }));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ success: false, message: "Gagal mengambil detail stock opname", error: err.message }));
+    }
+  }
+
+  // GET /api/stock-opname/rekap-bulanan?bulan=YYYY-MM — rekap kerugian bulanan
+  if (req.method === "GET" && req.url.startsWith("/api/stock-opname/rekap-bulanan")) {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+    try {
+      const url = new URL(req.url, `http://localhost:${config.PORT}`);
+      const bulan = String(url.searchParams.get("bulan") || "").trim();
+      const periode = bulan || new Date().toISOString().slice(0, 7); // YYYY-MM
+      const row = await new Promise((resolve, reject) => db.get(
+        `SELECT COUNT(id) as total_transaksi_so,
+                COALESCE(SUM(COALESCE(total_plus,0) - COALESCE(total_minus,0)), 0) as total_selisih_qty,
+                COALESCE(SUM(COALESCE(total_kerugian,0)), 0) as akumulasi_kerugian_modal
+         FROM stock_opname
+         WHERE strftime('%Y-%m', COALESCE(tanggal, created_at)) = ?`,
+        [periode],
+        (err, result) => err ? reject(err) : resolve(result || null)
+      ));
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ success: true, periode, data: row }));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ success: false, message: "Gagal mengambil rekap bulanan", error: err.message }));
     }
   }
 
@@ -7611,9 +8724,10 @@ const server = https.createServer({
 
 let lampWatchdogRunning = false;
 const lastLampCommandState = new Map();
+let lampTestRunning = false;
 
 async function reconcileLampState() {
-  if (lampWatchdogRunning) return;
+  if (lampWatchdogRunning || lampTestRunning) return;
 
   lampWatchdogRunning = true;
 
@@ -7870,7 +8984,8 @@ scheduleMemberDailyCheck();
 
 databaseInitialization
   .then(() => {
-    server.listen(config.PORT, () => {
+    MEMBER_SCHEDULE.initScheduler();
+  server.listen(config.PORT, () => {
       writeLog("INFO", "SERVER_START", `Server POS POLAR berjalan di port ${config.PORT}`);
     });
   })

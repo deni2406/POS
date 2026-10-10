@@ -225,7 +225,7 @@ test("intent classifier distinguishes analysis, diagnosis, planning, review, han
   assert.equal(classifyRequest("Halo ALVA"), "GENERAL_CHAT");
 });
 
-test("project inspector lists, searches, stats, and reads actual files without write capabilities", async () => {
+test("project inspector lists, reads, writes, edits, validates JavaScript, and runs shell commands", async () => {
   await withProject(root => {
     fs.mkdirSync(path.join(root, "src"));
     fs.mkdirSync(path.join(root, "node_modules"));
@@ -240,7 +240,12 @@ test("project inspector lists, searches, stats, and reads actual files without w
     assert.equal(inspector.stat("src/waitinglist.js").type, "file");
     assert.ok(inspector.listFiles().includes("src\\waitinglist.js") || inspector.listFiles().includes("src/waitinglist.js"));
     assert.ok(!inspector.listFiles().some(file => file.includes("node_modules")));
-    assert.equal(Object.keys(inspector).some(name => /write|delete|rename|move|patch|edit/i.test(name)), false);
+    assert.equal(inspector.writeFile("src/new.js", "const answer = 42;\n").syntax.valid, true);
+    assert.equal(inspector.editFile("src/new.js", "42", "43").replacements, 1);
+    assert.equal(inspector.readFile("src/new.js"), "const answer = 43;\n");
+    assert.throws(() => inspector.writeFile("src/new.js", "const = ;\n"), /syntax validation failed/);
+    assert.equal(inspector.readFile("src/new.js"), "const answer = 43;\n");
+    assert.equal(inspector.runShell("node --version").exitCode, 0);
   });
 });
 
@@ -467,21 +472,29 @@ test("review inspection reads current Git status and untracked source without ch
   });
 });
 
-test("execution guard prepares a Copilot brief request and never modifies project files", async () => {
+test("execution requests invoke editFile and return a validated final response", async () => {
   await withProject(async root => {
     const source = path.join(root, "waitinglist.js");
     const original = "const original = true;\n";
     fs.writeFileSync(source, original);
     const input = new PassThrough();
     const output = new PassThrough();
-    let modelRequest;
+    const modelRequests = [];
     let transcript = "";
     output.on("data", chunk => { transcript += chunk.toString(); });
     const ai = {
       models: {
         async generateContent(request) {
-          modelRequest = request;
-          return { text: "Root cause is not established by the inspected evidence." };
+          modelRequests.push(request);
+          if (modelRequests.length === 1) {
+            return {
+              functionCalls: [{
+                name: "editFile",
+                args: { path: "waitinglist.js", oldText: "true", newText: "false" }
+              }]
+            };
+          }
+          return { text: "Fixed waitinglist.js and validated its syntax." };
         }
       }
     };
@@ -494,15 +507,14 @@ test("execution guard prepares a Copilot brief request and never modifies projec
     input.end(["Perbaiki waitinglist.js", "/exit", ""].join("\n"));
     await workspace;
 
-    assert.equal(fs.readFileSync(source, "utf8"), original);
-    assert.match(modelRequest.config.systemInstruction, /HARD EXECUTION BOUNDARY/);
-    assert.match(modelRequest.config.systemInstruction, /EXECUTION GUARD/);
-    assert.match(modelRequest.contents.at(-1).parts[0].text, /INTENT: EXECUTION_REQUEST/);
-    assert.match(modelRequest.contents.at(-1).parts[0].text, /FILE waitinglist\.js:/);
-    assert.match(modelRequest.contents.at(-1).parts[0].text, /const original = true/);
-    assert.match(transcript, /Saya berperan sebagai analis, bukan executor/);
-    assert.match(transcript, /COPILOT IMPLEMENTATION BRIEF/);
-    assert.match(ALVA_BRAIN_SYSTEM_INSTRUCTION, /COPILOT IMPLEMENTATION BRIEF/);
+    assert.equal(fs.readFileSync(source, "utf8"), "const original = false;\n");
+    assert.equal(modelRequests.length, 2);
+    assert.match(modelRequests[0].config.systemInstruction, /full software engineering agent/);
+    assert.match(modelRequests[0].config.systemInstruction, /EXECUTION REQUEST/);
+    assert.match(modelRequests[0].contents.at(-1).parts[0].text, /INTENT: EXECUTION_REQUEST/);
+    assert.match(modelRequests[0].contents.at(-1).parts[0].text, /FILE waitinglist\.js:/);
+    assert.equal(modelRequests[1].contents.at(-1).parts[0].functionResponse.response.ok, true);
+    assert.match(transcript, /Fixed waitinglist\.js and validated its syntax/);
   });
 });
 
@@ -533,7 +545,7 @@ test("read-only analysis is grounded in file contents and leaves project files u
 
     assert.equal(requests.length, 1);
     assert.match(requests[0].contents.at(-1).parts[0].text, /function renderWaitinglist/);
-    assert.match(requests[0].config.systemInstruction, /READ-ONLY PROJECT INSPECTION/);
+    assert.match(requests[0].config.systemInstruction, /software engineering agent/);
     assert.equal(fs.readFileSync(source, "utf8"), original);
   });
 });

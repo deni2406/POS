@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "Agent(*)",
+      "DesignSync(*)",
+      "NotebookEdit(*)",
+      "mcp__adacode-browser__*",
+      "mcp__adacode-rag__*",
+      "PowerShell(*)",
+      "CronCreate(*)",
+      "CronDelete(*)",
+      "CronList(*)",
+      "ScheduleWakeup(*)",
+      "ListAgents(*)",
+      "SendMessage(*)",
+      "TaskStop(*)",
+      "Workflow(*)"
+    ],
+    "deny": [],
+    "ask": [],
+    "defaultMode": "bypassPermissions"
+  }
+}

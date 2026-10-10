@@ -26,14 +26,25 @@
     );
   }
 
+  // Logika non-aktif identik dengan katalog utama (tampilkanBarang di index.html).
+  // "Meja Billiard" selalu nonaktif; Meja Pagi/Malam mengikuti jadwal isMejaWaktuNonaktif().
+  // Produk dengan status 'NONAKTIF' atau is_active 0 juga tidak bisa dipilih.
+  function isProdukNonaktif(item) {
+    if (!item) return true;
+    const nonaktifMejaBilliard = String(item.nama || "").trim() === "Meja Billiard";
+    const nonaktifMejaWaktu = typeof window.isMejaWaktuNonaktif === "function"
+      ? window.isMejaWaktuNonaktif(item.nama)
+      : false;
+    const nonaktifStatus = item.status === 'NONAKTIF' || item.is_active === 0;
+    return nonaktifMejaBilliard || nonaktifMejaWaktu || nonaktifStatus;
+  }
+
   function isMejaNonaktif(item) {
-    const nama = String(item && item.nama || "").trim().toLowerCase();
-    if (nama !== "meja pagi" && nama !== "meja malam") return false;
-    return typeof window.isMejaWaktuNonaktif === "function" && window.isMejaWaktuNonaktif(item.nama);
+    return isProdukNonaktif(item);
   }
 
   function badgeNonaktif(item) {
-    return isMejaNonaktif(item)
+    return isProdukNonaktif(item)
       ? '<span style="display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 0.65rem; font-weight: 800; vertical-align: middle;">NONAKTIF</span>'
       : "";
   }
@@ -189,8 +200,9 @@
 
     container.innerHTML = items.map(item => {
       const isBilliard = isProdukBillard(item);
+      const nonaktif = isProdukNonaktif(item);
       return `
-        <button class="meja-produk-item-btn" onclick='MejaProdukModal.tambahItemDraft(${JSON.stringify(item.nama)})'>
+        <button class="meja-produk-item-btn" ${nonaktif ? 'disabled aria-disabled="true" tabindex="-1"' : `onclick='MejaProdukModal.tambahItemDraft(${JSON.stringify(item.nama)})'`}>
           <div style="font-weight: bold; font-size: 0.9rem; color: #111827;">${item.nama}${badgeNonaktif(item)}</div>
           <div style="font-size: 0.8rem; color: #6b7280;">Rp${Number(item.hargaJual || 0).toLocaleString('id-ID')} &bull; <span style="color: ${isBilliard ? '#2563eb' : '#4b5563'}; font-weight: bold;">${isBilliard ? 'PAKET BILLIARD / DURASI' : 'PRODUK TAMBAHAN'}</span></div>
         </button>
@@ -226,8 +238,12 @@
   }
 
   function tambahItemDraft(namaBarang) {
-    const existing = draftItems.find(x => x.nama === namaBarang);
+    // Proteksi: produk nonaktif tidak boleh masuk draft, meski dipanggil langsung
+    // (mis. lewat console atau sisa onclick lama sebelum re-render).
     const master = (typeof masterBarang !== 'undefined') ? masterBarang.find(x => x.nama === namaBarang) : null;
+    if (master && isProdukNonaktif(master)) return;
+
+    const existing = draftItems.find(x => x.nama === namaBarang);
     const kategori = master ? master.kategori : "Lainnya";
 
     if (existing) {

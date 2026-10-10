@@ -27,6 +27,98 @@ const ANSI = {
   code: "\x1b[90m",
   emphasis: "\x1b[1m"
 };
+const ALVA_TOOLS = [{
+  functionDeclarations: [
+    {
+      name: "readFile",
+      description: "Read a UTF-8 file from the project workspace.",
+      parametersJsonSchema: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "Path relative to C:\\POS." },
+          maxChars: { type: "integer", description: "Maximum characters to return." }
+        },
+        required: ["path"]
+      }
+    },
+    {
+      name: "writeFile",
+      description: "Create or replace a UTF-8 project file. JavaScript files are syntax-checked before replacement.",
+      parametersJsonSchema: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "Path relative to C:\\POS." },
+          content: { type: "string", description: "Complete new file content." }
+        },
+        required: ["path", "content"]
+      }
+    },
+    {
+      name: "editFile",
+      description: "Apply an exact text replacement to an existing project file. Fails if the target is ambiguous unless replaceAll is true.",
+      parametersJsonSchema: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "Path relative to C:\\POS." },
+          oldText: { type: "string", description: "Exact text to replace." },
+          newText: { type: "string", description: "Replacement text." },
+          replaceAll: { type: "boolean", description: "Replace every matching occurrence." }
+        },
+        required: ["path", "oldText", "newText"]
+      }
+    },
+    {
+      name: "runShell",
+      description: "Run a shell command in C:\\POS and return its exit code and captured output.",
+      parametersJsonSchema: {
+        type: "object",
+        properties: {
+          command: { type: "string", description: "Shell command to run." },
+          timeoutMs: { type: "integer", description: "Optional timeout, up to two minutes." }
+        },
+        required: ["command"]
+      }
+    }
+  ]
+}];
+const MAX_TOOL_ROUNDS = 12;
+const ALVA_CLI_SYSTEM_SUFFIX = [
+  "RUNTIME EXECUTION STANDARD:",
+  "Act as a Senior AI Software Engineer. Be concise and direct; do not assume root causes or file contents.",
+  "Before editing, inspect relevant source with readFile and use runShell when necessary to verify the failure or call path.",
+  "Make only surgical changes at verified fault locations. After every JavaScript edit, run `node --check` through runShell for each affected final file and fix any failure before reporting success.",
+  "For errors, give the verified cause in one or two sentences, then apply the direct fix.",
+  "Trace the verified root cause through data flow, state, async ordering, and callers; do not patch surface symptoms. Defend against null data, connection loss, COM3 serial timeouts, failed I/O, and async race conditions. Make the smallest non-destructive fix that prevents regressions.",
+  "Treat this as a live cashier POS: transaction integrity, consistent data, responsive operation, hardware reliability, and security take priority. Never infer code or database values without tool-backed evidence.",
+  "POS RULES: Never modify pos.db without first creating and verifying a backup. POS serial hardware uses COM3, 9600 baud, and \\r terminators. After relevant source edits, determine whether www must be synchronized and remind the user to restart PM2; do not restart PM2 unless explicitly requested. Roll back an edit if its syntax check fails."
+].join("\n");
+
+function systemInstructionFor(brainRequest) {
+  return `${ALVA_BRAIN_SYSTEM_INSTRUCTION}\n\n${ALVA_CLI_SYSTEM_SUFFIX}\n\nCURRENT REQUEST INTENT: ${brainRequest.intent}${brainRequest.executionGuard ? `\n${brainRequest.executionGuard}` : ""}`;
+}
+
+function functionCallsFromResponse(response) {
+  if (Array.isArray(response?.functionCalls)) return response.functionCalls;
+  return (response?.candidates || []).flatMap(candidate =>
+    (candidate?.content?.parts || []).map(part => part.functionCall).filter(Boolean)
+  );
+}
+
+function executeToolCall(inspector, call) {
+  const args = call?.args && typeof call.args === "object" ? call.args : {};
+  switch (call?.name) {
+    case "readFile":
+      return { text: inspector.readFile(args.path, { maxChars: args.maxChars }) };
+    case "writeFile":
+      return inspector.writeFile(args.path, args.content);
+    case "editFile":
+      return inspector.editFile(args.path, args.oldText, args.newText, { replaceAll: args.replaceAll === true });
+    case "runShell":
+      return inspector.runShell(args.command, { timeoutMs: args.timeoutMs });
+    default:
+      throw new Error(`Unknown ALVA tool: ${String(call?.name)}`);
+  }
+}
 
 function isInteractiveTerminal(input, output, env = process.env) {
   const ci = /^(1|true|yes)$/i.test(String(env.CI || ""));
@@ -551,7 +643,7 @@ function renderWorkspaceScreen({
   const conversation = body.slice(start, start + viewportHeight);
   while (conversation.length < viewportHeight) conversation.push("");
 
-  const status = "● ONLINE";
+  const status = " ONLINE";
   const top = `${colorize("ALVA", ANSI.accent, colors)}${" ".repeat(Math.max(1, columns - displayWidth("ALVA") - displayWidth(status)))}${colorize(status, ANSI.status, colors)}`;
   const subheader = colorize("by Deni Hasyim", ANSI.muted, colors);
   const separator = colorize("-".repeat(columns), ANSI.muted, colors);
@@ -604,6 +696,41 @@ async function createInteractiveWorkspace({
   let closed = false;
   let secretInput = false;
   const getWidth = () => Math.max(10, output.columns || 80);
+  const activeModelLabel = () => displayModelName(selectedModel || lockedModel || GEMINI_MODELS[0]);
+
+  function getRepositoryStatus() {
+    try {
+      const output = projectInspector.runGitReadOnly(["status", "--short"]);
+      if (output.startsWith("Git inspection unavailable:")) return "repository status unavailable";
+      const changes = output.split(/\r?\n/).filter(Boolean).length;
+      return changes ? `${changes} uncommitted change${changes === 1 ? "" : "s"}` : "working tree clean";
+    } catch {
+      return "repository status unavailable";
+    }
+  }
+
+  function writeWelcomeBanner() {
+    const width = Math.max(32, Math.min(88, getWidth()));
+    const line = "-".repeat(width);
+    output.write(`${colorize(line, ANSI.muted, colors)}\n`);
+    output.write(`${colorize("ALVA", ANSI.heading, colors)} ${colorize(" ONLINE", ANSI.status, colors)}  ${colorize("software engineering agent", ANSI.muted, colors)}\n`);
+    output.write(`${colorize("by Deni Hasyim", ANSI.muted, colors)}\n`);
+    output.write(`${colorize("model", ANSI.label, colors)} ${activeModelLabel()}  ${colorize("repo", ANSI.label, colors)} ${getRepositoryStatus()}\n`);
+    output.write(`${colorize("Tip:", ANSI.muted, colors)} Describe a change, or type /help for commands.\n`);
+    output.write(`${colorize(line, ANSI.muted, colors)}\n\n`);
+  }
+
+  function writeWorkspaceStatus() {
+    const index = projectInspector.getIndex();
+    const fileCount = index.entries.filter(entry => entry.type === "file").length;
+    const sessionMessages = contents.filter(entry => entry.role === "user").length;
+    writeAssistant([
+      `Model: ${activeModelLabel()}`,
+      `Repository: ${getRepositoryStatus()}`,
+      `Workspace: ${projectInspector.root} (${fileCount} indexed files)`,
+      `Session: ${sessionMessages} prompt${sessionMessages === 1 ? "" : "s"}`
+    ].join("\n"));
+  }
 
   async function testConfiguredKeys() {
     if (!apiKeyPool) {
@@ -675,6 +802,7 @@ async function createInteractiveWorkspace({
       "",
       "/setting    Manage API keys and ALVA settings",
       "/clear      Clear conversation",
+      "/status     Show model, repository, workspace, and session status",
       "/history    View conversation history",
       "/copy [n]   Copy an assistant response (latest by default)",
       "/model      View or choose a model",
@@ -855,6 +983,39 @@ async function createInteractiveWorkspace({
     output.write("\n");
   }
 
+  function toolSummary(call, result) {
+    const args = call?.args || {};
+    if (call?.name === "readFile") return args.path || "(unknown path)";
+    if (call?.name === "writeFile") {
+      return `${args.path || "(unknown path)"}${result?.bytes != null ? ` · ${result.bytes} bytes` : ""}`;
+    }
+    if (call?.name === "editFile") {
+      return `${args.path || "(unknown path)"}${result?.replacements != null ? ` · ${result.replacements} replacement${result.replacements === 1 ? "" : "s"}` : ""}`;
+    }
+    if (call?.name === "runShell") return args.command || "(empty command)";
+    return call?.name || "unknown tool";
+  }
+
+  function writeToolStatus(call, phase, result, durationMs) {
+    const label = {
+      readFile: "Read",
+      writeFile: "Write",
+      editFile: "Edit",
+      runShell: "Shell"
+    }[call?.name] || "Tool";
+    const summary = toolSummary(call, result);
+    if (phase === "start") {
+      output.write(`${colorize(`  [${label}]`, ANSI.label, colors)} ${colorize(summary, ANSI.muted, colors)}\n`);
+      return;
+    }
+    const success = result?.ok === true;
+    const marker = success ? "✓" : "×";
+    const detail = success
+      ? `${summary} · ${durationMs}ms${call?.name === "runShell" ? ` · exit ${result.result.exitCode ?? "?"}` : ""}`
+      : `${summary} · ${result?.error || "failed"}`;
+    output.write(`${colorize(`  ${marker} [${label}]`, success ? ANSI.status : ANSI.label, colors)} ${detail}\n`);
+  }
+
   function copyToClipboard(text) {
     return writeClipboardText(text, { output });
   }
@@ -875,7 +1036,7 @@ async function createInteractiveWorkspace({
 
     contents.push({ role: "user", parts: [{ text: safePrompt }] });
     const brainRequest = prepareBrainRequest(safePrompt, { inspector: projectInspector });
-    const providerContents = [
+    let providerContents = [
       ...contents.slice(0, -1),
       { role: "user", parts: [{ text: brainRequest.userText }] }
     ];
@@ -891,7 +1052,8 @@ async function createInteractiveWorkspace({
               model,
               contents: providerContents,
               config: {
-                systemInstruction: `${ALVA_BRAIN_SYSTEM_INSTRUCTION}\n\nCURRENT REQUEST INTENT: ${brainRequest.intent}${brainRequest.executionGuard ? `\n${brainRequest.executionGuard}` : ""}`
+                systemInstruction: systemInstructionFor(brainRequest),
+                tools: ALVA_TOOLS
               }
             });
             successfulModel = model;
@@ -915,7 +1077,7 @@ async function createInteractiveWorkspace({
               models: [lockedModel],
               generateContent
             });
-            return { response, model: successfulModel };
+            return { response, model: successfulModel, client };
           } catch (error) {
             if (!(error instanceof GeminiRequestError) || !error.transient) throw error;
             lockedModel = undefined;
@@ -926,7 +1088,7 @@ async function createInteractiveWorkspace({
           models: getModels(),
           generateContent
         });
-        return { response, model: successfulModel };
+        return { response, model: successfulModel, client };
       };
       const result = apiKeyPool
         ? await apiKeyPool.runWithRotation(generateForKey, {
@@ -934,20 +1096,93 @@ async function createInteractiveWorkspace({
         })
         : await generateForKey(undefined);
       lockedModel = result.model;
-      const response = result.response;
-      let answer = redactCliSecrets(apiKeyPool ? apiKeyPool.redact(response.text ?? "") : response.text ?? "");
-      if (brainRequest.intent === "EXECUTION_REQUEST") {
-        const refusal = "Saya berperan sebagai analis, bukan executor. Perubahan source dilakukan oleh Copilot.";
-        answer = `${refusal}\n\n${answer.replace(/^Saya berperan sebagai analis, bukan executor\.\s*Perubahan source dilakukan oleh Copilot\.?\s*/i, "")}`.trim();
-        if (!/COPILOT IMPLEMENTATION BRIEF/i.test(answer)) {
-          answer = `${answer}\n\nCOPILOT IMPLEMENTATION BRIEF`;
+      let client = result.client;
+      let response = result.response;
+      for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
+        const calls = functionCallsFromResponse(response);
+        if (!calls.length) break;
+        const responseParts = [];
+        for (const call of calls) {
+          let toolResult;
+          status.stop();
+          writeToolStatus(call, "start");
+          const startedAt = Date.now();
+          try {
+            toolResult = { ok: true, result: executeToolCall(projectInspector, call) };
+          } catch (error) {
+            toolResult = { ok: false, error: error instanceof Error ? error.message : String(error) };
+          }
+          writeToolStatus(call, "complete", toolResult, Date.now() - startedAt);
+          status.start();
+          responseParts.push({
+              functionResponse: {
+                id: call.id,
+                name: call.name,
+                response: toolResult
+              }
+            });
         }
+        const modelContent = response?.candidates?.[0]?.content ?? { role: "model", parts: calls.map((call) => ({ functionCall: call })) };
+
+          if (!modelContent) {
+            throw new Error("Gemini tool response content is missing.");
+          }
+
+          providerContents = [
+            ...providerContents,
+            modelContent,
+            { role: "user", parts: responseParts }
+          ];
+                const runToolFollowUp = async currentClient => {
+          return generateWithFallback({
+            models: [result.model],
+            log: verbose
+              ? message => output.write(`  ${colorize("[trace]", ANSI.muted, colors)} ${formatTrace(message)}\n`)
+              : undefined,
+            generateContent: model => currentClient.models.generateContent({
+              model,
+              contents: providerContents,
+              config: {
+                systemInstruction: systemInstructionFor(brainRequest),
+                tools: ALVA_TOOLS
+              }
+            })
+          });
+        };
+
+        const followUpResult = apiKeyPool
+          ? await apiKeyPool.runWithRotation(async key => {
+              const rotatedClient = makeAI(key);
+              const followUpResponse = await runToolFollowUp(rotatedClient);
+              return { response: followUpResponse, client: rotatedClient };
+            }, {
+              log: verbose
+                ? message => output.write(`  ${colorize("[key pool]", ANSI.muted, colors)} ${message}\n`)
+                : undefined
+            })
+          : {
+              response: await runToolFollowUp(client),
+              client
+            };
+
+        response = followUpResult.response;
+        client = followUpResult.client;
       }
+      if (functionCallsFromResponse(response).length) {
+        throw new Error(`ALVA stopped after ${MAX_TOOL_ROUNDS} tool-execution rounds.`);
+      }
+      let answer = redactCliSecrets(apiKeyPool ? apiKeyPool.redact(response.text ?? "") : response.text ?? "");
       status.stop();
       writeAssistant(answer);
       contents.push({ role: "model", parts: [{ text: answer }] });
     } catch (error) {
       status.stop();
+      try {
+        require("node:fs").appendFileSync(
+          "C:\\Users\\POLLARD\\AppData\\Local\\Temp\\opencode\\alva-internal-debug.log",
+          `\n===== ${new Date().toISOString()} =====\nNAME: ${error?.name}\nMESSAGE: ${error?.message}\nSTACK: ${error?.stack}\nCONSTRUCTOR: ${error?.constructor?.name}\nSTATUS: ${error?.status} RESPONSE_STATUS: ${error?.response?.status} CODE: ${error?.code}\n`
+        );
+      } catch {}
       const reason = error instanceof GeminiRequestError
         ? error.transient
           ? "semua model gagal setelah retry"
@@ -982,6 +1217,9 @@ async function createInteractiveWorkspace({
         contents.length = 0;
         writeDivider();
         writeAssistant("Percakapan dibersihkan.");
+        return true;
+      case "/status":
+        writeWorkspaceStatus();
         return true;
       case "/history":
         {
@@ -1104,10 +1342,7 @@ async function createInteractiveWorkspace({
     return true;
   }
 
-  const status = "● ONLINE";
-  const headerGap = Math.max(1, getWidth() - displayWidth("ALVA") - displayWidth(status));
-  output.write(`${colorize("ALVA", ANSI.accent, colors)}${" ".repeat(headerGap)}${colorize(status, ANSI.status, colors)}\n`);
-  output.write(`  ${colorize("by Deni Hasyim", ANSI.muted, colors)}\n`);
+  writeWelcomeBanner();
 
   if (initialArgs.length) await sendPrompt(initialArgs.join(" "));
 
@@ -1154,7 +1389,7 @@ async function createInteractiveWorkspace({
               ? "Choose a key..."
           : ">>";
     if (uiState === "CHAT") {
-      rl.setPrompt(colorize(">>", ANSI.muted, colors));
+      rl.setPrompt(colorize("alva >> ", ANSI.accent, colors));
       return;
     }
     const prompt = getWidth() < 18 ? "" : `${promptText} `;
@@ -1318,5 +1553,11 @@ module.exports = {
   renderWorkspaceScreen,
   renderComposerLine,
   displayWidth,
-  wrapText
+  wrapText,
+  ALVA_TOOLS,
+  ALVA_CLI_SYSTEM_SUFFIX,
+  systemInstructionFor,
+  functionCallsFromResponse,
+  executeToolCall
 };
+

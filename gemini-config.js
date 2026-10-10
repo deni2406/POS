@@ -6,7 +6,7 @@ module.exports = Object.freeze({
     "gemini-3.7-flash",
     "gemini-3.6-flash",
     "gemini-flash-latest",
-    "gemini-flash-lite-latest"
+    "gemini-3.5-flash-lite"
   ]),
   MAX_RETRIES_PER_MODEL: 2,
   INITIAL_BACKOFF_MS: 1000,

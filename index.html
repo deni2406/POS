@@ -34,6 +34,7 @@
 
   <!-- STYLE TAMBAHAN UNTUK POPUP & MODAL HASIL TRANSAKSI -->
   <link rel="stylesheet" href="/pos.css">
+  <link rel="stylesheet" href="/stock-opname.css">
 
   <style>
     /* Compact balance control within the existing topbar. */
@@ -1631,12 +1632,8 @@ z-index:5!important;
 
 <div id="openingBalanceModal" role="dialog" aria-modal="true" aria-labelledby="openingBalanceTitle">
   <div class="opening-card">
-    <h2 id="openingBalanceTitle">Saldo KWh Awal</h2>
-    <p>Masukkan saldo KWh awal sebelum mulai bertugas.</p>
-    <label for="openingBalanceKwhDalamAwal">KWh Dalam Awal</label>
-    <input id="openingBalanceKwhDalamAwal" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Masukkan KWh Dalam Awal">
-    <label for="openingBalanceKwhLuarAwal">KWh Luar Awal</label>
-    <input id="openingBalanceKwhLuarAwal" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Masukkan KWh Luar Awal">
+    <h2 id="openingBalanceTitle">Konfirmasi Mulai Bertugas</h2>
+    <p>Konfirmasi untuk mulai bertugas. Saldo KWh awal tidak perlu diinput.</p>
     <div id="openingBalanceError" role="alert" aria-live="polite"></div>
     <button id="openingBalanceSubmit" class="primary-btn" type="button" onclick="submitOpeningBalance()">KONFIRMASI</button>
   </div>
@@ -1878,9 +1875,17 @@ z-index:5!important;
           <button
             id="stockOpnameBtn"
             class="hamburger-item"
-            onclick="if (window.StockOpname && typeof window.StockOpname.open === 'function') { window.StockOpname.open(); } else { alert('Modul Stock Opname belum siap. Silakan refresh aplikasi.'); } tutupHamburgerMenu();"
+            onclick="if (window.StockOpname && typeof window.StockOpname.open === 'function') { window.StockOpname.open(); } else { console.error('[SO] window.StockOpname.open tidak tersedia — module gagal load'); } tutupHamburgerMenu();"
           >
             STOCK OPNAME
+          </button>
+
+          <button
+            id="riwayatSOBtn"
+            class="hamburger-item"
+            onclick="if (window.StockOpname && typeof window.StockOpname.openHistory === 'function') { window.StockOpname.openHistory(); } else { console.error('[SO] window.StockOpname.openHistory tidak tersedia — module gagal load'); } tutupHamburgerMenu();"
+          >
+            RIWAYAT & REKAP SO
           </button>
 
           <button
@@ -1902,6 +1907,20 @@ z-index:5!important;
             onclick="bukaTutupKasir(); tutupHamburgerMenu();"
           >
             TUTUP KASIR
+          </button>
+
+          <button
+            class="hamburger-item"
+            onclick="bukaModalRiwayatShift(); tutupHamburgerMenu();"
+          >
+            RIWAYAT SHIFT & CETAK ULANG
+          </button>
+
+          <button
+            class="hamburger-item"
+            onclick="jalankanTestLampu(); tutupHamburgerMenu();"
+          >
+            TEST LAMPU
           </button>
 
           <button
@@ -2100,13 +2119,22 @@ z-index:5!important;
           id="cashArea"
         >
 
-          <input
+          <div style="display:flex;gap:8px;align-items:center;width:100%;">
+            <input
             id="bayar"
             class="cash-input"
             type="text"
             inputmode="numeric"
             placeholder="Nominal Cash"
-          >
+            style="flex:1;min-width:0;">
+            <button
+            id="uangPasBtn"
+            type="button"
+            onclick="isiUangPas()"
+            style="flex:0 0 auto;padding:12px 14px;border:none;border-radius:8px;background:#10b981;color:#fff;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.3);touch-action:manipulation;">
+            UANG PAS
+            </button>
+          </div>
 
         </div>
 
@@ -2290,6 +2318,18 @@ z-index:5!important;
       </select>
     </div>
 
+    <!-- PILIHAN BONUS (PAKET 3 JAM + MEMBER) -->
+    <div id="containerPilihanBonus" style="display: none; margin-top: 10px;">
+      <label class="form-label" style="font-weight: 700; margin-bottom: 4px; display: block; color: #374151;">
+        Pilihan Bonus
+      </label>
+      <select id="pilihanBonusBukaMeja" class="form-input" style="cursor: pointer;">
+        <option value="">-- Pilih Bonus --</option>
+        <option value="Kopi Bonus">Kopi Bonus</option>
+        <option value="Es Teh Bonus">Es Teh Bonus</option>
+      </select>
+    </div>
+
     <!-- INFO BOX WAKTU LOSS -->
     <div id="infoWaktuLossBox" style="display: none; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 0.72rem; color: #065f46; line-height: 1.4;">
       <strong style="display: flex; align-items: center; gap: 4px; font-weight: 700; margin-bottom: 2px;">
@@ -2303,6 +2343,23 @@ z-index:5!important;
     <div style="display: flex; gap: 8px; margin-top: 18px;">
       <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #f3f4f6; color: #374151; font-weight: bold; border-radius: 8px;" onclick="tutupModalBukaMeja()">BATAL</button>
       <button class="popup-table-btn" style="flex: 1; padding: 10px; background: #3b82f6; color: #ffffff; font-weight: bold; border-radius: 8px;" onclick="konfirmasiMulaiSesi()">MULAI MAIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================
+     MODAL PILIHAN BONUS BUKA MEJA
+================================================== -->
+<div id="modalPilihanBonusBukaMeja" class="popup-overlay" style="z-index: 11000; background: rgba(17, 24, 39, 0.72);">
+  <div class="popup-card" style="max-width: 380px; width: 92%; background: #ffffff; border-radius: 14px; padding: 20px 22px; box-sizing: border-box; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);">
+    <div style="font-size: 1.05rem; font-weight: 800; color: #1e3a8a; text-align: center; margin-bottom: 6px;">Pilih Bonus</div>
+    <div style="font-size: 0.78rem; color: #6b7280; text-align: center; margin-bottom: 16px; line-height: 1.5;">
+      Pilih salah satu bonus untuk sesi<br><strong style="color: #1e3a8a;">Paket 3 Jam</strong>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <button class="popup-table-btn" style="background-color: #d35400; color: #ffffff; font-weight: bold; width: 100%; padding: 14px; border-radius: 8px; border: none; margin-bottom: 12px; font-size: 16px; cursor: pointer;" onclick="pilihBonusBukaMeja('Kopi Bonus')">Kopi Bonus</button>
+      <button class="popup-table-btn" style="background-color: #16a085; color: #ffffff; font-weight: bold; width: 100%; padding: 14px; border-radius: 8px; border: none; font-size: 16px; cursor: pointer;" onclick="pilihBonusBukaMeja('Es Teh Bonus')">Es Teh Bonus</button>
+      <button class="popup-table-btn" style="background-color: #f39c12; color: #ffffff; font-weight: bold; width: 100%; padding: 14px; border-radius: 8px; border: none; font-size: 16px; cursor: pointer;" onclick="pilihBonusBukaMeja('Popcorn Bonus')">Popcorn Bonus</button>
     </div>
   </div>
 </div>
@@ -2513,53 +2570,34 @@ z-index:5!important;
       id="lockedArea"
       class="locked-box"
     >
-
-      <div class="locked-icon">
-        &#128274;
-      </div>
-
-
+      <svg class="locked-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="32" height="32">
+        <rect x="3" y="14" width="26" height="14" rx="3"/>
+        <path d="M8 14V9a8 8 0 0 1 16 0v5"/>
+        <circle cx="16" cy="21" r="2"/>
+      </svg>
       <strong>
-        Laporan penjualan terkunci
+        Laporan Penjualan Terkunci
       </strong>
-
-
-      <div
-        style="margin-top:6px;color:#6b7280;"
-      >
-        Masukkan nominal aktual terlebih dahulu.
+      <div style="margin-top:6px;color:#b45309;">
+        Masukkan nominal aktual uang tunai untuk membuka rincian laporan.
       </div>
-
     </div>
 
 
     <div class="close-input-grid">
-    <div><label class="form-label" for="actualCash">Cash Sales</label>
-    <input
-      id="actualCash"
-      class="actual-input"
-      type="number"
-      inputmode="numeric"
-      placeholder="0"
-    ></div>
-    <div><label class="form-label" for="saldoKwhDalamAkhir">KWh Dalam Akhir</label>
-    <input
-      id="saldoKwhDalamAkhir"
-      class="actual-input"
-      type="text"
-      inputmode="numeric"
-      pattern="[0-9]*"
-      placeholder="5920 = 59.20"
-    ></div>
-    <div><label class="form-label" for="saldoKwhLuarAkhir">KWh Luar Akhir</label>
-    <input
-      id="saldoKwhLuarAkhir"
-      class="actual-input"
-      type="text"
-      inputmode="numeric"
-      pattern="[0-9]*"
-      placeholder="5920 = 59.20"
-    ></div>
+    <div>
+      <label class="form-label" for="actualCash">CASH SALES / UANG TUNAI</label>
+      <div class="cash-input-group">
+        <span class="cash-prefix">Rp</span>
+        <input
+          id="actualCash"
+          class="actual-input"
+          type="text"
+          inputmode="numeric"
+          placeholder="0"
+        >
+      </div>
+    </div>
     </div>
 
 
@@ -2682,8 +2720,8 @@ z-index:5!important;
   #closeModal { box-sizing: border-box; }
   #closeModal .modal-card { box-sizing: border-box; width: min(1180px, calc(100vw - 24px)); max-width: none; max-height: calc(100vh - 36px); max-height: calc(100dvh - 36px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: clamp(16px, 3vw, 30px); }
   #closeModal .close-modal-header { position: sticky; top: calc(-1 * clamp(16px, 3vw, 30px)); z-index: 2; margin: calc(-1 * clamp(16px, 3vw, 30px)) calc(-1 * clamp(16px, 3vw, 30px)) 16px; padding: clamp(16px, 3vw, 30px) clamp(16px, 3vw, 30px) 12px; background: #fff; border-bottom: 1px solid #e2e8f0; }
-  #closeModal .modal-title { font-size: 25px; font-weight: 850; color: #0f172a; }
-  #closeModal .modal-note { margin-bottom: 0; }
+  #closeModal .modal-title { font-size: 1.25rem; font-weight: 800; color: #0f172a; }
+  #closeModal .modal-note { color: #64748b; font-size: 0.875rem; margin-bottom: 18px; }
   #closeModal .close-input-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
   #closeModal .close-input-grid > div { min-width: 0; }
   #closeModal .close-input-grid label { display: block; margin: 10px 0 6px; font-weight: 700; color: #334155; }
@@ -2698,13 +2736,13 @@ z-index:5!important;
   #closeModal .close-check-progress { height: 9px; margin: 14px 0 8px; overflow: hidden; border-radius: 99px; background: #e2e8f0; }
   #closeModal .close-check-progress span { display: block; height: 100%; border-radius: inherit; background: #2563eb; transition: width .2s linear; }
   #closeModal .close-shift { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; color: #475569; }
-  #closeModal .close-badge { display: inline-flex; padding: 5px 10px; border-radius: 999px; background: #dcfce7; color: #166534; font-weight: 800; font-size: 12px; }
+  #closeModal .close-badge { display: inline-block; white-space: nowrap; padding: 4px 10px; border-radius: 20px; background: #dcfce7; color: #166534; font-weight: 700; font-size: 0.75rem; }
   #closeModal .close-code { flex-basis: 100%; padding: 10px 12px; border: 1px solid #bfdbfe; border-radius: 9px; background: #eff6ff; color: #1e40af; font-size: 15px; }
   #closeModal .close-code strong { margin-right: 4px; }
-  #closeModal .close-kpis { display: grid; grid-template-columns: repeat(auto-fit,minmax(145px,1fr)); gap: 10px; }
-  #closeModal .close-kpi { background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 11px; }
+  #closeModal .close-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  #closeModal .close-kpi { background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 11px; min-width: 0; overflow: hidden; }
   #closeModal .close-kpi span { display: block; color: #64748b; font-size: 12px; margin-bottom: 6px; }
-  #closeModal .close-kpi strong { color: #0f172a; font-size: 20px; overflow-wrap: anywhere; }
+  #closeModal .close-kpi strong { color: #0f172a; font-size: 1.2rem; overflow-wrap: anywhere; }
   #closeModal .close-table-wrap { min-width: 0; overflow-x: auto; }
   #closeModal .close-table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 13px; }
   #closeModal .close-table th,#closeModal .close-table td { text-align: left; padding: 10px 9px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
@@ -2724,6 +2762,19 @@ z-index:5!important;
   #closeModal .close-verify-btn { background: #d97706; }
   #closeModal .close-confirm-btn { background: #b91c1c; }
   #closeModal .close-print-btn { display: block; width: 100%; min-height: 48px; margin-top: 14px; border: 0; border-radius: 8px; background: #0f766e; color: #fff; font-weight: 800; cursor: pointer; }
+  #closeModal .modal-card { max-width: min(820px, 94vw) !important; width: 90% !important; max-height: 90vh; overflow-y: auto; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15); }
+  #closeModal #lockedArea { background: #fefce8; border: 1px solid #fef08a; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; text-align: center; }
+  #closeModal #lockedArea strong { display: block; font-weight: 700; color: #92400e; font-size: 0.95rem; margin-bottom: 4px; }
+  #closeModal #lockedArea div[style*="color:#b45309"] { font-size: 0.85rem; color: #b45309; }
+  #closeModal #lockedArea .locked-icon { width: 32px; height: 32px; margin: 0 auto 8px; display: block; }
+  #closeModal .cash-input-group { display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s; }
+  #closeModal .cash-input-group:focus-within { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+  #closeModal .cash-prefix { background: #f1f5f9; font-weight: 700; color: #334155; padding: 0 16px; border: 1px solid #cbd5e1; border-right: none; border-radius: 10px 0 0 10px; display: flex; align-items: center; font-size: 0.95rem; white-space: nowrap; }
+  #closeModal .close-input-grid input.actual-input { border-radius: 0 10px 10px 0; border: 1px solid #cbd5e1; font-size: 1.1rem; font-weight: 600; color: #0f172a; padding: 0 14px; height: 48px; width: 100%; box-sizing: border-box; outline: none; }
+  #closeModal .close-input-grid label.form-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: #475569; margin-bottom: 8px; display: block; }
+  #closeModal #calculateCloseBtn { width: 100%; height: 50px; border-radius: 10px; background: linear-gradient(135deg, #ef4444, #dc2626); color: #ffffff; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.03em; margin-top: 16px; cursor: pointer; border: none; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25); transition: all 0.2s ease; }
+  #closeModal #calculateCloseBtn:hover:not(:disabled) { background: #b91c1c; transform: translateY(-1px); }
+  #closeModal #calculateCloseBtn:disabled { opacity: .55; cursor: not-allowed; }
   @media print {
     @page { size: A4 portrait; margin: 12mm; }
     html, body { width: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
@@ -2822,9 +2873,25 @@ z-index:5!important;
     <div id="tarikTunaiNominalInfo" style="min-height:20px; margin:-6px 0 10px; font-size:.85rem; color:#64748b;"></div>
     <label for="tarikTunaiReferensiQris" style="display:block; font-weight:700; margin-bottom:6px;">Referensi / Deskripsi QRIS (opsional)</label>
     <input id="tarikTunaiReferensiQris" class="form-input" type="text" maxlength="200" autocomplete="off" style="margin-bottom:14px;">
-    <div style="display:flex; justify-content:flex-end; gap:8px;">
-      <button type="button" class="popup-table-btn" style="width:auto; padding:9px 14px;" onclick="tutupTarikTunai()">BATAL</button>
-      <button id="konfirmasiTarikTunaiBtn" type="button" class="pay-btn" style="width:auto; margin:0; padding:9px 14px;" disabled onclick="prosesTarikTunai()">KONFIRMASI TARIK TUNAI</button>
+    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 18px;">
+      <button type="button" onclick="tutupTarikTunai()" style="height: 40px; padding: 0 18px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; border-radius: 6px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">BATAL</button>
+      <button id="konfirmasiTarikTunaiBtn" type="button" class="pay-btn" style="height: 40px; margin: 0; padding: 0 18px; border-radius: 6px; font-weight: 700; font-size: 0.9rem; display: inline-flex; align-items: center; justify-content: center;" disabled onclick="prosesTarikTunai()">KONFIRMASI TARIK TUNAI</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================
+     MODAL RIWAYAT SHIFT & CETAK ULANG
+================================================== -->
+<div id="modalRiwayatShift" class="modal hidden">
+  <div class="modal-card" style="max-width: 600px; width: 90%;">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h3 style="margin: 0; font-size: 1.1rem; font-weight: bold;">RIWAYAT SHIFT & CETAK ULANG</h3>
+      <button type="button" class="close-btn" onclick="tutupModalRiwayatShift()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer;">✕</button>
+    </div>
+    <div id="daftarRiwayatShiftContainer" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+      <!-- Tempat rendering daftar shift -->
+      <div style="text-align: center; padding: 20px; color: #666;">Memuat riwayat shift…</div>
     </div>
   </div>
 </div>
@@ -3123,15 +3190,21 @@ let targetPindahMejaAsal = null;
 
 window.addEventListener("memberSelected", function (event) {
   const member = event.detail?.member || null;
-  if (!member) return;
 
-  pendingMemberForMeja = member;
-
-  if (activeMeja) {
-    memberByMeja.set(String(activeMeja), member);
+  if (member) {
+    pendingMemberForMeja = member;
+    if (activeMeja) {
+      memberByMeja.set(String(activeMeja), member);
+    }
+  } else {
+    pendingMemberForMeja = null;
+    if (activeMeja) {
+      memberByMeja.delete(String(activeMeja));
+    }
   }
 
   renderCart();
+  sinkronTampilanPilihanBonus();
 });
 
 let targetBukaMejaNomor = null;
@@ -3328,6 +3401,70 @@ async function cekSessionLogin() {
   }
 }
 
+async function jalankanTestLampu() {
+  // UI loading state — cegah double-click
+  const confirmBuka = confirm("Pemeriksaan lampu meja akan dijalankan sekarang.\n\nSemua lampu meja non-aktif akan diuji.\nLanjutkan?");
+  if (!confirmBuka) return;
+
+  // Simpan referensi tombol untuk disabling
+  const semuaItem = document.querySelectorAll(".hamburger-item");
+  let tombolTestLampu = null;
+  semuaItem.forEach(el => {
+    if (el.textContent.trim() === "TEST LAMPU") tombolTestLampu = el;
+  });
+  if (tombolTestLampu) {
+    tombolTestLampu.disabled = true;
+    tombolTestLampu.style.opacity = "0.6";
+  }
+
+  try {
+    const res = await authenticatedFetch("/api/lamp/test-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}"
+    });
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      data = {};
+    }
+
+    if (res.ok && data.success === true) {
+      let pesan;
+      if (data.status === "TIDAK_ADA_MEJA_TEST") {
+        pesan = "Semua meja sedang aktif. Tidak ada meja yang dapat dites lampu.";
+      } else if (data.status === "NORMAL") {
+        const summary = data.summary || {};
+        pesan = "Pemeriksaan lampu selesai normal.\n\n" +
+          "Lampu ON: " + (summary.onSuccess || 0) + " berhasil, " + (summary.onFailure || 0) + " gagal\n" +
+          "Lampu OFF: " + (summary.offSuccess || 0) + " berhasil, " + (summary.offFailure || 0) + " gagal";
+      } else {
+        pesan = "Pemeriksaan lampu selesai. Status: " + (data.status || "NORMAL");
+      }
+      alert(pesan);
+    } else {
+      let pesanError;
+      if (data.code === "LAMP_TEST_RUNNING") {
+        pesanError = data.message || "Lampu sedang dalam pemeriksaan, silakan tunggu hingga selesai.";
+      } else if (data.message) {
+        pesanError = data.message;
+      } else {
+        pesanError = "Gagal menjalankan pemeriksaan lampu. HTTP status: " + res.status;
+      }
+      alert("Pemeriksaan lampu gagal:\n" + pesanError);
+    }
+  } catch (e) {
+    console.error("Error test lampu:", e);
+    alert("Gagal menghubungi server untuk pemeriksaan lampu.\n" + e.message);
+  } finally {
+    if (tombolTestLampu) {
+      tombolTestLampu.disabled = false;
+      tombolTestLampu.style.opacity = "";
+    }
+  }
+}
+
 async function logoutKasir() {
   const rawSessionId = sessionStorage.getItem("pbms_session_id");
   const sessionId = rawSessionId ? rawSessionId.trim() : "";
@@ -3369,7 +3506,7 @@ async function logoutKasir() {
   closeReport.innerHTML = "";
   closeReport.classList.add("hidden");
   document.getElementById("lockedArea").classList.remove("hidden");
-  ["actualCash", "saldoKwhDalamAkhir", "saldoKwhLuarAkhir"].forEach(id => {
+  ["actualCash"].forEach(id => {
     const input = document.getElementById(id);
     input.value = "";
     input.disabled = false;
@@ -3527,7 +3664,7 @@ function showNoCurrentOpenShiftMessage() {
 }
 
 function kunciInputTutupKasir() {
-  ["actualCash", "saldoKwhDalamAkhir", "saldoKwhLuarAkhir"].forEach(id => {
+  ["actualCash"].forEach(id => {
     const input = document.getElementById(id);
     input.readOnly = true;
     input.disabled = true;
@@ -3547,35 +3684,52 @@ function kunciInputTutupKasir() {
   if (app && modal && app.contains(modal)) inertSiblings(app);
 }
 
-function readKwhAkhirDigits(id) {
-  const value = document.getElementById(id).value;
-  if (!/^\d+$/.test(value)) return null;
-  const scaled = BigInt(value);
-  if (scaled > BigInt(Number.MAX_SAFE_INTEGER)) return null;
-  return Number(scaled) / 100;
-}
-
-document.querySelectorAll("#openingBalanceKwhDalamAwal, #openingBalanceKwhLuarAwal, #saldoKwhDalamAkhir, #saldoKwhLuarAkhir").forEach(input => {
-  input.addEventListener("beforeinput", event => {
-    if (event.data !== null && event.data !== undefined && /[^0-9]/.test(event.data)) event.preventDefault();
-  });
-  input.addEventListener("input", () => {
-    input.value = input.value.replace(/[^0-9]/g, "");
-  });
-});
-
-function formatKwhAkhirDigits(value) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    throw new RangeError("Nilai KWh akhir tidak valid.");
+(function() {
+  const el = document.getElementById("actualCash");
+  if (!el) return;
+  function fmt(digits) {
+    if (!digits) return "";
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   }
-  const match = String(value).match(/^(\d+)(?:\.(\d{1,2}))?$/);
-  if (!match) throw new RangeError("Nilai KWh akhir tidak valid.");
-  const scaled = BigInt(match[1]) * 100n + BigInt((match[2] || "").padEnd(2, "0") || "0");
-  if (scaled > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new RangeError("Nilai KWh akhir melebihi batas integer aman.");
+  function stripNonDigits(s) {
+    return String(s).replace(/\D/g, "");
   }
-  return scaled.toString();
-}
+  function setCash(rawValue) {
+    const raw = stripNonDigits(rawValue).replace(/^0+(?=\d)/, "");
+    el.dataset.raw = raw;
+    el.value = fmt(raw);
+  }
+  el.addEventListener("focus", () => {
+    setCash(el.value);
+  });
+  el.addEventListener("beforeinput", (e) => {
+    e.preventDefault();
+    const raw = stripNonDigits(el.dataset.raw || el.value);
+    if (e.inputType === "insertText" && e.data) {
+      const d = stripNonDigits(e.data);
+      if (!d) return;
+      setCash(raw + d);
+    } else if (e.inputType === "deleteContentBackward") {
+      setCash(raw.slice(0, -1));
+    } else if (e.inputType === "deleteContentForward" || e.inputType === "deleteByCut") {
+      setCash("");
+    } else {
+      return;
+    }
+    el.setSelectionRange(el.value.length, el.value.length);
+  });
+  el.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const d = stripNonDigits(e.clipboardData.getData("text"));
+    if (!d) return;
+    const raw = stripNonDigits(el.dataset.raw || el.value);
+    setCash(raw + d);
+    el.setSelectionRange(el.value.length, el.value.length);
+  });
+  window.setActualCashValue = function (nominal) {
+    setCash(nominal);
+  };
+})();
 
 function pulihkanTutupKasirPending(rawSnapshot) {
   const report = document.getElementById("closeReport");
@@ -3598,9 +3752,7 @@ function pulihkanTutupKasirPending(rawSnapshot) {
       throw new Error("Snapshot penutupan dari server tidak lengkap atau tidak sesuai shift.");
     }
     const rec = snapshot.rekonsiliasiKas;
-    document.getElementById("actualCash").value = String(rec.nominalAktual);
-    document.getElementById("saldoKwhDalamAkhir").value = formatKwhAkhirDigits(snapshot.kwh.dalam.akhir);
-    document.getElementById("saldoKwhLuarAkhir").value = formatKwhAkhirDigits(snapshot.kwh.luar.akhir);
+    if (window.setActualCashValue) window.setActualCashValue(String(rec.nominalAktual));
     previewTutupKasir = snapshot;
     renderLaporanTutupKasir(snapshot);
     tampilkanTombolCetakLaporan(report);
@@ -3622,28 +3774,8 @@ document.addEventListener("keydown", (event) => {
 }, true);
 
 async function submitOpeningBalance() {
-  const kwhDalamInput = document.getElementById("openingBalanceKwhDalamAwal");
-  const kwhLuarInput = document.getElementById("openingBalanceKwhLuarAwal");
   const error = document.getElementById("openingBalanceError");
   const button = document.getElementById("openingBalanceSubmit");
-  const kwhDalamAwalText = kwhDalamInput.value.trim();
-  const kwhLuarAwalText = kwhLuarInput.value.trim();
-  const parseOpeningKwh = (value, label, field) => {
-    if (!/^\d+$/.test(value)) {
-      error.textContent = `${label} harus berupa angka (tanpa titik atau koma)`;
-      field.focus();
-      return null;
-    }
-    return Number(value) / 100;
-  };
-  const kwhDalamAwal = parseOpeningKwh(kwhDalamAwalText, "KWh Dalam Awal", kwhDalamInput);
-  if (kwhDalamAwal === null) {
-    return;
-  }
-  const kwhLuarAwal = parseOpeningKwh(kwhLuarAwalText, "KWh Luar Awal", kwhLuarInput);
-  if (kwhLuarAwal === null) {
-    return;
-  }
   const sessionId = (sessionStorage.getItem("pbms_session_id") || "").trim();
   const deviceId = getOrCreateDeviceId().trim();
   if (!sessionId) {
@@ -3656,7 +3788,7 @@ async function submitOpeningBalance() {
     const response = await fetch(apiUrl("/api/confirm-opening-balance"), {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Session-Id": sessionId, "X-Device-Id": deviceId },
-      body: JSON.stringify({ saldo_awal: 0, saldo_kwh_dalam_awal: kwhDalamAwal, saldo_kwh_luar_awal: kwhLuarAwal, sessionId, deviceId })
+      body: JSON.stringify({ saldo_awal: 0, saldo_kwh_dalam_awal: 0, saldo_kwh_luar_awal: 0, sessionId, deviceId })
     });
     const result = await response.json();
     if (!response.ok || result.success !== true) throw new Error(result.message || "Konfirmasi saldo awal gagal. Silakan coba lagi.");
@@ -3705,9 +3837,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           showNoCurrentOpenShiftMessage();
           return;
         }
-        const kId = result.kasirId || sessionStorage.getItem("pbms_kasir_id");
-        const kName = sessionStorage.getItem("pbms_nama");
+        const kId = result.kasirId;
+        const kName = result.nama;
         const sId = result.shiftId;
+        sessionStorage.setItem("pbms_kasir_id", result.kasirId);
+        sessionStorage.setItem("pbms_nama", result.nama);
         sessionStorage.setItem("pbms_shift_id", result.shiftId);
         currentKasir = {
           id: kId,
@@ -3870,6 +4004,86 @@ function tutupModalPengaturanPrinter() {
   document
     .getElementById("modalPengaturanPrinter")
     .classList.add("hidden");
+}
+
+// === MODAL RIWAYAT SHIFT & CETAK ULANG ===
+function bukaModalRiwayatShift() {
+  const modal = document.getElementById("modalRiwayatShift");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  muatRiwayatShift();
+}
+
+function tutupModalRiwayatShift() {
+  const modal = document.getElementById("modalRiwayatShift");
+  if (!modal) return;
+  modal.classList.add("hidden");
+}
+
+async function muatRiwayatShift() {
+  const container = document.getElementById("daftarRiwayatShiftContainer");
+  if (!container) return;
+  try {
+    const res = await fetch("/api/shift/history");
+    const json = await res.json();
+    if (!json.success || !json.data) {
+      container.innerHTML = "<div style='text-align:center; padding:20px; color:#dc2626;'>Gagal memuat riwayat shift.</div>";
+      return;
+    }
+    if (json.data.length === 0) {
+      container.innerHTML = "<div style='text-align:center; padding:20px; color:#666;'>Belum ada riwayat shift.</div>";
+      return;
+    }
+    container.innerHTML = json.data.map(function (row) {
+      const buka = new Date(row.buka_at);
+      const tutup = row.tutup_at ? new Date(row.tutup_at) : null;
+      const waktuBuka = buka.toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      const waktuTutup = tutup ? tutup.toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-";
+      const nominal = row.nominal_aktual != null ? "Rp " + Number(row.nominal_aktual).toLocaleString("id-ID") : "-";
+      const kode = row.kode_tutup || "-";
+      return "<div style='border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; margin-bottom:8px;'>"
+        + "<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;'>"
+        + "<strong>" + (row.nama_kasir || "-") + "</strong>"
+        + "<span style='color:#64748b; font-size:.8rem;'>#" + row.id + "</span>"
+        + "</div>"
+        + "<div style='font-size:.85rem; color:#334155;'>Buka: " + waktuBuka + " &middot; Tutup: " + waktuTutup + "</div>"
+        + "<div style='font-size:.85rem; color:#334155;'>Kode: " + kode + " &middot; Total: " + nominal + "</div>"
+        + "<div style='margin-top:8px; display:flex; justify-content:flex-end;'>"
+        + "<button type='button' class='btn-reprint-shift' onclick='cetakUlangTutupKasir(" + row.id + ")' style='padding: 6px 12px; background: #0f766e; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem;'>CETAK ULANG</button>"
+        + "</div>"
+        + "</div>";
+    }).join("");
+  } catch (error) {
+    container.innerHTML = "<div style='text-align:center; padding:20px; color:#dc2626;'>Gagal memuat riwayat shift.</div>";
+  }
+}
+
+async function cetakUlangTutupKasir(shiftId) {
+  const btn = event.target;
+  const btnText = btn ? btn.textContent : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = "0.6";
+    btn.textContent = "MEMUAT...";
+  }
+  try {
+    const res = await fetch("/api/shift/snapshot/" + shiftId);
+    const json = await res.json();
+    if (json.success && json.snapshot) {
+      renderLaporanTutupKasir(json.snapshot);
+      await cetakLaporanTutupKasir();
+    } else {
+      alert("Gagal memuat snapshot laporan tutup kasir: " + (json.message || "Data tidak ditemukan."));
+    }
+  } catch (error) {
+    alert("Gagal memuat snapshot laporan tutup kasir: " + (error.message || "Terjadi kesalahan."));
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = "";
+      btn.textContent = btnText;
+    }
+  }
 }
 
 let printerTerpilihBluetooth = null;
@@ -4790,18 +5004,24 @@ async function tampilkanBarang() {
   container.innerHTML =
     data
       .map(
-        item => `
+        item => {
+          // "Meja Billiard" selalu nonaktif; Meja Pagi/Malam mengikuti jadwal isMejaWaktuNonaktif().
+          const nonaktifMejaBilliard = String(item.nama || "").trim() === "Meja Billiard";
+          const nonaktifMejaWaktu = isMejaWaktuNonaktif(item.nama);
+          const nonaktif = nonaktifMejaBilliard || nonaktifMejaWaktu;
+          return `
 
           <button
             class="product-card"
-            onclick='tambahBarang(${JSON.stringify(item)})'
+            ${nonaktif ? 'disabled aria-disabled="true" tabindex="-1"' : ''}
+            ${nonaktif ? '' : `onclick='tambahBarang(${JSON.stringify(item)})'`}
           >
 
             <div class="product-name">
 
               ${escapeHtml(
                 item.nama
-              )}${isMejaWaktuNonaktif(item.nama) ? ' <span style="display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 0.65rem; font-weight: 800; vertical-align: middle;">NONAKTIF</span>' : ""}
+              )}${nonaktif ? ' <span style="display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 0.65rem; font-weight: 800; vertical-align: middle;">NONAKTIF</span>' : ""}
 
             </div>
 
@@ -4816,7 +5036,8 @@ async function tampilkanBarang() {
 
           </button>
 
-        `
+        `;
+        }
       )
       .join("");
 
@@ -4850,6 +5071,12 @@ setInterval(tampilkanBarang, 60000);
 function isItemMejaBilliard(value) {
   const nama = typeof value === "string" ? value : value?.nama;
   return ["Meja Billiard", "Meja Pagi", "Meja Malam"].includes(String(nama || "").trim());
+}
+
+function isPaket3Jam(value) {
+  const nama = typeof value === "string" ? value : value?.nama;
+  const trimmed = String(nama || "").trim();
+  return trimmed === "Paket 3 Jam" || trimmed === "Paket 3 Jam Non Member";
 }
 
 async function fetchMejaSessions() {
@@ -4928,6 +5155,7 @@ async function fetchDetailSesi(sessionId, loadCart = false) {
           idMember: data.session.memberId,
           kategori: data.session.kategoriMember
         });
+        sinkronTampilanPilihanBonus();
       }
 
       // Ambil hargaJual/subtotal dari server secara tepat
@@ -5634,6 +5862,7 @@ async function klikMejaPopup(nomor) {
 
 // BRIDGE FUNCTION UNTUK MEJA-MODAL.JS & FITUR WAKTU LOSS
 let modeSesiDraft = "DURASI";
+let currentBukaMejaDraft = null;
 
 function setModeSesiBukaMeja(mode) {
   modeSesiDraft = (mode === "LOSS" || mode === "WAKTU LOSS") ? "LOSS" : "DURASI";
@@ -5676,10 +5905,29 @@ function setModeSesiBukaMeja(mode) {
     if (containerDurasi) containerDurasi.style.display = "block";
     if (infoLossBox) infoLossBox.style.display = "none";
   }
+
+  sinkronTampilanPilihanBonus();
+}
+
+// Pilihan bonus untuk Paket 3 Jam kini ditangani lewat modal
+// #modalPilihanBonusBukaMeja saat tombol MULAI MAIN ditekan, bukan
+// dropdown di form utama. Elemen #pilihanBonusBukaMeja di form utama
+// tetap disembunyikan agar tidak memenuhi tampilan form Buka Meja.
+function sinkronTampilanPilihanBonus() {
+  const container = document.getElementById("containerPilihanBonus");
+  const select = document.getElementById("pilihanBonusBukaMeja");
+  if (container) {
+    container.style.display = "none";
+  }
+  if (select) {
+    select.value = "";
+    select.disabled = true;
+  }
 }
 
 window.bukaMejaDariModalBaru = async function(nomor, namaPemesan, durasiJam, draft, jenisSesi) {
   targetBukaMejaNomor = nomor;
+  currentBukaMejaDraft = draft;
   if (pendingMemberForMeja) {
     memberByMeja.set(String(nomor), pendingMemberForMeja);
     pendingMemberForMeja = null;
@@ -5695,6 +5943,8 @@ window.bukaMejaDariModalBaru = async function(nomor, namaPemesan, durasiJam, dra
     setModeSesiBukaMeja("DURASI");
   }
 
+  sinkronTampilanPilihanBonus();
+
   const berhasil = await konfirmasiMulaiSesi(durasiJam, draft, jenisSesi);
   return berhasil;
 };
@@ -5704,7 +5954,9 @@ window.handleMulaiMain = window.handleMulaiMain || window.bukaMejaDariModalBaru;
 function tutupModalBukaMeja() {
   document.getElementById("bukaMejaModal").classList.remove("show");
   targetBukaMejaNomor = null;
+  currentBukaMejaDraft = null;
   setModeSesiBukaMeja("DURASI");
+  sinkronTampilanPilihanBonus();
 }
 
 function tutupModalBukaMejaLuar(event) {
@@ -5713,7 +5965,11 @@ function tutupModalBukaMejaLuar(event) {
   }
 }
 
-async function konfirmasiMulaiSesi(durasiJam = 1, draft = [], jenisSesiParam = null) {
+// Payload tersimpan sementara saat modal pilihan bonus tampil.
+// Setelah kasir memilih bonus di modal, eksekusi ulang POST /api/meja/buka.
+let pendingPilihanBonus = null;
+
+async function konfirmasiMulaiSesi(durasiJam = 1, draft = [], jenisSesiParam = null, pilihanBonusNilai = null) {
   const input = document.getElementById("inputNamaPemesan");
   const namaPemesan = input ? input.value.trim() : "";
 
@@ -5747,6 +6003,22 @@ async function konfirmasiMulaiSesi(durasiJam = 1, draft = [], jenisSesiParam = n
   }
 
   const selectedMember = memberByMeja.get(String(targetBukaMejaNomor)) || pendingMemberForMeja;
+
+
+  // Paket 3 Jam: draft hanya berisi paket qty 1 => sesi 3 jam.
+  // Backend menyimpan satu baris paket sebagai bagian pembukaan sesi,
+  // sehingga frontend tidak mengirim paket via /api/meja/pesanan generik.
+  const isPaket3JamSaja = selectedMode !== "LOSS"
+    && Array.isArray(draft)
+    && draft.length === 1
+    && ["Paket 3 Jam", "Paket 3 Jam Non Member"].includes(String(draft[0]?.nama || "").trim())
+    && Number(draft[0]?.qty) === 1;
+  if (isPaket3JamSaja) {
+    finalDurasiJam = 3;
+  }
+  // Paket 3 Jam non-member tidak punya tarif member, tapi sesi Member tetap
+  // boleh pakai Paket 3 Jam + pilihan bonus, jadi memberId tidak lagi
+  // dipaksa null saat isPaket3JamSaja.
   const memberId = selectedMember?.idMember || selectedMember?.id || selectedMember?.kodeMember || null;
 
   const requestPayload = {
@@ -5755,11 +6027,39 @@ async function konfirmasiMulaiSesi(durasiJam = 1, draft = [], jenisSesiParam = n
     kasir: currentKasir ? currentKasir.nama : "-",
     durasiJam: finalDurasiJam,
     jenisSesi: finalJenisSesi,
-    modeSesi: finalJenisSesi
+    modeSesi: finalJenisSesi,
+    draft: draft
   };
+
+  if (isPaket3JamSaja) {
+    requestPayload.paket = "Paket 3 Jam";
+    requestPayload.namaPaket = "Paket 3 Jam";
+  }
 
   if (memberId) {
     requestPayload.memberId = memberId;
+  }
+
+  // Non-member atau sesi bukan Paket 3 Jam langsung dilanjutkan tanpa bonus.
+  // Member + Paket 3 Jam tanpa nilai bonus: tunjukkan modal interaktif
+  // untuk memilih bonus; pilihBonusBukaMeja() memanggil kembali fungsi
+  // ini setelah nilai bonus dipilih.
+  if (isPaket3JamSaja && selectedMember && !pilihanBonusNilai) {
+    const pendingBonus = {
+      durasiJam: durasiJam,
+      draft: draft,
+      jenisSesi: jenisSesiParam
+    };
+    pendingPilihanBonus = pendingBonus;
+    const modalBonus = document.getElementById("modalPilihanBonusBukaMeja");
+    if (modalBonus) {
+      modalBonus.classList.add("show");
+    }
+    return false;
+  }
+
+  if (pilihanBonusNilai) {
+    requestPayload.pilihanBonus = pilihanBonusNilai;
   }
 
   try {
@@ -5780,6 +6080,7 @@ async function konfirmasiMulaiSesi(durasiJam = 1, draft = [], jenisSesiParam = n
     if (Array.isArray(draft) && draft.length > 0) {
       for (const item of draft) {
         if (!item || !item.nama || isItemMejaBilliard(item)) continue;
+        if (isPaket3JamSaja && isPaket3Jam(item)) continue;
         const qty = Number(item.qty);
         if (!Number.isInteger(qty) || qty <= 0) continue;
 
@@ -5837,6 +6138,32 @@ async function konfirmasiMulaiSesi(durasiJam = 1, draft = [], jenisSesiParam = n
     return false;
   }
 }
+
+// Dipanggil saat kasir mengklik salah satu tombol di modal pilihan bonus.
+// Mengambil nilai bonus yang dipilih, memanggil kembali konfirmasiMulaiSesi
+// dengan nilai bonus tersebut, dan melanjutkan pengiriman POST /api/meja/buka.
+window.pilihBonusBukaMeja = function(nilaiBonus) {
+  const modalBonus = document.getElementById("modalPilihanBonusBukaMeja");
+  if (modalBonus) {
+    modalBonus.classList.remove("show");
+  }
+
+  if (!pendingPilihanBonus) {
+    return;
+  }
+
+  const pending = pendingPilihanBonus;
+  pendingPilihanBonus = null;
+
+  konfirmasiMulaiSesi(
+    pending.durasiJam,
+    pending.draft,
+    pending.jenisSesi,
+    nilaiBonus
+  ).catch(error => {
+    console.error("Gagal lanjutkan buka meja setelah pilih bonus:", error);
+  });
+};
 
 function updateMejaHeaderUI() {
   const btnMejaText = document.getElementById("btnMejaText");
@@ -6133,6 +6460,11 @@ async function tambahQty(index) {
   }
 
   try {
+    if (isPaket3Jam(item)) {
+      alert("Paket 3 Jam hanya qty 1 dan tidak dapat diubah via tambah qty.");
+      return;
+    }
+
     if (isItemMejaBilliard(item)) {
       const resDurasi = await authenticatedFetch("/api/meja/tambah-durasi", {
         method: "POST",
@@ -6226,6 +6558,11 @@ async function kurangQty(index) {
 
   if (item.nama === "Billiard Waktu Loss") {
     alert("Durasi Waktu Loss dikalkulasi secara otomatis oleh server saat Stop Waktu.");
+    return;
+  }
+
+  if (isPaket3Jam(item)) {
+    alert("Paket 3 Jam hanya qty 1 dan tidak dapat diubah via kurang qty.");
     return;
   }
 
@@ -6701,7 +7038,10 @@ function getTotal() {
 
         if (member && ["PLATINUM", "UMUM", "PELAJAR"].includes(String(member.kategori || member.kategoriId || "").trim().toUpperCase())) {
           const kategori = String(member.kategori || member.kategoriId).trim().toUpperCase();
-          const cacheKey = `${activeMeja}_${kategori}_${durasiJam}_${waktuMulai}`;
+          // Normalisasi identitas member: string/number yang sama menghasilkan key yang sama,
+          // sehingga hasil harga member sebelumnya tidak pernah dipakai ulang di meja ini.
+          const memberIdCache = (member.idMember ?? member.memberId ?? member.id ?? member.kodeMember ?? member.kode_member ?? "");
+          const cacheKey = `${activeMeja}_${String(memberIdCache).trim()}_${kategori}_${durasiJam}_${waktuMulai}`;
 
           if (window._hargaMejaCache && window._hargaMejaCache[cacheKey]) {
             const hasilHarga = window._hargaMejaCache[cacheKey];
@@ -7015,6 +7355,15 @@ document
       updateKembalian();
     }
   );
+
+function isiUangPas() {
+  const total = getTotal();
+  const bayar = document.getElementById("bayar");
+  if (!bayar || total <= 0) return;
+  bayar.value = formatCurrencyInput(total);
+  updateKembalian();
+}
+
 
 
 document
@@ -7691,7 +8040,7 @@ function bukaTutupKasir() {
   const calculateButton = document.getElementById("calculateCloseBtn");
   calculateButton.classList.remove("hidden");
   calculateButton.disabled = false;
-  ["actualCash", "saldoKwhDalamAkhir", "saldoKwhLuarAkhir"].forEach(id => { document.getElementById(id).value = ""; document.getElementById(id).disabled = false; });
+  ["actualCash"].forEach(id => { if (window.setActualCashValue) window.setActualCashValue(""); document.getElementById(id).disabled = false; });
   previewTutupKasir = null;
   document.getElementById("closeReport").classList.add("hidden");
   document.getElementById("closeReport").innerHTML = "";
@@ -8190,20 +8539,14 @@ async function hitungTutupKasir() {
   button.disabled = true;
   button.classList.remove("hidden");
   button.textContent = "SEDANG MEMPROSES...";
-  if (["actualCash", "saldoKwhDalamAkhir", "saldoKwhLuarAkhir"].some(id => document.getElementById(id).value === "")) {
-    status.textContent = "Gagal: lengkapi Cash Sales, KWh Dalam Akhir, dan KWh Luar Akhir.";
+  if (["actualCash"].some(id => document.getElementById(id).value === "")) {
+    status.textContent = "Gagal: lengkapi Cash Sales.";
     prosesTutupKasirAktif = false; button.disabled = false; button.textContent = "LIHAT HASIL"; return;
   }
-  const readInteger = id => Number(document.getElementById(id).value);
+  const readInteger = id => Number(String(document.getElementById(id).value).replace(/[.,]/g, ""));
   const actual = readInteger("actualCash");
-  const saldoKwhDalamAkhir = readKwhAkhirDigits("saldoKwhDalamAkhir");
-  const saldoKwhLuarAkhir = readKwhAkhirDigits("saldoKwhLuarAkhir");
   if (!Number.isSafeInteger(actual) || actual < 0) {
     status.textContent = "Gagal: semua nilai penutupan wajib berupa bilangan bulat non-negatif yang aman.";
-    prosesTutupKasirAktif = false; button.disabled = false; button.textContent = "LIHAT HASIL"; return;
-  }
-  if (saldoKwhDalamAkhir === null || saldoKwhLuarAkhir === null) {
-    status.textContent = "Gagal: saldo KWh akhir wajib berupa angka bulat non-negatif; dua digit terakhir adalah desimal.";
     prosesTutupKasirAktif = false; button.disabled = false; button.textContent = "LIHAT HASIL"; return;
   }
   if (!currentKasir || !currentKasir.shiftId) {
@@ -8213,20 +8556,17 @@ async function hitungTutupKasir() {
   try {
     const response = await authenticatedFetch("/api/kasir/tutup-preview", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shiftId: Number(currentKasir.shiftId), nominalAktual: actual, saldo_kwh_dalam_akhir: saldoKwhDalamAkhir, saldo_kwh_luar_akhir: saldoKwhLuarAkhir })
+      body: JSON.stringify({ shiftId: Number(currentKasir.shiftId), nominalAktual: actual })
     });
     const result = await response.json();
     if (!response.ok || !result.success) throw new Error(result.message || "Preview penutupan gagal dimuat.");
     if (result.shift && result.shift.status === "PENDING_CLOSE" && result.kode_tutup) {
       previewTutupKasir = result;
       pendingCloseLocked = true;
-      ["actualCash", "saldoKwhDalamAkhir", "saldoKwhLuarAkhir"].forEach(id => {
-        const input = document.getElementById(id);
-        input.value = String(id === "actualCash" ? result.rekonsiliasiKas.nominalAktual :
-          id === "saldoKwhDalamAkhir" ? formatKwhAkhirDigits(result.kwh.dalam.akhir) : formatKwhAkhirDigits(result.kwh.luar.akhir));
-        input.readOnly = true;
-        input.disabled = true;
-      });
+      const actualCashInput = document.getElementById("actualCash");
+      if (window.setActualCashValue) window.setActualCashValue(String(result.rekonsiliasiKas.nominalAktual));
+      actualCashInput.readOnly = true;
+      actualCashInput.disabled = true;
       kunciInputTutupKasir();
     } else {
       throw new Error("Server tidak mengembalikan snapshot penutupan yang terkunci.");
@@ -8236,7 +8576,7 @@ async function hitungTutupKasir() {
       ["Tahap 1 dari 6 — Identitas dan status shift", () => validasiTahapTutupKasir(1, result)],
       ["Tahap 2 dari 6 — Transaksi dan ringkasan penjualan", () => validasiTahapTutupKasir(2, result)],
       ["Tahap 3 dari 6 — Rekonsiliasi kas", () => validasiTahapTutupKasir(3, result)],
-      ["Tahap 4 dari 6 — KWh dan data token", () => validasiTahapTutupKasir(4, result)],
+      ["Tahap 4 dari 6 — Data token KWh (info)", () => {}],
       ["Tahap 5 dari 6 — Performa meja, sesi, dan produk", () => validasiTahapTutupKasir(5, result)],
       ["Tahap 6 dari 6 — Pemeriksaan silang akhir", () => { validasiTahapTutupKasir(6, result); validasiHasilTutupKasir(result); }]
     ];
@@ -8264,7 +8604,7 @@ async function hitungTutupKasir() {
     status.remove();
     renderLaporanTutupKasir(result);
     tampilkanTombolCetakLaporan(report);
-    ["actualCash", "saldoKwhDalamAkhir", "saldoKwhLuarAkhir"].forEach(id => { document.getElementById(id).disabled = true; });
+    ["actualCash"].forEach(id => { document.getElementById(id).disabled = true; });
     document.getElementById("lockedArea").classList.add("hidden");
     document.getElementById("closeReport").classList.remove("hidden");
   } catch (error) {
@@ -8368,22 +8708,18 @@ function validasiTahapTutupKasir(tahap, data) {
     total = cash + qris;
     if (cashCount !== sales.jumlahTransaksiCash || qrisCount !== sales.jumlahTransaksiQris || !near(cash, sales.totalCash) || !near(qris, sales.totalQris) || !near(total, sales.totalPenjualan)) fail("Rincian transaksi berbeda dari ringkasan penjualan.");
     if (Number(sales.jumlahTarikTunai || 0) !== tarikTunaiCount || Number(sales.totalTarikTunai || 0) !== tarikTunaiTotal) fail("Rincian Tarik Tunai berbeda dari ringkasan closing.");
-    if (!near(sales.nominalAktual, Number(document.getElementById("actualCash").value)) || !near(data.selisihPenjualan, sales.nominalAktual - sales.totalCash)) fail("Selisih penjualan tidak konsisten dengan Cash Penjualan dan Cash Sales.");
+    if (!near(sales.nominalAktual, Number(String(document.getElementById("actualCash").value).replace(/[.,]/g, ""))) || !near(data.selisihPenjualan, sales.nominalAktual - sales.totalCash)) fail("Selisih penjualan tidak konsisten dengan Cash Penjualan dan Cash Sales.");
     if (data.jumlahTransaksiBatal != null && (!Number.isSafeInteger(data.jumlahTransaksiBatal) || data.jumlahTransaksiBatal < 0)) fail("Metadata transaksi batal tidak valid.");
   }
   if (tahap === 3) {
     if (!rec || !valid(shift && shift.saldo_awal) || !valid(sales && sales.totalCash)) fail("Data rekonsiliasi kas tidak lengkap.");
     if (!data.kas || !valid(data.kas.masuk) || !valid(data.kas.keluar)) fail("Total kas masuk atau kas keluar tidak valid.");
     if (![rec.uangSeharusnya, rec.nominalAktual].every(valid) || !finite(rec.selisih)) fail("Nilai rekonsiliasi kas tidak valid.");
-    if (!near(rec.uangSeharusnya, shift.saldo_awal + data.kas.masuk + sales.totalCash - data.kas.keluar) || !near(rec.nominalAktual, Number(document.getElementById("actualCash").value)) || !near(rec.selisih, rec.nominalAktual - rec.uangSeharusnya)) fail("Rekonsiliasi kas tidak konsisten secara matematis atau dengan input.");
-  }
-  if (tahap === 4) {
-    for (const side of ["dalam", "luar"]) {
-      const meter = data.kwh && data.kwh[side], inputId = side === "dalam" ? "saldoKwhDalamAkhir" : "saldoKwhLuarAkhir";
-      const awalKey = side === "dalam" ? "saldo_kwh_dalam_awal" : "saldo_kwh_luar_awal";
-      if (!meter || !valid(meter.awal) || !valid(meter.akhir) || !finite(meter.penggunaan) || !near(meter.awal, shift[awalKey]) || !near(meter.akhir, readKwhAkhirDigits(inputId)) || !near(meter.penggunaan, meter.awal - meter.akhir)) fail(`KWh ${side}: nilai awal, akhir, atau penggunaan tidak konsisten.`);
-      if (meter.tokenTopupTersedia && !valid(meter.totalTokenTopup)) fail(`Data token top-up KWh ${side} tidak valid.`);
-    }
+    // Saldo Kas Akhir (uangSeharusnya) kini bersumber dari Kas Laci resmi,
+    // bukan dari shift.saldo_awal + kas_masuk + totalCash - kas_keluar.
+    const saldoAkharLaci = data.kasLaci ? data.kasLaci.saldoAkhir : null;
+    if (saldoAkharLaci !== null && !near(rec.uangSeharusnya, saldoAkharLaci)) fail("Rekonsiliasi kas tidak sesuai saldo Kas Laci resmi.");
+    if (!near(rec.nominalAktual, Number(String(document.getElementById("actualCash").value).replace(/[.,]/g, ""))) || !near(rec.selisih, rec.nominalAktual - rec.uangSeharusnya)) fail("Rekonsiliasi kas tidak konsisten secara matematis atau dengan input.");
   }
   if (tahap === 5) {
     if (!Array.isArray(data.performaMeja) || data.performaMeja.length !== 10 || !Array.isArray(data.rekapProduk)) fail("Data performa meja atau rekap produk tidak lengkap.");
@@ -8456,10 +8792,10 @@ function buatTeksLaporanTutupKasir(data) {
       "Cash Sales": ["Cash"],
       "Total Penjualan": ["Total Jual", "Total"],
       "Jumlah transaksi": ["Jml Transaksi", "Transaksi"],
-      "Saldo Kas Awal": ["Saldo Awal", "Kas Awal"],
-      "Kas Masuk": ["Masuk"],
-      "Kas Keluar": ["Keluar"],
-      "Saldo Kas Seharusnya": ["Saldo Seharusnya"],
+      "Saldo Kas Awal (Kas Laci)": ["Saldo Awal", "Kas Awal", "Saldo Kas Awal"],
+      "Saldo Kas Akhir (Kas Laci)": ["Saldo Seharusnya", "Saldo Akhir", "Saldo Kas Akhir"],
+      "Kas Masuk (info)": ["Masuk", "Kas Masuk"],
+      "Kas Keluar (info)": ["Keluar", "Kas Keluar"],
       "Selisih Penjualan": ["Selisih Jual", "Selisih"],
       "Uang Kas Aktual / Laci": ["Kas Aktual / Laci"],
       "Cash Sales Aktual": ["Cash Sales", "Sales Aktual"]
@@ -8485,7 +8821,6 @@ function buatTeksLaporanTutupKasir(data) {
     const amount = Number(value || 0);
     return amount < 0 ? `-Rp${Math.abs(amount).toLocaleString("id-ID")}` : rupiah(amount);
   };
-  const kwh = value => formatKwhPembelian(Number(value || 0));
   const dateTime = value => {
     if (!value) return "—";
     const date = new Date(value);
@@ -8556,21 +8891,14 @@ function buatTeksLaporanTutupKasir(data) {
   labelValue("TOTAL", money(categorySales.BAR + categorySales.DAPUR + categorySales.KASIR));
 
   section("REKAP SALDO KAS");
-  labelValue("Saldo Kas Awal", money(shift.saldo_awal));
-  labelValue("Kas Masuk", money(data.kas?.masuk));
-  labelValue("Kas Keluar", money(data.kas?.keluar));
-  labelValue("Saldo Kas Seharusnya", money(rec.uangSeharusnya));
+  const laci = data.kasLaci || {};
+  labelValue("Saldo Kas Awal (Kas Laci)", money(laci.saldoAwal ?? shift.saldo_awal));
+  labelValue("Kas Masuk (info)", money(data.kas?.masuk));
+  labelValue("Kas Keluar (info)", money(data.kas?.keluar));
+  labelValue("Saldo Kas Akhir (Kas Laci)", money(laci.saldoAkhir ?? rec.uangSeharusnya));
   labelValue("Cash Sales Aktual", money(rec.nominalAktual));
   labelValue("Selisih Kas", money(rec.selisih));
 
-  [["DALAM", data.kwh?.dalam], ["LUAR", data.kwh?.luar]].forEach(([label, meter]) => {
-    section(`KWH ${label}`);
-    labelValue("Awal", `${kwh(meter?.awal)} kWh`);
-    labelValue("Token", meter?.tokenTopupTersedia ? `${kwh(meter.totalTokenTopup)} kWh` : "Tidak ada");
-    labelValue("Tersedia", `${kwh(meter?.tersedia)} kWh`);
-    labelValue("Akhir", `${kwh(meter?.akhir)} kWh`);
-    labelValue("Pemakaian", `${kwh(meter?.penggunaan)} kWh`);
-  });
   lines.push("", "", "");
   return lines.join("\n");
 }
@@ -8599,12 +8927,17 @@ function renderLaporanTutupKasir(data) {
   const txs = data.transaksi || [];
   const salesDifference = data.selisihPenjualan;
   const salesDifferenceClass = salesDifference < 0 ? "sales-difference-negative" : salesDifference > 0 ? "sales-difference-positive" : "";
-  const elapsed = shift.buka_at ? Math.max(0, Date.now() - new Date(shift.buka_at).getTime()) : 0;
+  const shiftEndAt =
+    (shift.status === "PENDING_CLOSE" && shift.pending_close_at)
+      ? new Date(shift.pending_close_at).getTime()
+      : (shift.status === "CLOSED" && shift.tutup_at)
+        ? new Date(shift.tutup_at).getTime()
+        : Date.now();
+  const elapsed = shift.buka_at ? Math.max(0, shiftEndAt - new Date(shift.buka_at).getTime()) : 0;
   const duration = shift.buka_at && Number.isFinite(elapsed) ? `${Math.floor(elapsed / 3600000)} jam ${Math.floor((elapsed % 3600000) / 60000)} menit` : "—";
   const dateTime = value => { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.getTime()) ? escapeCloseHtml(value) : date.toLocaleString("id-ID"); };
   const money = value => rupiah(Number(value || 0));
   const salesDifferenceAmount = salesDifference < 0 ? `-Rp${Math.abs(salesDifference).toLocaleString("id-ID")}` : money(salesDifference);
-  const kwhCard = (label, item = {}) => `<div class="close-section"><h3>KWh ${label}</h3><div class="close-kpis"><div class="close-kpi"><span>Awal</span><strong>${escapeCloseHtml(item.awal ?? 0)}</strong></div><div class="close-kpi"><span>Akhir</span><strong>${escapeCloseHtml(item.akhir ?? 0)}</strong></div><div class="close-kpi"><span>Penggunaan</span><strong>${escapeCloseHtml(item.penggunaan ?? 0)}</strong></div>${item.tokenTopupTersedia ? `<div class="close-kpi"><span>Token top-up</span><strong>${formatKwhPembelian(item.totalTokenTopup)}</strong></div>` : ""}</div></div>`;
   document.getElementById("closeReport").innerHTML = `
     <div class="close-report">
       <section class="close-section"><h3>Header Shift</h3><div class="close-shift"><strong>${escapeCloseHtml(shift.kasir || currentKasir?.nama || "Kasir")}</strong><span>Shift ID: ${escapeCloseHtml(shift.shiftId ?? currentKasir?.shiftId)}</span><span>Buka: ${dateTime(shift.buka_at)}</span><span class="close-badge">${escapeCloseHtml(shift.status || "OPEN")}</span><span>Durasi: ${duration}</span>${data.kode_tutup ? `<span class="close-code"><strong>Kode Unik Tutup:</strong> ${escapeCloseHtml(data.kode_tutup)}</span>` : String(shift.status || "").toUpperCase() === "OPEN" ? `<span class="close-code"><strong>Kode Unik Tutup:</strong> Akan dibuat setelah tutup berhasil</span>` : ""}</div></section>
@@ -8613,8 +8946,7 @@ function renderLaporanTutupKasir(data) {
       <section class="close-section"><h3>Performa 10 Meja</h3><div class="close-table-wrap"><table class="close-table"><thead><tr><th>Meja</th><th class="num">Jumlah sesi</th><th class="num">Durasi (jam)</th><th class="num">Omzet</th></tr></thead><tbody>${tables.map(row => `<tr><td>Meja ${escapeCloseHtml(row.nomor_meja)}</td><td class="num">${Number(row.jumlah_sesi || 0)}</td><td class="num">${Number(row.total_durasi_jam || 0)}</td><td class="num">${money(row.omzet)}</td></tr>`).join("")}</tbody></table></div></section>
       <section class="close-section"><h3>Rekap Produk</h3><div class="close-table-wrap"><table class="close-table"><thead><tr><th>Produk</th><th class="num">Qty</th><th class="num">Harga jual</th><th class="num">Subtotal</th></tr></thead><tbody>${products.length ? products.map(item => `<tr><td>${escapeCloseHtml(item.nama_barang)}</td><td class="num">${Number(item.qty || 0)}</td><td class="num">${item.harga_jual == null ? "Bervariasi" : money(item.harga_jual)}</td><td class="num">${money(item.subtotal)}</td></tr>`).join("") : `<tr><td colspan="4">Belum ada penjualan produk.</td></tr>`}</tbody></table></div></section>
       <section class="close-section"><h3>Detail Transaksi (${txs.length})</h3><div class="close-table-wrap"><table class="close-table"><thead><tr><th>No. transaksi / detail</th><th>Waktu</th><th>Meja</th><th>Session</th><th class="num">Total</th><th>Metode</th></tr></thead><tbody>${txs.length ? txs.map(tx => { const isTarikTunai = tx.tipe_transaksi === "TARIK_TUNAI"; return `<tr><td><strong>${escapeCloseHtml(tx.nomor_transaksi)}</strong>${isTarikTunai ? `<div class="close-tx-detail"><strong>TARIK TUNAI</strong> &bull; Setoran ${escapeCloseHtml(tx.kode_setoran)}</div>` : `<div class="close-tx-detail">${(tx.detail_produk || []).map(item => `${escapeCloseHtml(item.nama_barang)} × ${Number(item.qty || 0)} (${money(item.subtotal)})`).join("<br>") || "—"}</div>`}</td><td>${dateTime(tx.waktu || [tx.tanggal, tx.jam].filter(Boolean).join(" "))}</td><td>${tx.nomor_meja ? `Meja ${escapeCloseHtml(tx.nomor_meja)}` : "—"}</td><td>${escapeCloseHtml(tx.session_id)}</td><td class="num">${money(isTarikTunai ? tx.nominal_tarik_tunai : tx.total)}</td><td>${isTarikTunai ? "TARIK TUNAI &bull; QRIS" : escapeCloseHtml(tx.metode_pembayaran)}</td></tr>`; }).join("") : `<tr><td colspan="6">Belum ada transaksi.</td></tr>`}</tbody></table></div></section>
-      <section class="close-section"><h3>Rekap Saldo Kas</h3><div class="close-kpis"><div class="close-kpi"><span>Saldo Kas Awal</span><strong>${money(shift.saldo_awal)}</strong></div><div class="close-kpi"><span>Kas Masuk</span><strong>${money(data.kas?.masuk)}</strong></div><div class="close-kpi"><span>Kas Keluar</span><strong>${money(data.kas?.keluar)}</strong></div><div class="close-kpi"><span>Saldo Kas Seharusnya</span><strong>${money(rec.uangSeharusnya)}</strong></div></div></section>
-      <div class="close-kwh-grid">${kwhCard("Dalam", data.kwh?.dalam)}${kwhCard("Luar", data.kwh?.luar)}</div>
+      <section class="close-section"><h3>Rekap Saldo Kas</h3><div class="close-kpis"><div class="close-kpi"><span>Saldo Kas Awal (Kas Laci)</span><strong>${money(data.kasLaci?.saldoAwal ?? shift.saldo_awal)}</strong></div><div class="close-kpi"><span>Kas Masuk (info)</span><strong>${money(data.kas?.masuk)}</strong></div><div class="close-kpi"><span>Kas Keluar (info)</span><strong>${money(data.kas?.keluar)}</strong></div><div class="close-kpi"><span>Saldo Kas Akhir (Kas Laci)</span><strong>${money(data.kasLaci?.saldoAkhir ?? rec.uangSeharusnya)}</strong></div></div></section>
       <section class="close-section close-actions-section"><div class="close-actions"><button class="confirm-close-btn close-confirm-btn" id="confirmCloseBtn" onclick="konfirmasiTutupKasir()">KONFIRMASI TUTUP KASIR</button></div></section>
     </div>
     <button type="button" id="printCloseReportBtn" class="close-print-btn hidden" onclick="cetakLaporanTutupKasir()">CETAK LAPORAN</button>`;
@@ -8638,7 +8970,7 @@ function validasiHasilTutupKasir(data) {
   if (!rec) fail("Rekonsiliasi kas tidak tersedia.");
   reqNums(rec, ["uangSeharusnya", "nominalAktual"], "Rekonsiliasi kas");
   if (typeof rec.selisih !== "number" || !Number.isFinite(rec.selisih) || Math.abs(rec.selisih) > Number.MAX_SAFE_INTEGER) fail("Rekonsiliasi kas: selisih tidak valid.");
-  if (Math.abs(rec.nominalAktual - Number(document.getElementById("actualCash").value)) > 0.01) fail("Nilai Cash Sales Aktual tidak sesuai input.");
+  if (Math.abs(rec.nominalAktual - Number(String(document.getElementById("actualCash").value).replace(/[.,]/g, ""))) > 0.01) fail("Nilai Cash Sales Aktual tidak sesuai input.");
   for (const side of ["dalam", "luar"]) {
     const meter = data.kwh && data.kwh[side];
     if (!meter) fail(`KWh ${side} tidak tersedia.`);
@@ -9250,8 +9582,7 @@ async function prosesBatalTransaksi() {
 
 
   <!-- STOCK OPNAME MODULE -->
-  <link rel="stylesheet" href="/stock-opname.css">
-  <script src="/stock-opname.js"></script>
+  <script src="/stock-opname.js?v=4"></script>
 
   <script src="./printer-bluetooth.js?v=20260915-1"></script>
   <script src="./printer-pesanan.js"></script>
@@ -9454,9 +9785,113 @@ if (document.readyState === 'loading') {
   startLampWatchdogPolling();
 }
 </script>
-</body>
 
-</html>
+<!-- ==================================================
+     MODAL RIWAYAT & REKAP STOCK OPNAME
+================================================== -->
+<div id="soHistoryModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-card so-modal-container" style="max-width:960px; width:95vw; max-height:85vh; overflow-y:auto;">
+    <div class="so-header">
+      <h2>Riwayat & Rekap Kerugian Stock Opname</h2>
+      <button class="so-close-btn" onclick="window.StockOpname?.closeHistory()" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="so-body">
+      <!-- Rekap Bulanan Card -->
+      <div class="so-rekap-period-wrapper">
+        <label for="soFilterBulan">Periode:</label>
+        <input type="month" id="soFilterBulan" onchange="window.StockOpname?.loadRekapBulanan(this.value)">
+      </div>
+      <div id="soRekapContent"></div>
+
+      <!-- Tabel Riwayat -->
+      <div style="margin-top:20px;">
+        <h3 style="margin:0 0 12px; font-size:1rem; color:#1e293b;">Riwayat Transaksi SO (30 Terakhir)</h3>
+        <div id="soHistoryContent" style="overflow-x:auto;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================
+     MODAL DETAIL STOCK OPNAME
+================================================== -->
+<div id="soDetailModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-card so-modal-container" style="max-width:900px; width:95vw; max-height:85vh; overflow-y:auto;">
+    <div class="so-header">
+      <h2>Detail Transaksi Stock Opname</h2>
+      <button class="so-close-btn" onclick="window.StockOpname?.closeDetail()" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="so-body">
+      <div id="soDetailContent"></div>
+    </div>
+    <div class="so-footer">
+      <button class="so-btn so-btn-secondary" onclick="window.StockOpname?.closeDetail()">TUTUP</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================
+     MODAL FORM INPUT STOCK OPNAME
+================================================== -->
+<div id="modalStockOpname" class="modal hidden" aria-hidden="true">
+  <div class="modal-card so-modal-container" style="max-width:960px; width:95vw; max-height:85vh; overflow-y:auto;">
+    <div class="so-header">
+      <h2>Form Input Stock Opname</h2>
+      <button class="so-close-btn" onclick="window.StockOpname?.closeStockOpnameModal()" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="so-body">
+      <!-- Kategori Selector -->
+      <div class="so-category-wrapper">
+        <label for="soSelectKategori">KATEGORI:</label>
+        <select id="soSelectKategori" class="so-select" onchange="window.StockOpname?.loadSOProducts(this.value)">
+          <option value="">-- PILIH KATEGORI --</option>
+        </select>
+      </div>
+      <p style="font-size:0.85rem; color:#64748b; margin:-8px 0 16px 4px;">Masukkan jumlah stok fisik hasil hitungan manual</p>
+
+      <!-- Tabel Item -->
+      <div id="soTableContainer" style="overflow-x:auto;">
+        <table class="so-history-table" id="soItemTable">
+          <thead>
+            <tr>
+              <th>Nama Barang</th>
+              <th>Stok Sistem</th>
+              <th>Stok Fisik</th>
+              <th>Selisih Qty</th>
+              <th>Keterangan</th>
+            </tr>
+          </thead>
+          <tbody id="soTableBody">
+            <tr><td colspan="5" style="text-align:center; padding:40px; color:#94a3b8;">Pilih kategori untuk memuat daftar barang</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Ringkasan -->
+      <div id="soSummaryBox" class="so-summary-box" style="display:none; margin-top:16px;">
+        <div class="so-summary-item">
+          <div class="so-summary-title">Total Item</div>
+          <div class="so-summary-val" id="soSummaryTotalItem">0</div>
+        </div>
+        <div class="so-summary-item">
+          <div class="so-summary-title">Selisih Unit</div>
+          <div class="so-summary-val" id="soSummarySelisih">0</div>
+        </div>
+        <div class="so-summary-item">
+          <div class="so-summary-title">Kerugian Modal</div>
+          <div class="so-summary-val loss" id="soSummaryRugi">Rp 0</div>
+        </div>
+      </div>
+    </div>
+    <!-- Footer -->
+    <div class="so-footer">
+      <input type="text" id="soCatatanInput" placeholder="Catatan tambahan..." style="flex:1; padding:10px 14px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.95rem; margin-right:8px;" />
+      <button class="so-btn so-btn-secondary" onclick="window.StockOpname?.closeStockOpnameModal()">BATAL</button>
+      <button id="btnSubmitSO" class="so-btn so-btn-primary" onclick="window.StockOpname?.submitStockOpname()">SIMPAN STOCK OPNAME</button>
+    </div>
+  </div>
+</div>
+</body>
 
 
 

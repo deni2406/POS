@@ -456,3 +456,218 @@
   justify-content: center;
   gap: 12px;
 }
+
+/* ==================================================
+   RIWAYAT & REKAP MODAL
+   ================================================== */
+.so-rekap-period-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.so-rekap-period-wrapper label {
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.so-rekap-period-wrapper input[type="month"] {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  background: #fff;
+  cursor: pointer;
+}
+
+.so-rekap-card {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-radius: 12px;
+  padding: 20px;
+  color: #fff;
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.so-rekap-stat {
+  text-align: center;
+}
+
+.so-rekap-stat-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.so-rekap-stat-val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.so-rekap-stat-val.loss {
+  color: #f87171;
+}
+
+/* History Table */
+.so-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.so-history-table thead th {
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.so-history-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  color: #334155;
+}
+
+.so-history-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.so-history-table .so-loss-cell {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
+.so-history-table .so-selisih-cell.positive {
+  color: #2e7d32;
+  font-weight: 700;
+}
+
+.so-history-table .so-selisih-cell.negative {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
+.so-detail-btn {
+  padding: 5px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 5px;
+  background: #e0e7ff;
+  color: #4338ca;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.so-detail-btn:hover {
+  background: #c7d2fe;
+}
+
+/* Detail Modal */
+.so-detail-header-info {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+.so-detail-header-info dt {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.so-detail-header-info dd {
+  margin: 0 0 6px 0;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.so-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.so-detail-table thead th {
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+  text-align: left;
+  padding: 9px 10px;
+  border-bottom: 2px solid #e2e8f0;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.so-detail-table tbody td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  color: #334155;
+}
+
+.so-detail-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.so-detail-table .so-loss-val {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
+.so-detail-table .so-selisih-val.positive {
+  color: #2e7d32;
+  font-weight: 700;
+}
+
+.so-detail-table .so-selisih-val.negative {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
+/* Empty state */
+.so-empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+  font-size: 0.95rem;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .so-rekap-card {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .so-detail-header-info {
+    grid-template-columns: 1fr;
+  }
+  .so-history-table,
+  .so-detail-table {
+    font-size: 0.78rem;
+  }
+  .so-history-table thead th,
+  .so-history-table tbody td,
+  .so-detail-table thead th,
+  .so-detail-table tbody td {
+    padding: 6px 4px;
+  }
+}

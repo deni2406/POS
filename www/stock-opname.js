@@ -650,15 +650,388 @@
   }
 
   // ==================================================
-  // EXPOSE SAFE PUBLIC NAMESPACE
+  // HISTORY & REKAP MODULE STATE
   // ==================================================
-  window.StockOpname = {
-    open: openSOModal,
-    close: closeSOModal,
-    onCategoryChange: handleCategoryChange,
-    onQtyInput: handleQtyInput,
-    submitSO: submitSO,
-    handleRevisi: handleRevisi
+  const historyState = {
+    modalContainerId: 'soHistoryModal',
+    historyData: [],
+    rekapData: null
   };
 
+  // ==================================================
+  // FORMAT HELPERS
+  // ==================================================
+  function formatRupiah(n) {
+    return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+  }
+
+  function formatDateTime(isoStr) {
+    if (!isoStr) return '-';
+    try {
+      const d = new Date(isoStr);
+      return d.toLocaleString('id-ID', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    } catch (_) { return String(isoStr); }
+  }
+
+  function formatMonth(isoStr) {
+    if (!isoStr) return '-';
+    try {
+      const d = new Date(isoStr);
+      return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (_) { return String(isoStr); }
+  }
+
+  function todayYYYYMM() {
+    const d = new Date();
+    return d.toISOString().slice(0, 7);
+  }
+
+  function selisihClass(n) {
+    if (n > 0) return 'positive';
+    if (n < 0) return 'negative';
+    return '';
+  }
+
+  // ==================================================
+  // RENDER: REKAP BULANAN
+  // ==================================================
+  function renderRekapCard(container) {
+    if (!container) { console.error('[SO] renderRekapCard: container soRekapContent tidak ditemukan'); return; }
+    const d = historyState.rekapData;
+    if (!d) {
+      container.innerHTML = '<div class="so-empty-state">Tidak ada data rekap untuk periode ini.</div>';
+      return;
+    }
+    container.innerHTML = `
+      <div class="so-rekap-card">
+        <div class="so-rekap-stat">
+          <div class="so-rekap-stat-label">Total Transaksi SO</div>
+          <div class="so-rekap-stat-val">${d.total_transaksi_so ?? 0}</div>
+        </div>
+        <div class="so-rekap-stat">
+          <div class="so-rekap-stat-label">Total Selisih Unit</div>
+          <div class="so-rekap-stat-val ${d.total_selisih_qty < 0 ? 'loss' : ''}">${d.total_selisih_qty ?? 0}</div>
+        </div>
+        <div class="so-rekap-stat">
+          <div class="so-rekap-stat-label">Akumulasi Kerugian Modal</div>
+          <div class="so-rekap-stat-val loss">${formatRupiah(d.akumulasi_kerugian_modal)}</div>
+        </div>
+      </div>`;
+  }
+
+  // ==================================================
+  // RENDER: TABEL RIWAYAT
+  // ==================================================
+  function renderHistoryTable(container) {
+    if (!container) { console.error('[SO] renderHistoryTable: container soHistoryContent tidak ditemukan'); return; }
+    const rows = historyState.historyData;
+    if (!rows || rows.length === 0) {
+      container.innerHTML = '<div class="so-empty-state">Belum ada riwayat Stock Opname.</div>';
+      return;
+    }
+    container.innerHTML = `
+      <table class="so-history-table">
+        <thead>
+          <tr>
+            <th>Tanggal & Waktu</th>
+            <th>Kategori</th>
+            <th>Petugas</th>
+            <th>Selisih Unit</th>
+            <th>Kerugian Modal</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${formatDateTime(r.tanggal)}</td>
+              <td>${r.kategori || '-'}</td>
+              <td>${r.nama_kasir || '-'}</td>
+              <td class="so-selisih-cell ${selisihClass(r.total_selisih_qty || 0)}">${r.total_selisih_qty ?? 0}</td>
+              <td class="so-loss-cell">${formatRupiah(r.total_kerugian_modal)}</td>
+              <td>
+                <button class="so-detail-btn" onclick="window.StockOpname.showDetail(${r.id})">Detail</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // ==================================================
+  // RENDER: TABEL DETAIL PRODUK
+  // ==================================================
+  function renderDetailTable(container, data) {
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div class="so-empty-state">Tidak ada rincian produk.</div>';
+      return;
+    }
+    container.innerHTML = `
+      <table class="so-detail-table">
+        <thead>
+          <tr>
+            <th>Nama Barang</th>
+            <th>Stok Sistem</th>
+            <th>Stok Fisik</th>
+            <th>Selisih</th>
+            <th>Harga Modal</th>
+            <th>Total Rugi Modal</th>
+            <th>Keterangan</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(d => `
+            <tr>
+              <td>${d.nama_produk || '-'}</td>
+              <td>${d.stok_sistem ?? 0}</td>
+              <td>${d.stok_fisik ?? 0}</td>
+              <td class="so-selisih-val ${selisihClass(d.selisih || 0)}">${d.selisih ?? 0}</td>
+              <td>${formatRupiah(d.harga_modal)}</td>
+              <td class="so-loss-val">${formatRupiah(d.total_rugi_modal)}</td>
+              <td>${d.keterangan || '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // ==================================================
+  // LOAD REKAP BULANAN
+  // ==================================================
+  async function loadRekapBulanan(bulan) {
+    try {
+      const url = `/api/stock-opname/rekap-bulanan?bulan=${encodeURIComponent(bulan || '')}`;
+      const resp = await fetch(url, { headers: getAuthHeaders() });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json = await resp.json();
+      if (json.success && json.data) {
+        historyState.rekapData = json.data;
+        renderRekapCard(document.getElementById('soRekapContent'));
+      }
+    } catch (err) {
+      console.error('[SO] loadRekapBulanan error:', err);
+    }
+  }
+
+  // ==================================================
+  // LOAD RIWAYAT
+  // ==================================================
+  async function loadHistory() {
+    try {
+      const resp = await fetch('/api/stock-opname/history', { headers: getAuthHeaders() });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json = await resp.json();
+      if (json.success && Array.isArray(json.data)) {
+        historyState.historyData = json.data;
+        renderHistoryTable(document.getElementById('soHistoryContent'));
+      }
+    } catch (err) {
+      console.error('[SO] loadHistory error:', err);
+    }
+  }
+
+  // ==================================================
+  // OPEN HISTORY MODAL
+  // ==================================================
+  async function openHistoryModal() {
+    const containerId = historyState.modalContainerId;
+    let modalEl = document.getElementById(containerId);
+    if (!modalEl) {
+      modalEl = document.createElement('div');
+      modalEl.id = containerId;
+      modalEl.className = 'so-modal-overlay';
+      modalEl.style.display = 'none';
+      document.body.appendChild(modalEl);
+    }
+    modalEl.classList.remove('hidden');
+    modalEl.style.display = 'flex';
+
+    // Reset inner containers (don't wipe the modal itself, so static
+    // children soRekapContent / soHistoryContent / soFilterBulan survive).
+    document.getElementById('soRekapContent').innerHTML = '';
+    document.getElementById('soHistoryContent').innerHTML = '';
+
+    // Set default month to current
+    const currentMonth = todayYYYYMM();
+    const filterInput = document.getElementById('soFilterBulan');
+    if (filterInput) filterInput.value = currentMonth;
+
+    await Promise.all([loadHistory(), loadRekapBulanan(currentMonth)]);
+  }
+
+  // ==================================================
+  // CLOSE HISTORY MODAL
+  // ==================================================
+  function closeHistoryModal() {
+    const modalEl = document.getElementById(historyState.modalContainerId);
+    if (modalEl) {
+      modalEl.classList.add('hidden');
+      modalEl.style.display = 'none';
+      modalEl.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  // ==================================================
+  // CLOSE DETAIL MODAL
+  // ==================================================
+  function closeDetail() {
+    const modalEl = document.getElementById('soDetailModal');
+    if (modalEl) {
+      modalEl.classList.add('hidden');
+      modalEl.style.display = 'none';
+      modalEl.innerHTML = '';
+    }
+  }
+
+  // ==================================================
+  // SHOW DETAIL MODAL
+  // ==================================================
+  async function showDetail(opnameId) {
+    let modalEl = document.getElementById('soDetailModal');
+    if (!modalEl) {
+      modalEl = document.createElement('div');
+      modalEl.id = 'soDetailModal';
+      modalEl.className = 'so-modal-overlay';
+      document.body.appendChild(modalEl);
+    }
+    modalEl.classList.remove('hidden');
+    modalEl.style.display = 'flex';
+
+    modalEl.innerHTML = `
+      <div class="so-modal-content" style="background:#fff;border-radius:12px;width:90%;max-width:750px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+        <div class="so-header" style="background:#1e293b;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;font-size:1.1rem;font-weight:600;">DETAIL STOCK OPNAME #${opnameId}</h3>
+          <button class="so-close-btn" onclick="window.StockOpname.closeDetail()" style="background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <div style="text-align:center;padding:40px;">
+          <div style="font-size:0.95rem;color:#475569;">Memuat detail...</div>
+        </div>
+      </div>`;
+
+    try {
+      const resp = await fetch(`/api/stock-opname/detail/${opnameId}`, {
+        headers: typeof getAuthHeaders === 'function' ? getAuthHeaders() : {}
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json = await resp.json();
+
+      const items = Array.isArray(json)
+        ? json
+        : (json.data?.items || (json.success && Array.isArray(json.data) ? json.data : []) || []);
+
+      let rowsHtml;
+      if (!items.length) {
+        rowsHtml = '<tr><td colspan="6" style="text-align:center;padding:15px;color:#888;">Tidak ada rincian barang.</td></tr>';
+      } else {
+        rowsHtml = items.map((item, idx) => {
+          const nama = item.nama || item.nama_barang || '-';
+          const stokSistem = item.stok_sistem ?? 0;
+          const stokFisik = item.stok_fisik ?? 0;
+          const selisih = item.selisih ?? (stokFisik - stokSistem);
+          const totalRugi = item.total_rugi_modal ?? item.kerugian_hpp ?? 0;
+          const satuan = item.satuan || 'Pcs';
+
+          const selisihStyle = selisih < 0
+            ? 'color:#ef4444;font-weight:bold;'
+            : selisih > 0
+              ? 'color:#10b981;font-weight:bold;'
+              : 'color:#6b7280;';
+          const selisihText = selisih > 0 ? `+${selisih}` : `${selisih}`;
+
+          return `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px;text-align:center;">${idx + 1}</td>
+              <td style="padding:10px;font-weight:500;color:#1e293b;">${nama}</td>
+              <td style="padding:10px;text-align:right;color:#475569;">${stokSistem} ${satuan}</td>
+              <td style="padding:10px;text-align:right;font-weight:600;color:#0f172a;">${stokFisik} ${satuan}</td>
+              <td style="padding:10px;text-align:right;${selisihStyle}">${selisihText}</td>
+              <td style="padding:10px;text-align:right;color:#dc2626;font-weight:600;">Rp ${Number(totalRugi).toLocaleString('id-ID')}</td>
+            </tr>`;
+        }).join('');
+      }
+
+      modalEl.innerHTML = `
+        <div class="so-modal-content" style="background:#fff;border-radius:12px;width:90%;max-width:750px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+          <div class="so-header" style="background:#1e293b;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;font-size:1.1rem;font-weight:600;">DETAIL STOCK OPNAME #${opnameId}</h3>
+            <button class="so-close-btn" onclick="window.StockOpname.closeDetail()" style="background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;">&times;</button>
+          </div>
+          <div class="so-body" style="padding:20px;overflow-y:auto;flex:1;">
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:0.9rem;text-align:left;">
+                <thead>
+                  <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;color:#475569;">
+                    <th style="padding:10px;text-align:center;width:40px;">#</th>
+                    <th style="padding:10px;">Nama Barang</th>
+                    <th style="padding:10px;text-align:right;">Sistem</th>
+                    <th style="padding:10px;text-align:right;">Fisik</th>
+                    <th style="padding:10px;text-align:right;">Selisih</th>
+                    <th style="padding:10px;text-align:right;">Kerugian Modal</th>
+                  </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+              </table>
+            </div>
+          </div>
+          <div class="so-footer" style="padding:12px 20px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:right;">
+            <button onclick="window.StockOpname.closeDetail()" style="padding:8px 16px;background:#64748b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">Tutup</button>
+          </div>
+        </div>`;
+    } catch (err) {
+      console.error('[SO] showDetail error:', err);
+      modalEl.innerHTML = `
+        <div class="so-modal-content" style="background:#fff;border-radius:12px;width:90%;max-width:500px;padding:20px;text-align:center;">
+          <div style="color:#ef4444;margin-bottom:10px;font-size:1.1rem;font-weight:600;">Gagal Memuat Detail</div>
+          <div style="color:#64748b;margin-bottom:15px;font-size:0.9rem;">${err.message || 'Terjadi kesalahan sistem.'}</div>
+          <button onclick="window.StockOpname.closeDetail()" style="padding:8px 16px;background:#64748b;color:#fff;border:none;border-radius:6px;cursor:pointer;">Tutup</button>
+        </div>`;
+    }
+  }
+
+  // ==================================================
+  // ==================================================
+  // EXPORT (Defensive & Complete Aliases)
+  // ==================================================
+  const getFn = (fnName, fallbackMsg) => {
+    if (typeof window[fnName] === 'function') return window[fnName];
+    try {
+      const fn = eval(fnName);
+      if (typeof fn === 'function') return fn;
+    } catch (e) {}
+    return function () { console.error(`[SO] ${fallbackMsg || fnName + ' tidak terdefinisi'}`); };
+  };
+
+  const openMainFn  = typeof openSOModal === 'function' ? openSOModal : (typeof openStockOpnameModal === 'function' ? openStockOpnameModal : getFn('openSOModal'));
+  const closeMainFn = typeof closeSOModal === 'function' ? closeSOModal : (typeof closeStockOpnameModal === 'function' ? closeStockOpnameModal : getFn('closeSOModal'));
+  const openHistFn  = typeof openHistoryModal === 'function' ? openHistoryModal : (typeof openHistory === 'function' ? openHistory : getFn('openHistoryModal'));
+  const closeHistFn = typeof closeHistoryModal === 'function' ? closeHistoryModal : (typeof closeHistory === 'function' ? closeHistory : getFn('closeHistoryModal'));
+
+  window.StockOpname = Object.assign(window.StockOpname || {}, {
+    // Main Modal Aliases
+    open:                  openMainFn,
+    close:                 closeMainFn,
+    openSOModal:           openMainFn,
+    openStockOpnameModal:  openMainFn,
+    closeSOModal:          closeMainFn,
+    closeStockOpnameModal: closeMainFn,
+
+    // History Modal Aliases
+    openHistory:           openHistFn,
+    openHistoryModal:      openHistFn,
+    closeHistory:          closeHistFn,
+    closeHistoryModal:     closeHistFn,
+
+    // Detail Modal Aliases
+    showDetail:  typeof showDetail   === 'function' ? showDetail   : getFn('showDetail'),
+    closeDetail: typeof closeDetail  === 'function' ? closeDetail  : getFn('closeDetail'),
+
+    // Action Handlers
+    loadSOProducts:   typeof loadSOProducts   === 'function' ? loadSOProducts   : getFn('loadSOProducts'),
+    submitStockOpname: typeof submitStockOpname === 'function' ? submitStockOpname : getFn('submitStockOpname'),
+    loadRekapBulanan: typeof loadRekapBulanan === 'function' ? loadRekapBulanan : getFn('loadRekapBulanan'),
+  });
 })();
+

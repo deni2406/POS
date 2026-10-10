@@ -12,7 +12,7 @@ const BAUD_RATE = 9600;
 const DATA_BITS = 8;
 const STOP_BITS = 1;
 const PARITY = 'none';
-const LINE_TERMINATOR = '\r\n';
+const LINE_TERMINATOR = '\r';
 
 // Shared serial connection
 let port = null;
@@ -38,12 +38,14 @@ function initSerialPort() {
             dataBits: DATA_BITS,
             stopBits: STOP_BITS,
             parity: PARITY,
+            rtscts: false,
             xon: false,
             xoff: false,
             autoOpen: false
         });
 
         port.on('open', () => {
+            port.set({ dtr: true, rts: true });
             console.log(
                 `[LAMP CONTROLLER] ${SERIAL_PATH} Opened Successfully at ${BAUD_RATE} baud.`
             );
