@@ -1,5 +1,15 @@
 ﻿const sqlite3 = require("sqlite3");
 
+function isMorningHour(hour) {
+  const h = Number(hour);
+  return Number.isFinite(h) && h >= 7 && h < 18;
+}
+
+function isNightHour(hour) {
+  const h = Number(hour);
+  return Number.isFinite(h) && (h >= 18 || h < 7);
+}
+
 function runMonthlyArchiveCheck(dbPath = "./pos.db") {
   const db = new sqlite3.Database(dbPath);
   const now = new Date();
@@ -66,4 +76,4 @@ function initScheduler() {
   setInterval(runMonthlyArchiveCheck, 3600000);
 }
 
-module.exports = { initScheduler, runMonthlyArchiveCheck };
+module.exports = { initScheduler, runMonthlyArchiveCheck, isMorningHour, isNightHour };

@@ -2005,19 +2005,19 @@ const server = https.createServer({
         if (res.headersSent) return;
         if (err) {
           console.error('[SO ERROR] Query kategori gagal:', err.message);
-          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
           return res.end(JSON.stringify({ success: true, data: [] }));
         }
         const categories = (rows || [])
           .map(r => r.kategori)
           .filter(k => k && String(k).trim() !== '');
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ success: true, data: categories }));
       });
     } catch (err) {
       console.error('[SO ERROR] Exception pada /api/stock-opname/kategori:', err);
       if (!res.headersSent) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ success: true, data: [] }));
       }
     }
@@ -2239,6 +2239,17 @@ const server = https.createServer({
     } catch (error) {
       res.writeHead(404);
       return res.end("member-schedule.js tidak ditemukan");
+    }
+  }
+
+  if (req.method === "GET" && req.url === "/member-schedule-browser.js") {
+    try {
+      const js = fs.readFileSync(path.join(__dirname, "member-schedule-browser.js"), "utf8");
+      res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8" });
+      return res.end(js);
+    } catch (error) {
+      res.writeHead(404);
+      return res.end("member-schedule-browser.js tidak ditemukan");
     }
   }
 

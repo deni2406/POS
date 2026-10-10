@@ -1,3 +1,4 @@
+﻿const MEMBER_SCHEDULE = require('./member-schedule');
 function selectLocalMemberPrice(rows, durationInput, startTimeInput) {
   const duration = Number(durationInput);
   if (!Number.isInteger(duration) || duration < 1 || !startTimeInput) return null;
@@ -21,3 +22,4 @@ function selectLocalMemberPrice(rows, durationInput, startTimeInput) {
 }
 
 module.exports = { selectLocalMemberPrice };
+
