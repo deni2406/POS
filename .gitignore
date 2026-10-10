@@ -25,3 +25,7 @@ android/keystore/
 # Local database backups
 *.bak
 pos.db*
+
+pos.db
+*.db
+backup.log
