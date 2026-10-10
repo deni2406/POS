@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin</title>
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <!-- Topbar -->
+  <header class="topbar" role="banner">
+    <div class="topbar__inner">
+      <h1 class="topbar__brand">Panel Admin</h1>
+      <button type="button" id="btnLogout" class="btn-logout">Logout</button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main id="adminMainContent" class="main-content" role="main">
+
+    <!-- Stat Cards -->
+    <section class="stat-grid" aria-label="Ringkasan Metrik">
+      <article class="stat-card stat-card--clickable" id="cardTotalTx">
+        <div class="stat-card__label">Total Transaksi Hari Ini</div>
+        <div class="stat-card__value" id="statTotalTx">0</div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-card__label">Total Penjualan Hari Ini</div>
+        <div class="stat-card__value" id="statTotalPenjualan">Rp 0</div>
+      </article>
+
+      <article class="stat-card stat-card--loss">
+        <div class="stat-card__label">Kerugian SO Bulan Ini</div>
+        <div class="stat-card__value" id="statKerugianSO">Rp 0</div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-card__label">Total Master Barang</div>
+        <div class="stat-card__value" id="statTotalBarang">0</div>
+      </article>
+    </section>
+
+    <!-- System Status & Recent Activity -->
+    <section class="panel-grid" aria-label="Status Sistem & Aktivitas Terkini">
+      <article class="panel-card">
+        <h2 class="panel-card__title">Status Sistem</h2>
+        <div id="systemStatus" class="status-list" role="list">
+          <div class="status-row" role="listitem">
+            <span class="status-dot status-dot--loading" aria-hidden="true"></span>
+            <span class="status-text">Memuat status sistem…</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel-card">
+        <h2 class="panel-card__title">Aktivitas Terkini</h2>
+        <div id="recentActivity" class="activity-list" role="list">
+          <div class="activity-row" role="listitem">
+            <span class="activity-time">—</span>
+            <span class="activity-text">Menunggu data…</span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+  </main>
+
+  <!-- Modal: Detail Transaksi Hari Ini -->
+  <div class="modal-overlay" id="modalDetailTransaksi" role="dialog"
+       aria-modal="true" aria-labelledby="modalTxTitle" hidden>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalTxTitle">Detail Transaksi Hari Ini</h2>
+        <button type="button" id="btnCloseModalTx" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <p class="modal-summary">
+          Total <span id="modalTxCount">0</span> transaksi hari ini ·
+          <span id="modalTxTotal">Rp 0</span>
+        </p>
+
+        <!-- Filter Bar -->
+        <div class="tx-filter-bar">
+          <div class="tx-filter-search">
+            <svg class="tx-filter-search__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+              <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <input type="search" id="inputSearchTx"
+                   placeholder="Cari No. Struk / Kasir..." aria-label="Cari No. Struk / Kasir">
+          </div>
+          <select id="selectFilterMetode" aria-label="Filter metode pembayaran">
+            <option value="">Semua Metode</option>
+            <option value="CASH">CASH</option>
+            <option value="QRIS">QRIS</option>
+            <option value="TRANSFER">TRANSFER</option>
+          </select>
+        </div>
+
+        <!-- Stat Chips Ringkasan Mini -->
+        <div class="tx-summary-bar" aria-label="Ringkasan transaksi hasil filter">
+          <div class="tx-chip">
+            <span class="tx-chip__label">Transaksi Tampil</span>
+            <span class="tx-chip__value" id="countTxFiltered">0</span>
+          </div>
+          <div class="tx-chip tx-chip--omzet">
+            <span class="tx-chip__label">Omzet Tampil</span>
+            <span class="tx-chip__value" id="sumOmzetFiltered">Rp 0</span>
+          </div>
+        </div>
+
+        <div class="modal-table-wrap">
+          <table id="tableTodayTransactions" class="tx-table">
+            <thead>
+              <tr>
+                <th>No. Struk / ID</th>
+                <th>Jam</th>
+                <th>Kasir</th>
+                <th>Metode</th>
+                <th>Total (Rp)</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="txTableBody">
+              <tr class="tx-table__empty">
+                <td colspan="6">Memuat data…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Lapis 2: Detail Item per Transaksi -->
+  <div class="modal-overlay modal-overlay--item" id="modalItemTransaksi" role="dialog"
+       aria-modal="true" aria-labelledby="modalItemTxTitle" hidden>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalItemTxTitle">Detail Belanja</h2>
+        <button type="button" id="btnCloseModalItemTx" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <div class="tx-info-row" id="txInfoRow">
+          <span class="tx-info-item"><span class="tx-info-label">Waktu</span><span id="itemTxWaktu">—</span></span>
+          <span class="tx-info-item"><span class="tx-info-label">Kasir</span><span id="itemTxKasir">—</span></span>
+          <span class="tx-info-item"><span class="tx-info-label">Metode</span><span id="itemTxMetode">—</span></span>
+        </div>
+
+        <div class="modal-table-wrap">
+          <table id="tableTransactionItems" class="tx-table">
+            <thead>
+              <tr>
+                <th class="col-no">No</th>
+                <th>Nama Barang</th>
+                <th class="col-num">Qty</th>
+                <th class="col-num">Harga Satuan</th>
+                <th class="col-num">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody id="txItemsBody">
+              <tr class="tx-table__empty">
+                <td colspan="5">Memuat data…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="tx-summary" id="txSummary">
+          <div class="tx-summary__row">
+            <span>Total Belanja</span>
+            <span id="itemTxTotal">Rp 0</span>
+          </div>
+          <div class="tx-summary__row">
+            <span>Bayar</span>
+            <span id="itemTxBayar">Rp 0</span>
+          </div>
+          <div class="tx-summary__row tx-summary__row--kembalian">
+            <span>Kembalian</span>
+            <span id="itemTxKembalian">Rp 0</span>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/dashboard.js" defer></script>
+</body>
+</html>

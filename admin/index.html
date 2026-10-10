@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PBMS — Admin Login</title>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <main class="login-wrap" role="main">
+    <section class="login-card">
+      <header class="card-header">
+        <h1 class="card-title">PBMS Admin</h1>
+        <p class="card-subtitle">Masuk untuk mengakses panel operasional</p>
+      </header>
+
+      <form id="loginForm" novalidate>
+        <div class="form-field">
+          <label for="adminUsername">Username</label>
+          <input
+            type="text"
+            id="adminUsername"
+            name="username"
+            autocomplete="username"
+            placeholder="Masukkan username"
+            required
+            autofocus
+          >
+        </div>
+
+        <div class="form-field">
+          <label for="adminPin">PIN (6 digit)</label>
+          <input
+            type="password"
+            id="adminPin"
+            name="pin"
+            inputmode="numeric"
+            pattern="\d{6}"
+            minlength="6"
+            maxlength="6"
+            autocomplete="off"
+            placeholder="••••••"
+            required
+          >
+        </div>
+
+        <div id="loginMessage" class="login-message" role="alert" aria-live="polite"></div>
+
+        <button type="submit" id="btnLogin" class="btn-login">Masuk</button>
+      </form>
+    </section>
+
+    <footer class="login-footer">
+      <small>&copy; 2026 Pollar Billiard</small>
+    </footer>
+  </main>
+
+  <script src="js/login.js" defer></script>
+</body>
+</html>

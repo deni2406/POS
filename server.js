@@ -2000,7 +2000,7 @@ const server = https.createServer({
   if (req.method === "GET" && pathname === "/api/stock-opname/kategori") {
     if (!validateLoginSession(req, res)) return;
     try {
-      const query = "SELECT DISTINCT kategori FROM master_barang WHERE kategori IS NOT NULL AND TRIM(kategori) != '' ORDER BY kategori ASC";
+      const query = "SELECT DISTINCT kategori FROM master_barang WHERE kategori IS NOT NULL AND TRIM(kategori) != '' AND UPPER(TRIM(kategori)) != 'MEJA' AND UPPER(TRIM(kategori)) != 'BONUS' ORDER BY kategori ASC";
       db.all(query, [], (err, rows) => {
         if (res.headersSent) return;
         if (err) {
@@ -7541,7 +7541,7 @@ function getKasLaciSaldo(waktu = null) {
       // BLIND SO: kategori 'BONUS' di-exclude; stok ditampilkan 0 agar kasir tidak melihat stok riil sebelum menghitung.
       // Stok riil (stok_aktual) tetap dihitung backend saat submit berdasarkan id_barang.
       const rows = await new Promise((resolve, reject) => db.all(
-        "SELECT id, id_barang, nama, kategori, 0 AS stok, hpp AS harga_modal, 'Pcs' AS satuan FROM master_barang WHERE kategori = ? AND UPPER(COALESCE(kategori, '')) != 'BONUS' ORDER BY nama ASC",
+        "SELECT id, id_barang, nama, kategori, 0 AS stok, hpp AS harga_modal, 'Pcs' AS satuan FROM master_barang WHERE kategori = ? AND UPPER(COALESCE(kategori, '')) != 'BONUS' AND UPPER(COALESCE(kategori, '')) != 'MEJA' ORDER BY nama ASC",
         [kategori], (error, result) => error ? reject(error) : resolve(result || [])
       ));
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -7607,7 +7607,12 @@ function getKasLaciSaldo(waktu = null) {
         return res.end(JSON.stringify({ success: false, code: "SO_STILL_ACTIVE",
           message: "Stock Opname aktif sudah ada; revisi lokal belum tersedia pada fase ini." }));
       }
-      const result = await stockOpnameLocal.createStockOpname(db, data);
+      const petugasLocal = String(
+        data.petugas ||
+        (session && (session.nama_kasir || session.nama || session.kasir_nama || session.username || session.user)) ||
+        "Kasir"
+      ).trim();
+      const result = await stockOpnameLocal.createStockOpname(db, { ...data, petugas: data.petugas || petugasLocal });
       writeLog("INFO", "SO_LOCAL_DRAFT_SUCCESS", `Stock Opname ${result.soId} tersimpan sebagai draft lokal`,
         { category, jumlahItem: result.data.items.length });
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -7696,7 +7701,11 @@ function getKasLaciSaldo(waktu = null) {
       const data = await getJsonBody(req);
       const kategori = String(data.kategori || "SEMUA BARANG").trim();
       const items = Array.isArray(data.items) ? data.items : [];
-      const petugas = String(data.petugas || (session && session.nama ? session.nama : "Kasir")).trim();
+      const petugas = String(
+        data.petugas ||
+        (session && (session.nama_kasir || session.nama || session.kasir_nama || session.username || session.user)) ||
+        "Kasir"
+      ).trim();
 
       if (items.length === 0) {
         if (!res.headersSent) {
@@ -7715,9 +7724,10 @@ function getKasLaciSaldo(waktu = null) {
       // (cocokkan via id ATAU id_barang) sehingga selisih & kerugian HPP tetap akurat.
       const keyOf = (it) => it.id != null ? String(it.id)
         : (it.produk_id != null ? String(it.produk_id)
+        : (it.local_master_barang_id != null ? String(it.local_master_barang_id)
         : (it.idBarang != null ? String(it.idBarang)
         : (it.id_barang != null ? String(it.id_barang)
-        : (it.produkId != null ? String(it.produkId) : null))));
+        : (it.produkId != null ? String(it.produkId) : null)))));
       const itemKeys = [];
       for (const item of items) {
         const k = keyOf(item);
@@ -7727,8 +7737,8 @@ function getKasLaciSaldo(waktu = null) {
       if (itemKeys.length > 0) {
         const placeholders = itemKeys.map(() => "?").join(", ");
         const dbRows = await new Promise((resolve, reject) => db.all(
-          "SELECT id, id_barang, stok_aktual, hpp FROM master_barang WHERE id IN (" + placeholders + ") OR id_barang IN (" + placeholders + ")",
-          itemKeys.concat(itemKeys), (error, result) => error ? reject(error) : resolve(result || [])
+          "SELECT id, id_barang, stok_aktual, hpp FROM master_barang WHERE id IN (" + placeholders + ") OR id_barang IN (" + placeholders + ") OR local_master_barang_id IN (" + placeholders + ")",
+          itemKeys.concat(itemKeys, itemKeys), (error, result) => error ? reject(error) : resolve(result || [])
         ));
         for (const r of dbRows) {
           const info = { id: r.id, idBarang: r.id_barang != null ? String(r.id_barang) : null,
@@ -7736,6 +7746,7 @@ function getKasLaciSaldo(waktu = null) {
             hpp: Number.isFinite(Number(r.hpp)) ? Number(r.hpp) : 0 };
           if (r.id != null) dbInfoMap.set(String(r.id), info);
           if (info.idBarang != null) dbInfoMap.set(info.idBarang, info);
+          if (r.local_master_barang_id != null) dbInfoMap.set(String(r.local_master_barang_id), info);
         }
       }
 
@@ -7834,7 +7845,30 @@ function getKasLaciSaldo(waktu = null) {
       writeLog("INFO", "SO_SUBMIT_SUCCESS", "Stock Opname " + soId + " untuk " + kategori + " berhasil disimpan", { kategori, itemCount: items.length, soId });
       if (!res.headersSent) {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-        return res.end(JSON.stringify({ success: true, message: "Stock Opname berhasil disimpan", data: { so_id: soId, total_kerugian: totalKerugian } }));
+        return res.end(JSON.stringify({
+          success: true,
+          message: "Stock Opname berhasil disimpan",
+          data: {
+            so_id: soId,
+            total_plus: totalPlus,
+            total_minus: totalMinus,
+            total_kerugian: totalKerugian,
+            summary: {
+              totalPlus: totalPlus,
+              totalMinus: totalMinus,
+              totalKerugian: totalKerugian
+            },
+            items: resolvedItems.map(r => ({
+              item: r.item,
+              idMaster: r.idMaster,
+              idBarang: r.idBarang,
+              stokRiil: r.stokRiil,
+              stokFisik: r.stokFisik,
+              selisih: r.selisih,
+              hpp: r.hpp
+            }))
+          }
+        }));
       }
     } catch (err) {
       writeLog("ERROR", "SO_SUBMIT_ERROR", err.message);
@@ -7878,13 +7912,13 @@ function getKasLaciSaldo(waktu = null) {
   }
 
   // GET /api/stock-opname/detail/:id — rincian satu transaksi SO
-  if (req.method === "GET" && /^\/api\/stock-opname\/detail\/\d+$/.test(req.url)) {
+  if (req.method === "GET" && req.url.startsWith("/api/stock-opname/detail/")) {
     const session = validateLoginSession(req, res);
     if (!session) return;
-    const id = parseInt(req.url.split("/").pop(), 10);
-    if (isNaN(id)) {
+    const paramId = req.url.split("/").pop();
+    if (!paramId) {
       res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-      return res.end(JSON.stringify({ success: false, message: "ID tidak valid" }));
+      return res.end(JSON.stringify({ success: false, message: "ID/SO_ID tidak valid" }));
     }
     try {
       const rows = await new Promise((resolve, reject) => db.all(
@@ -7892,18 +7926,27 @@ function getKasLaciSaldo(waktu = null) {
             d.id,
             d.so_id AS stock_opname_id,
             d.local_master_barang_id AS produk_id,
-            COALESCE(d.nama_barang, p.nama) AS nama,
+            COALESCE(NULLIF(d.nama_barang, 'Barang Tanpa Nama'), p.nama, d.nama_barang, 'Barang Tanpa Nama') AS nama,
+            COALESCE(NULLIF(d.id_barang, ''), p.id_barang, '-') AS kode_barang,
             d.jumlah_barang_aktual AS stok_sistem,
             d.jumlah_hasil_so AS stok_fisik,
             d.selisih_barang AS selisih,
             COALESCE(p.hpp, 0) AS harga_modal,
-            d.kerugian_hpp AS total_rugi_modal,
+            COALESCE(
+              d.kerugian_hpp,
+              CASE WHEN COALESCE(d.selisih_barang, 0) < 0
+                   THEN ABS(COALESCE(d.selisih_barang, 0)) * COALESCE(p.hpp, 0)
+                   ELSE 0
+              END,
+              0
+            ) AS total_rugi_modal,
             COALESCE(d.satuan, 'Pcs') AS satuan
           FROM stock_opname_detail d
+          LEFT JOIN stock_opname h ON h.so_id = d.so_id
           LEFT JOIN master_barang p ON d.local_master_barang_id = p.id
-          WHERE d.so_id = ?
+          WHERE h.id = ? OR d.so_id = ?
           ORDER BY d.id ASC`,
-        [id],
+        [paramId, paramId],
         (err, result) => err ? reject(err) : resolve(result || [])
       ));
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -7927,7 +7970,7 @@ function getKasLaciSaldo(waktu = null) {
                 COALESCE(SUM(COALESCE(total_plus,0) - COALESCE(total_minus,0)), 0) as total_selisih_qty,
                 COALESCE(SUM(COALESCE(total_kerugian,0)), 0) as akumulasi_kerugian_modal
          FROM stock_opname
-         WHERE strftime('%Y-%m', COALESCE(tanggal, created_at)) = ?`,
+         WHERE substr(COALESCE(tanggal, created_at), 1, 7) = ?`,
         [periode],
         (err, result) => err ? reject(err) : resolve(result || null)
       ));
@@ -8707,6 +8750,88 @@ function getKasLaciSaldo(waktu = null) {
         "Content-Type": "application/json; charset=utf-8"
       });
 
+      return res.end(
+        JSON.stringify({
+          success: false,
+          message: error.message
+        })
+      );
+    }
+  }
+
+  // 5. POST /api/admin/stock-opname/unlock
+  // Admin Unlock/Re-open Stock Opname per kategori — hapus draf/terkunci
+  if (req.method === "POST" && req.url === "/api/admin/stock-opname/unlock") {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+
+    try {
+      const data = await getJsonBody(req);
+      const category = String(data.kategori || data.category || "").trim().toUpperCase();
+
+      if (!category) {
+        res.writeHead(400, {
+          "Content-Type": "application/json; charset=utf-8"
+        });
+        return res.end(
+          JSON.stringify({
+            success: false,
+            message: "Parameter kategori wajib diisi"
+          })
+        );
+      }
+
+      await new Promise((resolve, reject) => {
+        db.exec("BEGIN TRANSACTION", (err) => {
+          if (err) return reject(err);
+          db.run(
+            "DELETE FROM stock_opname_detail WHERE so_id IN (SELECT so_id FROM stock_opname WHERE kategori = ? AND is_final = 1)",
+            [category],
+            (err2) => {
+              if (err2) {
+                db.exec("ROLLBACK", () => reject(err2));
+                return;
+              }
+              db.run(
+                "DELETE FROM stock_opname WHERE kategori = ? AND (is_final = 1 OR status = 'DRAFT')",
+                [category],
+                (err3) => {
+                  if (err3) {
+                    db.exec("ROLLBACK", () => reject(err3));
+                    return;
+                  }
+                  db.exec("COMMIT", () => resolve());
+                }
+              );
+            }
+          );
+        });
+      });
+
+      writeLog(
+        "INFO",
+        "SO_ADMIN_UNLOCK",
+        `Kategori ${category} berhasil dibuka kembali oleh Admin`
+      );
+
+      res.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8"
+      });
+      return res.end(
+        JSON.stringify({
+          success: true,
+          message: "Kategori berhasil dibuka kembali oleh Admin."
+        })
+      );
+    } catch (error) {
+      writeLog(
+        "ERROR",
+        "SO_ADMIN_UNLOCK_ERROR",
+        error.message
+      );
+      res.writeHead(500, {
+        "Content-Type": "application/json; charset=utf-8"
+      });
       return res.end(
         JSON.stringify({
           success: false,

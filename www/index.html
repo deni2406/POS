@@ -1230,7 +1230,7 @@
 <style>
 <style>
 /* =========================================================
-   ACTIVE + BOOKING â€” compact notification strip
+   ACTIVE + BOOKING — compact notification strip
    ========================================================= */
 
 .popup-table-btn.booking-new.meja-active-card {
@@ -1331,7 +1331,7 @@
 }
 
 /* =========================================================
-   BOOKING STRIP â€” kecil, hanya sebagai notifikasi
+   BOOKING STRIP — kecil, hanya sebagai notifikasi
    ========================================================= */
 
 .popup-table-btn.booking-new.meja-active-card .cart-booking-notice {
@@ -1374,7 +1374,7 @@
     line-height: 1 !important;
 }
 /* =========================================================
-   ACTIVE TABLE â€” customer name & status cleanup
+   ACTIVE TABLE — customer name & status cleanup
    Booking notification tidak disentuh
    ========================================================= */
 
@@ -1754,7 +1754,7 @@ z-index:5!important;
 
     <div id="drawerBalanceContainer" style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); text-align:center; z-index:2;">
       <button id="drawerBalanceButton" type="button" aria-expanded="false" aria-controls="drawerBalanceChoices" onclick="toggleDrawerBalanceChoices(event)">
-        Saldo : <span id="drawerBalanceAmount">â€”</span>
+        Saldo : <span id="drawerBalanceAmount">—</span>
       </button>
       <div id="drawerBalanceChoices" hidden style="position:absolute; transform:translateX(-50%);">
         <button type="button" class="drawer-balance-action drawer-balance-in" onclick="bukaModalKasMasuk(event)"><svg aria-hidden="true" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v13m-5-5 5 5 5-5"/></svg>Uang Masuk</button>
@@ -1875,7 +1875,7 @@ z-index:5!important;
           <button
             id="stockOpnameBtn"
             class="hamburger-item"
-            onclick="if (window.StockOpname && typeof window.StockOpname.open === 'function') { window.StockOpname.open(); } else { console.error('[SO] window.StockOpname.open tidak tersedia â€” module gagal load'); } tutupHamburgerMenu();"
+            onclick="if (window.StockOpname && typeof window.StockOpname.open === 'function') { window.StockOpname.open(); } else { console.error('[SO] window.StockOpname.open tidak tersedia — module gagal load'); } tutupHamburgerMenu();"
           >
             STOCK OPNAME
           </button>
@@ -1883,7 +1883,7 @@ z-index:5!important;
           <button
             id="riwayatSOBtn"
             class="hamburger-item"
-            onclick="if (window.StockOpname && typeof window.StockOpname.openHistory === 'function') { window.StockOpname.openHistory(); } else { console.error('[SO] window.StockOpname.openHistory tidak tersedia â€” module gagal load'); } tutupHamburgerMenu();"
+            onclick="if (window.StockOpname && typeof window.StockOpname.openHistory === 'function') { window.StockOpname.openHistory(); } else { console.error('[SO] window.StockOpname.openHistory tidak tersedia — module gagal load'); } tutupHamburgerMenu();"
           >
             RIWAYAT & REKAP SO
           </button>
@@ -2891,7 +2891,7 @@ z-index:5!important;
     </div>
     <div id="daftarRiwayatShiftContainer" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
       <!-- Tempat rendering daftar shift -->
-      <div style="text-align: center; padding: 20px; color: #666;">Memuat riwayat shiftâ€¦</div>
+      <div style="text-align: center; padding: 20px; color: #666;">Memuat riwayat shift…</div>
     </div>
   </div>
 </div>
@@ -3402,7 +3402,7 @@ async function cekSessionLogin() {
 }
 
 async function jalankanTestLampu() {
-  // UI loading state â€” cegah double-click
+  // UI loading state — cegah double-click
   const confirmBuka = confirm("Pemeriksaan lampu meja akan dijalankan sekarang.\n\nSemua lampu meja non-aktif akan diuji.\nLanjutkan?");
   if (!confirmBuka) return;
 
@@ -3630,9 +3630,9 @@ async function cekSemuaPrinterSaatStartup() {
 
   if (printerOffline.length > 0) {
     alert(
-      "âš ï¸ PRINTER TIDAK TERHUBUNG\n\n" +
+      "⚠️ PRINTER TIDAK TERHUBUNG\n\n" +
       "Printer yang offline:\n" +
-      printerOffline.map((nama) => `â€¢ ${nama}`).join("\n")
+      printerOffline.map((nama) => `• ${nama}`).join("\n")
     );
   }
 
@@ -5375,7 +5375,7 @@ function renderPopupMeja() {
     const bookingBadgeHtml = `<div class="meja-booking-container"${(!isBooking || bookingForTable) ? ' style="visibility: hidden;"' : ''}><span class="ribbon-booking">BOOKING</span></div>`;
 
     if (isMejaKosong && !isBooking) cardClass += " meja-empty-card";
-    const emptyArtHtml = (isMejaKosong && !isBooking) ? `<div class="meja-empty-copy"><div class="meja-empty-title"><span>â€”</span><strong>MEJA ${i < 10 ? "0" + i : i}</strong><span>â€”</span></div><div class="meja-empty-pill">KOSONG</div></div>` : "";
+    const emptyArtHtml = (isMejaKosong && !isBooking) ? `<div class="meja-empty-copy"><div class="meja-empty-title"><span>—</span><strong>MEJA ${i < 10 ? "0" + i : i}</strong><span>—</span></div><div class="meja-empty-pill">KOSONG</div></div>` : "";
 
     // 5 & 6. TIMER & TOMBOL STOP LOSS / PINDAH MEJA
     let timerHtml = "";
@@ -8108,7 +8108,7 @@ async function validasiKodeSetoranKasMasuk() {
   const message = document.getElementById("kasMasukMessage");
   if (!kode || validasiSetoranKasMasukAktif) return;
   validasiSetoranKasMasukAktif = true;
-  message.textContent = "Memeriksa kode setoranâ€¦";
+  message.textContent = "Memeriksa kode setoran…";
   message.style.color = "#64748b";
   try {
     const response = await authenticatedFetch(`/api/kas-laci/setoran?kode=${encodeURIComponent(kode)}`);
@@ -8154,7 +8154,7 @@ async function simpanFormKasMasuk(event) {
   if (!setoranKasMasukValid || !validasiNominalKasMasuk()) return;
   simpanKasMasukAktif = true;
   document.getElementById("kasMasukSubmit").disabled = true;
-  message.textContent = "Menyimpan Uang Masukâ€¦";
+  message.textContent = "Menyimpan Uang Masuk…";
   message.style.color = "#64748b";
   try {
     const response = await authenticatedFetch("/api/kas-laci/uang-masuk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kodeSetoran: setoranKasMasukValid.kodeSetoran, nominal, keterangan: document.getElementById("kasKeterangan").value.trim() }) });
@@ -8308,7 +8308,7 @@ async function simpanFormKasKeluar(event) {
   }
   simpanKasKeluarLaciAktif = true;
   document.getElementById("kasKeluarLaciSubmit").disabled = true;
-  message.textContent = "Menyimpan Uang Keluarâ€¦";
+  message.textContent = "Menyimpan Uang Keluar…";
   message.style.color = "#64748b";
   let committed = false;
   try {
@@ -8371,14 +8371,14 @@ document.addEventListener("keydown", event => {
 
 async function muatSaldoKasLaci() {
   const host = document.getElementById("drawerBalanceAmount");
-  if (!currentKasir || !currentKasir.shiftId) { host.textContent = "â€”"; return; }
+  if (!currentKasir || !currentKasir.shiftId) { host.textContent = "—"; return; }
   try {
     const response = await authenticatedFetch(`/api/kasir/kas-laci-saldo?shiftId=${Number(currentKasir.shiftId)}`);
     const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.message || "Saldo Kas Laci gagal dimuat");
     host.textContent = rupiah(data.saldoKasLaci);
   } catch (error) {
-    host.textContent = "â€”";
+    host.textContent = "—";
     console.error("Saldo Kas Laci gagal dimuat:", error);
   }
 }
@@ -8533,7 +8533,7 @@ async function hitungTutupKasir() {
   document.getElementById("lockedArea").classList.add("hidden");
   const status = document.createElement("div");
   status.className = "close-verification";
-  status.textContent = "PEMERIKSAAN OTOMATIS: menyiapkan pemeriksaan dataâ€¦";
+  status.textContent = "PEMERIKSAAN OTOMATIS: menyiapkan pemeriksaan data…";
   report.appendChild(status);
   report.classList.remove("hidden");
   button.disabled = true;
@@ -8573,12 +8573,12 @@ async function hitungTutupKasir() {
     }
     const startedAt = Date.now();
     const checks = [
-      ["Tahap 1 dari 6 â€” Identitas dan status shift", () => validasiTahapTutupKasir(1, result)],
-      ["Tahap 2 dari 6 â€” Transaksi dan ringkasan penjualan", () => validasiTahapTutupKasir(2, result)],
-      ["Tahap 3 dari 6 â€” Rekonsiliasi kas", () => validasiTahapTutupKasir(3, result)],
-      ["Tahap 4 dari 6 â€” Data token KWh (info)", () => {}],
-      ["Tahap 5 dari 6 â€” Performa meja, sesi, dan produk", () => validasiTahapTutupKasir(5, result)],
-      ["Tahap 6 dari 6 â€” Pemeriksaan silang akhir", () => { validasiTahapTutupKasir(6, result); validasiHasilTutupKasir(result); }]
+      ["Tahap 1 dari 6 — Identitas dan status shift", () => validasiTahapTutupKasir(1, result)],
+      ["Tahap 2 dari 6 — Transaksi dan ringkasan penjualan", () => validasiTahapTutupKasir(2, result)],
+      ["Tahap 3 dari 6 — Rekonsiliasi kas", () => validasiTahapTutupKasir(3, result)],
+      ["Tahap 4 dari 6 — Data token KWh (info)", () => {}],
+      ["Tahap 5 dari 6 — Performa meja, sesi, dan produk", () => validasiTahapTutupKasir(5, result)],
+      ["Tahap 6 dari 6 — Pemeriksaan silang akhir", () => { validasiTahapTutupKasir(6, result); validasiHasilTutupKasir(result); }]
     ];
     for (let i = 0; i < checks.length; i++) {
       checks[i][1]();
@@ -8731,7 +8731,7 @@ function validasiTahapTutupKasir(tahap, data) {
     });
     const tableSales = new Map();
     data.transaksi.forEach(tx => {
-      if (tx.nomor_meja != null) { const no = Number(tx.nomor_meja); if (!tables.has(no)) fail("Detail transaksi merujuk meja di luar 1â€“10."); tableSales.set(no, (tableSales.get(no) || 0) + tx.total); }
+      if (tx.nomor_meja != null) { const no = Number(tx.nomor_meja); if (!tables.has(no)) fail("Detail transaksi merujuk meja di luar 1–10."); tableSales.set(no, (tableSales.get(no) || 0) + tx.total); }
       if (tx.session_id) sessions.add(`${tx.nomor_meja}:${tx.session_id}`);
       tx.detail_produk.forEach(item => {
         if (["meja billiard", "meja pagi", "meja malam"].includes(String(item.nama_barang).trim().toLowerCase())) return;
@@ -8753,7 +8753,7 @@ function validasiTahapTutupKasir(tahap, data) {
 }
 
 function escapeCloseHtml(value) {
-  return String(value == null ? "â€”" : value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char]));
+  return String(value == null ? "—" : value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char]));
 }
 
 function tampilkanTombolCetakLaporan(report) {
@@ -8767,7 +8767,7 @@ function buatTeksLaporanTutupKasir(data) {
   const width = 32;
   const lines = [];
   const addLine = value => {
-    const text = String(value == null ? "â€”" : value).replace(/[\r\n\t]/g, " ").trim();
+    const text = String(value == null ? "—" : value).replace(/[\r\n\t]/g, " ").trim();
     if (!text) { lines.push(""); return; }
     let remaining = text;
     while (remaining.length > width) {
@@ -8800,8 +8800,8 @@ function buatTeksLaporanTutupKasir(data) {
       "Uang Kas Aktual / Laci": ["Kas Aktual / Laci"],
       "Cash Sales Aktual": ["Cash Sales", "Sales Aktual"]
     };
-    const rawLabel = String(label == null ? "â€”" : label).replace(/[\r\n\t]/g, " ").replace(/\s+/g, " ").trim();
-    const valueText = String(value == null ? "â€”" : value).replace(/[\r\n\t]/g, " ").replace(/\s+/g, " ").trim();
+    const rawLabel = String(label == null ? "—" : label).replace(/[\r\n\t]/g, " ").replace(/\s+/g, " ").trim();
+    const valueText = String(value == null ? "—" : value).replace(/[\r\n\t]/g, " ").replace(/\s+/g, " ").trim();
     const availableLabelWidth = Math.max(0, width - valueText.length - 1);
     const candidates = [rawLabel, ...(labelAliases[rawLabel] || [])];
     let labelText = candidates.find(candidate => candidate.length <= availableLabelWidth);
@@ -8822,12 +8822,12 @@ function buatTeksLaporanTutupKasir(data) {
     return amount < 0 ? `-Rp${Math.abs(amount).toLocaleString("id-ID")}` : rupiah(amount);
   };
   const dateTime = value => {
-    if (!value) return "â€”";
+    if (!value) return "—";
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("id-ID");
   };
   const dateOnly = value => {
-    if (!value) return "â€”";
+    if (!value) return "—";
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" });
   };
@@ -8844,7 +8844,7 @@ function buatTeksLaporanTutupKasir(data) {
   addCenter(dateTime(data.generatedAt));
   section("IDENTITAS SHIFT");
   labelValue("Kasir", shift.kasir || currentKasir?.nama || "Kasir");
-  labelValue("Shift ID", shift.shiftId ?? currentKasir?.shiftId ?? "â€”");
+  labelValue("Shift ID", shift.shiftId ?? currentKasir?.shiftId ?? "—");
   labelValue("Status", shift.status || "OPEN");
   labelValue("Tanggal", dateOnly(shift.buka_at));
   labelValue("Kode tutup", data.kode_tutup || "Akan dibuat setelah tutup berhasil");
@@ -8934,8 +8934,8 @@ function renderLaporanTutupKasir(data) {
         ? new Date(shift.tutup_at).getTime()
         : Date.now();
   const elapsed = shift.buka_at ? Math.max(0, shiftEndAt - new Date(shift.buka_at).getTime()) : 0;
-  const duration = shift.buka_at && Number.isFinite(elapsed) ? `${Math.floor(elapsed / 3600000)} jam ${Math.floor((elapsed % 3600000) / 60000)} menit` : "â€”";
-  const dateTime = value => { if (!value) return "â€”"; const date = new Date(value); return Number.isNaN(date.getTime()) ? escapeCloseHtml(value) : date.toLocaleString("id-ID"); };
+  const duration = shift.buka_at && Number.isFinite(elapsed) ? `${Math.floor(elapsed / 3600000)} jam ${Math.floor((elapsed % 3600000) / 60000)} menit` : "—";
+  const dateTime = value => { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.getTime()) ? escapeCloseHtml(value) : date.toLocaleString("id-ID"); };
   const money = value => rupiah(Number(value || 0));
   const salesDifferenceAmount = salesDifference < 0 ? `-Rp${Math.abs(salesDifference).toLocaleString("id-ID")}` : money(salesDifference);
   document.getElementById("closeReport").innerHTML = `
@@ -8945,7 +8945,7 @@ function renderLaporanTutupKasir(data) {
       <section class="close-section"><h3>Selisih Penjualan</h3><div class="close-difference ${salesDifferenceClass}">${salesDifference < 0 ? "MINUS" : salesDifference > 0 ? "PLUS" : "SESUAI"} ${salesDifferenceAmount}</div></section>
       <section class="close-section"><h3>Performa 10 Meja</h3><div class="close-table-wrap"><table class="close-table"><thead><tr><th>Meja</th><th class="num">Jumlah sesi</th><th class="num">Durasi (jam)</th><th class="num">Omzet</th></tr></thead><tbody>${tables.map(row => `<tr><td>Meja ${escapeCloseHtml(row.nomor_meja)}</td><td class="num">${Number(row.jumlah_sesi || 0)}</td><td class="num">${Number(row.total_durasi_jam || 0)}</td><td class="num">${money(row.omzet)}</td></tr>`).join("")}</tbody></table></div></section>
       <section class="close-section"><h3>Rekap Produk</h3><div class="close-table-wrap"><table class="close-table"><thead><tr><th>Produk</th><th class="num">Qty</th><th class="num">Harga jual</th><th class="num">Subtotal</th></tr></thead><tbody>${products.length ? products.map(item => `<tr><td>${escapeCloseHtml(item.nama_barang)}</td><td class="num">${Number(item.qty || 0)}</td><td class="num">${item.harga_jual == null ? "Bervariasi" : money(item.harga_jual)}</td><td class="num">${money(item.subtotal)}</td></tr>`).join("") : `<tr><td colspan="4">Belum ada penjualan produk.</td></tr>`}</tbody></table></div></section>
-      <section class="close-section"><h3>Detail Transaksi (${txs.length})</h3><div class="close-table-wrap"><table class="close-table"><thead><tr><th>No. transaksi / detail</th><th>Waktu</th><th>Meja</th><th>Session</th><th class="num">Total</th><th>Metode</th></tr></thead><tbody>${txs.length ? txs.map(tx => { const isTarikTunai = tx.tipe_transaksi === "TARIK_TUNAI"; return `<tr><td><strong>${escapeCloseHtml(tx.nomor_transaksi)}</strong>${isTarikTunai ? `<div class="close-tx-detail"><strong>TARIK TUNAI</strong> &bull; Setoran ${escapeCloseHtml(tx.kode_setoran)}</div>` : `<div class="close-tx-detail">${(tx.detail_produk || []).map(item => `${escapeCloseHtml(item.nama_barang)} Ã— ${Number(item.qty || 0)} (${money(item.subtotal)})`).join("<br>") || "â€”"}</div>`}</td><td>${dateTime(tx.waktu || [tx.tanggal, tx.jam].filter(Boolean).join(" "))}</td><td>${tx.nomor_meja ? `Meja ${escapeCloseHtml(tx.nomor_meja)}` : "â€”"}</td><td>${escapeCloseHtml(tx.session_id)}</td><td class="num">${money(isTarikTunai ? tx.nominal_tarik_tunai : tx.total)}</td><td>${isTarikTunai ? "TARIK TUNAI &bull; QRIS" : escapeCloseHtml(tx.metode_pembayaran)}</td></tr>`; }).join("") : `<tr><td colspan="6">Belum ada transaksi.</td></tr>`}</tbody></table></div></section>
+      <section class="close-section"><h3>Detail Transaksi (${txs.length})</h3><div class="close-table-wrap"><table class="close-table"><thead><tr><th>No. transaksi / detail</th><th>Waktu</th><th>Meja</th><th>Session</th><th class="num">Total</th><th>Metode</th></tr></thead><tbody>${txs.length ? txs.map(tx => { const isTarikTunai = tx.tipe_transaksi === "TARIK_TUNAI"; return `<tr><td><strong>${escapeCloseHtml(tx.nomor_transaksi)}</strong>${isTarikTunai ? `<div class="close-tx-detail"><strong>TARIK TUNAI</strong> &bull; Setoran ${escapeCloseHtml(tx.kode_setoran)}</div>` : `<div class="close-tx-detail">${(tx.detail_produk || []).map(item => `${escapeCloseHtml(item.nama_barang)} × ${Number(item.qty || 0)} (${money(item.subtotal)})`).join("<br>") || "—"}</div>`}</td><td>${dateTime(tx.waktu || [tx.tanggal, tx.jam].filter(Boolean).join(" "))}</td><td>${tx.nomor_meja ? `Meja ${escapeCloseHtml(tx.nomor_meja)}` : "—"}</td><td>${escapeCloseHtml(tx.session_id)}</td><td class="num">${money(isTarikTunai ? tx.nominal_tarik_tunai : tx.total)}</td><td>${isTarikTunai ? "TARIK TUNAI &bull; QRIS" : escapeCloseHtml(tx.metode_pembayaran)}</td></tr>`; }).join("") : `<tr><td colspan="6">Belum ada transaksi.</td></tr>`}</tbody></table></div></section>
       <section class="close-section"><h3>Rekap Saldo Kas</h3><div class="close-kpis"><div class="close-kpi"><span>Saldo Kas Awal (Kas Laci)</span><strong>${money(data.kasLaci?.saldoAwal ?? shift.saldo_awal)}</strong></div><div class="close-kpi"><span>Kas Masuk (info)</span><strong>${money(data.kas?.masuk)}</strong></div><div class="close-kpi"><span>Kas Keluar (info)</span><strong>${money(data.kas?.keluar)}</strong></div><div class="close-kpi"><span>Saldo Kas Akhir (Kas Laci)</span><strong>${money(data.kasLaci?.saldoAkhir ?? rec.uangSeharusnya)}</strong></div></div></section>
       <section class="close-section close-actions-section"><div class="close-actions"><button class="confirm-close-btn close-confirm-btn" id="confirmCloseBtn" onclick="konfirmasiTutupKasir()">KONFIRMASI TUTUP KASIR</button></div></section>
     </div>
@@ -9934,7 +9934,7 @@ margin:3px 0 0!important;
 
 <style>
 /* =========================================================
-   MEJA KOSONG â€” modern / clean
+   MEJA KOSONG — modern / clean
    ========================================================= */
 
 .popup-table-btn:not(.meja-active-card):not(.booking-new) {
@@ -9969,7 +9969,7 @@ margin:3px 0 0!important;
 </style>
 
 <style>
-/* MEJA KOSONG â€” status card modern */
+/* MEJA KOSONG — status card modern */
 .popup-table-btn:not(.meja-active-card):not(.booking-new){
 position:relative!important;
 justify-content:flex-start!important;
@@ -10025,7 +10025,7 @@ line-height:1!important;
 }
 
 .popup-table-btn:not(.meja-active-card):not(.booking-new)::after{
-content:'Siap digunakan  â€¢  Klik untuk mulai'!important;
+content:'Siap digunakan  •  Klik untuk mulai'!important;
 position:absolute!important;
 left:0!important;
 right:0!important;
@@ -10041,7 +10041,7 @@ letter-spacing:.1px!important;
 
 <style>
 /* =========================================================
-   MEJA KOSONG â€” 2D BILLIARD BALL
+   MEJA KOSONG — 2D BILLIARD BALL
    Menggantikan tanda centang
    ========================================================= */
 
@@ -10115,7 +10115,7 @@ animation:billiardBallSpin 3s linear infinite!important;
 
 <style>
 /* =========================================================
-   MEJA KOSONG â€” 2D BILLIARD RACK
+   MEJA KOSONG — 2D BILLIARD RACK
    Bola sedang dirapikan di dalam rack segitiga
    ========================================================= */
 
@@ -10147,7 +10147,7 @@ animation:billiardRackArrange 3s ease-in-out infinite!important;
 
 /* Teks tetap dipertahankan di bawah */
 .popup-table-btn:not(.meja-active-card):not(.booking-new)::after{
-content:'Siap digunakan  â€¢  Klik untuk mulai'!important;
+content:'Siap digunakan  •  Klik untuk mulai'!important;
 position:absolute!important;
 left:0!important;
 right:0!important;
@@ -10160,7 +10160,7 @@ letter-spacing:.1px!important;
 z-index:2!important;
 }
 
-/* Animasi sangat halus â€” seperti rack sedang dirapikan */
+/* Animasi sangat halus — seperti rack sedang dirapikan */
 @keyframes billiardRackArrange{
 0%,100%{
     transform:translateX(-50%) translateY(0);
@@ -10172,7 +10172,7 @@ z-index:2!important;
 </style>
 
 <style>
-/* MEJA KOSONG â€” rack billiard 2D */
+/* MEJA KOSONG — rack billiard 2D */
 .popup-table-btn:not(.meja-active-card):not(.booking-new)::before{
 content:''!important;
 position:absolute!important;
@@ -10211,7 +10211,7 @@ transform:translateX(-50%) translateY(-2px);
 </style>
 
 <style>
-/* MEJA KOSONG â€” BILLIARD EMBLEM */
+/* MEJA KOSONG — BILLIARD EMBLEM */
 .popup-table-btn:not(.meja-active-card):not(.booking-new)::before{
 content:'MEJA 06'!important;
 position:absolute!important;
@@ -10282,7 +10282,7 @@ z-index:5!important;
 </style>
 
 <style>
-/* MEJA KOSONG â€” billiard emblem clean */
+/* MEJA KOSONG — billiard emblem clean */
 .popup-table-btn:not(.meja-active-card):not(.booking-new)::before{
 content:''!important;
 top:12px!important;
@@ -10338,7 +10338,7 @@ display:none!important;
 
 <style>
 /* =========================================================
-   MEJA KOSONG â€” BILLIARD EMBLEM
+   MEJA KOSONG — BILLIARD EMBLEM
    Black & white / compact / modern
    ========================================================= */
 
@@ -10430,7 +10430,7 @@ display:none!important;
 </style>
 
 <style>
-/* BILLIARD EMBLEM â€” refinement */
+/* BILLIARD EMBLEM — refinement */
 .popup-table-btn:not(.meja-active-card):not(.booking-new)::before{
 top:8px!important;
 width:105px!important;
@@ -10477,7 +10477,7 @@ top:78px!important;
 
 <style>
 /* =========================================================
-   FINAL REFINEMENT â€” EMPTY TABLE BILLIARD EMBLEM
+   FINAL REFINEMENT — EMPTY TABLE BILLIARD EMBLEM
    ========================================================= */
 
 .popup-table-btn:not(.meja-active-card):not(.booking-new)::before{
@@ -10542,7 +10542,7 @@ top:78px!important;
 </style>
 
 <style>
-/* EMPTY TABLE â€” final emblem cleanup */
+/* EMPTY TABLE — final emblem cleanup */
 
 .popup-table-btn:not(.meja-active-card):not(.booking-new) .popup-table-num{
     position:absolute!important;
@@ -10604,7 +10604,7 @@ top:78px!important;
 <style>
 /* =========================================================
    FINAL EMPTY TABLE DESIGN
-   Modern 2D billiard emblem â€” CSS only
+   Modern 2D billiard emblem — CSS only
    ========================================================= */
 
 .popup-table-btn:not(.meja-active-card):not(.booking-new) {
@@ -10663,7 +10663,7 @@ top:78px!important;
         );
 }
 
-/* MEJA XX â€” judul utama */
+/* MEJA XX — judul utama */
 .popup-table-btn:not(.meja-active-card):not(.booking-new) .popup-table-num {
     position: absolute !important;
     top: 72px !important;

@@ -111,11 +111,23 @@ async function createStockOpnameUnlocked(db, input, now = new Date()) {
     jumlahBarangAktual: Number(product.stok_aktual || 0),
     jumlahHasilSO: product.qty,
     selisihBarang: product.qty - Number(product.stok_aktual || 0),
-    // Historical monetary formulas are unavailable in the local source.
     kerugianHPP: 0,
     kerugianHargaJual: 0,
     nominalPlus: 0
   }));
+
+  let totalPlus = 0;
+  let totalMinus = 0;
+  let totalKerugian = 0;
+  for (let i = 0; i < resultItems.length; i++) {
+    const selisih = resultItems[i].selisihBarang;
+    const hpp = Number.isFinite(Number(products[i].hpp)) ? Number(products[i].hpp) : 0;
+    if (selisih > 0) totalPlus += selisih;
+    else if (selisih < 0) { totalMinus += Math.abs(selisih); totalKerugian += Math.abs(selisih) * hpp; }
+  }
+  totalPlus = Number.isFinite(totalPlus) ? Math.max(0, totalPlus) : 0;
+  totalMinus = Number.isFinite(totalMinus) ? Math.max(0, totalMinus) : 0;
+  totalKerugian = Number.isFinite(totalKerugian) ? Math.max(0, totalKerugian) : 0;
 
   // BEGIN IMMEDIATE serializes competing writers before checking active state.
   await run(db, "BEGIN IMMEDIATE TRANSACTION");
@@ -131,8 +143,8 @@ async function createStockOpnameUnlocked(db, input, now = new Date()) {
     await run(db, `INSERT INTO stock_opname
       (so_id, source, kategori, petugas, tanggal, revisi_ke, is_final, status,
        total_plus, total_minus, total_kerugian, created_at, updated_at)
-      VALUES (?, 'LOCAL', ?, ?, ?, 0, 0, 'DRAFT', 0, 0, 0, ?, ?)`,
-    [soId, category, petugas, tanggal, timestamp, timestamp]);
+      VALUES (?, 'LOCAL', ?, ?, ?, 0, 0, 'DRAFT', ?, ?, ?, ?, ?)`,
+    [soId, category, petugas, tanggal, totalPlus, totalMinus, totalKerugian, timestamp, timestamp]);
 
     for (const item of resultItems) {
       await run(db, `INSERT INTO stock_opname_detail
@@ -160,11 +172,11 @@ async function createStockOpnameUnlocked(db, input, now = new Date()) {
       category,
       status: "DRAFT",
       items: resultItems,
-      // Monetary aggregation is blocked until the historical formula is evidenced.
-      summary: { totalPlus: 0, totalMinus: 0, totalKerugian: 0 }
+      summary: { totalPlus, totalMinus, totalKerugian }
     }
   };
 }
+
 
 function createStockOpname(db, input, now = new Date()) {
   const previous = createQueues.get(db) || Promise.resolve();

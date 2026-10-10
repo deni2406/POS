@@ -116,9 +116,10 @@
   }
 
   function getPetugasName() {
-    return localStorage.getItem('kasirNama') || 
-           sessionStorage.getItem('kasirNama') || 
-           localStorage.getItem('username') || 
+    return sessionStorage.getItem('pbms_nama') ||
+           localStorage.getItem('kasirNama') ||
+           sessionStorage.getItem('kasirNama') ||
+           localStorage.getItem('username') ||
            'Petugas Kasir';
   }
 
@@ -262,8 +263,9 @@
     const modalEl = getOrCreateModalElement();
 
     // 1. Opsi Kategori
-    let categoryOptionsHtml = `<option value="">-- PILIH KATEGORI --</option>`;
+    let categoryOptionsHtml = `<option value="" selected disabled hidden>-- PILIH KATEGORI --</option>`;
     state.categories.forEach(cat => {
+      if (cat && ['MEJA', 'BONUS'].includes(cat.trim().toUpperCase())) return;
       const selected = cat === state.kategoriAktif ? 'selected' : '';
       categoryOptionsHtml += `<option value="${escapeHtml(cat)}" ${selected}>${escapeHtml(cat)}</option>`;
     });
@@ -528,7 +530,6 @@
           
           ${itemsListHtml}
 
-          <!-- Ringkasan draft lokal; nominal diblokir sampai formula lama terverifikasi. -->
           <div class="so-summary-box">
             <div class="so-summary-item">
               <span class="so-summary-title">TOTAL PLUS</span>
@@ -540,11 +541,8 @@
             </div>
             <div class="so-summary-item">
               <span class="so-summary-title">TOTAL KERUGIAN</span>
-              <span class="so-summary-val loss">Rp ${formatRupiah(summary.totalKerugian || 0)}</span>
+              <span class="so-summary-val loss">${formatRupiah(summary.totalKerugian || 0)}</span>
             </div>
-          </div>
-          <div style="padding: 10px 14px; color: #92400e; background: #fffbeb; border-radius: 8px;">
-            Draft tersimpan di SQLite. Rumus nominal plus/minus dan finalisasi masih diblokir sampai aturan lama tervalidasi.
           </div>
         </div>
 
@@ -753,45 +751,8 @@
               <td class="so-selisih-cell ${selisihClass(r.total_selisih_qty || 0)}">${r.total_selisih_qty ?? 0}</td>
               <td class="so-loss-cell">${formatRupiah(r.total_kerugian_modal)}</td>
               <td>
-                <button class="so-detail-btn" onclick="window.StockOpname.showDetail(${r.id})">Detail</button>
+                <button class="so-detail-btn" onclick="window.StockOpname.showDetail('${String(r.so_id || '').replace(/'/g, "\\'")}')">Detail</button>
               </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>`;
-  }
-
-  // ==================================================
-  // RENDER: TABEL DETAIL PRODUK
-  // ==================================================
-  function renderDetailTable(container, data) {
-    if (!data || data.length === 0) {
-      container.innerHTML = '<div class="so-empty-state">Tidak ada rincian produk.</div>';
-      return;
-    }
-    container.innerHTML = `
-      <table class="so-detail-table">
-        <thead>
-          <tr>
-            <th>Nama Barang</th>
-            <th>Stok Sistem</th>
-            <th>Stok Fisik</th>
-            <th>Selisih</th>
-            <th>Harga Modal</th>
-            <th>Total Rugi Modal</th>
-            <th>Keterangan</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.map(d => `
-            <tr>
-              <td>${d.nama_produk || '-'}</td>
-              <td>${d.stok_sistem ?? 0}</td>
-              <td>${d.stok_fisik ?? 0}</td>
-              <td class="so-selisih-val ${selisihClass(d.selisih || 0)}">${d.selisih ?? 0}</td>
-              <td>${formatRupiah(d.harga_modal)}</td>
-              <td class="so-loss-val">${formatRupiah(d.total_rugi_modal)}</td>
-              <td>${d.keterangan || '-'}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -924,31 +885,38 @@
 
       let rowsHtml;
       if (!items.length) {
-        rowsHtml = '<tr><td colspan="6" style="text-align:center;padding:15px;color:#888;">Tidak ada rincian barang.</td></tr>';
+        rowsHtml = '<tr><td colspan="7" style="text-align:center;padding:15px;color:#888;">Tidak ada rincian barang.</td></tr>';
       } else {
         rowsHtml = items.map((item, idx) => {
           const nama = item.nama || item.nama_barang || '-';
+          const kode = item.kode_barang || '-';
           const stokSistem = item.stok_sistem ?? 0;
           const stokFisik = item.stok_fisik ?? 0;
           const selisih = item.selisih ?? (stokFisik - stokSistem);
           const totalRugi = item.total_rugi_modal ?? item.kerugian_hpp ?? 0;
           const satuan = item.satuan || 'Pcs';
 
-          const selisihStyle = selisih < 0
-            ? 'color:#ef4444;font-weight:bold;'
-            : selisih > 0
-              ? 'color:#10b981;font-weight:bold;'
-              : 'color:#6b7280;';
+          let colorStyle = 'color: #ffffff;';
+          let badgeClass = 'so-badge-zero';
+
+          if (selisih < 0) {
+            colorStyle = 'color: #ef4444; font-weight: bold;';
+            badgeClass = 'so-badge-loss';
+          } else if (selisih > 0) {
+            colorStyle = 'color: #22c55e; font-weight: bold;';
+            badgeClass = 'so-badge-gain';
+          }
           const selisihText = selisih > 0 ? `+${selisih}` : `${selisih}`;
 
           return `
             <tr style="border-bottom:1px solid #f1f5f9;">
               <td style="padding:10px;text-align:center;">${idx + 1}</td>
+              <td style="padding:10px;color:#64748b;font-family:monospace;font-size:0.8rem;">${kode}</td>
               <td style="padding:10px;font-weight:500;color:#1e293b;">${nama}</td>
               <td style="padding:10px;text-align:right;color:#475569;">${stokSistem} ${satuan}</td>
               <td style="padding:10px;text-align:right;font-weight:600;color:#0f172a;">${stokFisik} ${satuan}</td>
-              <td style="padding:10px;text-align:right;${selisihStyle}">${selisihText}</td>
-              <td style="padding:10px;text-align:right;color:#dc2626;font-weight:600;">Rp ${Number(totalRugi).toLocaleString('id-ID')}</td>
+              <td style="padding:10px;text-align:right;${colorStyle}">${selisihText}</td>
+              <td style="padding:10px;text-align:right;${colorStyle}">Rp ${Number(totalRugi).toLocaleString('id-ID')}</td>
             </tr>`;
         }).join('');
       }
@@ -965,6 +933,7 @@
                 <thead>
                   <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;color:#475569;">
                     <th style="padding:10px;text-align:center;width:40px;">#</th>
+                    <th style="padding:10px;">Kolom Barang</th>
                     <th style="padding:10px;">Nama Barang</th>
                     <th style="padding:10px;text-align:right;">Sistem</th>
                     <th style="padding:10px;text-align:right;">Fisik</th>
@@ -1032,6 +1001,12 @@
     loadSOProducts:   typeof loadSOProducts   === 'function' ? loadSOProducts   : getFn('loadSOProducts'),
     submitStockOpname: typeof submitStockOpname === 'function' ? submitStockOpname : getFn('submitStockOpname'),
     loadRekapBulanan: typeof loadRekapBulanan === 'function' ? loadRekapBulanan : getFn('loadRekapBulanan'),
+
+    // UI Event Handlers (called by inline onchange/oninput/onclick attributes)
+    onCategoryChange: typeof handleCategoryChange === 'function' ? handleCategoryChange : getFn('handleCategoryChange'),
+    onQtyInput:       typeof handleQtyInput        === 'function' ? handleQtyInput        : getFn('handleQtyInput'),
+    submitSO:         typeof submitSO              === 'function' ? submitSO              : getFn('submitSO'),
+    handleRevisi:     typeof handleRevisi          === 'function' ? handleRevisi          : getFn('handleRevisi'),
   });
 })();
 
