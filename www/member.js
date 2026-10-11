@@ -12,12 +12,9 @@
   let formModalElement = null;
   let kategoriListCache = [];
 
+  // PLATINUM sengaja TIDAK termasuk — kategori eksklusif yang hanya
+  // bisa diberikan internal (bukan opsi bebas di form pendaftaran).
   const MEMBER_KATEGORI_DEFAULT = [
-    {
-      id: "PLATINUM",
-      nama: "PLATINUM",
-      aktif: 1
-    },
     {
       id: "UMUM",
       nama: "UMUM",
@@ -29,6 +26,15 @@
       aktif: 1
     }
   ];
+
+  // PLATINUM disaring dari hasil fetch API kategori (Fix #26):
+  // kategori eksklusif tetap ada di DB (member_kategori) untuk
+  // kebutuhan internal, tapi tidak boleh tampil di dropdown
+  // pendaftaran member baru.
+  const filterKategoriPendaftaran = (list) =>
+    (Array.isArray(list) ? list : []).filter(k =>
+      String(k.nama || k.id || "").toUpperCase() !== "PLATINUM"
+    );
 
   function getSessionId() {
     return sessionStorage.getItem("pbms_session_id") || 
@@ -104,7 +110,7 @@
 
       if (!sessionId || !deviceId) {
         console.error("[MEMBER] Session atau DeviceId kosong saat memuat kategori");
-        kategoriListCache = [...MEMBER_KATEGORI_DEFAULT];
+        kategoriListCache = filterKategoriPendaftaran(MEMBER_KATEGORI_DEFAULT);
         return;
       }
 
@@ -124,13 +130,17 @@
       console.log("[MEMBER] jumlah kategori:", Array.isArray(result?.data) ? result.data.length : 0);
 
       if (result.success === true && Array.isArray(result.data) && result.data.length > 0) {
-        kategoriListCache = result.data;
+        // Filter PLATINUM dari hasil API (Fix #26) — kategoriListCache
+        // hanya dipakai dropdown pendaftaran, bukan untuk kategori
+        // member yang sudah terdaftar (daftar detail tetap dari
+        // memberListCache / fetch terpisah).
+        kategoriListCache = filterKategoriPendaftaran(result.data);
       } else {
-        kategoriListCache = [...MEMBER_KATEGORI_DEFAULT];
+        kategoriListCache = filterKategoriPendaftaran(MEMBER_KATEGORI_DEFAULT);
       }
     } catch (error) {
       console.error("Gagal memuat kategori member:", error);
-      kategoriListCache = [...MEMBER_KATEGORI_DEFAULT];
+      kategoriListCache = filterKategoriPendaftaran(MEMBER_KATEGORI_DEFAULT);
     }
   }
 
@@ -267,17 +277,19 @@
   window.bukaFormTambahMember = async function() {
     initFormModal();
 
-    kategoriListCache = [...MEMBER_KATEGORI_DEFAULT];
+    kategoriListCache = filterKategoriPendaftaran(MEMBER_KATEGORI_DEFAULT);
     const katSelect = document.getElementById('memberKategoriSelect');
     if (katSelect) {
-      katSelect.innerHTML = kategoriListCache.map(k => `
+      // Filter PLATINUM sebelum .map() (Fix #26) — kategoriListCache
+      // sudah difilter, tetap di-filter lagi sebagai double-guard.
+      katSelect.innerHTML = filterKategoriPendaftaran(kategoriListCache).map(k => `
         <option value="${k.id}">${escapeHtml(k.nama)}</option>
       `).join("");
     }
 
     await loadKategori();
     if (katSelect && kategoriListCache.length > 0) {
-      katSelect.innerHTML = kategoriListCache.map(k => `
+      katSelect.innerHTML = filterKategoriPendaftaran(kategoriListCache).map(k => `
         <option value="${k.id}">${escapeHtml(k.nama)}</option>
       `).join("");
     }

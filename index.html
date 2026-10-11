@@ -1814,6 +1814,19 @@ z-index:5!important;
         </span>
       </button>
 
+      <!-- TOMBOL PO PENDING (PENERIMAAN BARANG) -->
+      <button id="poHeaderBtn" class="header-menu-item" type="button" title="Penerimaan Barang / PO Pending" onclick="bukaModalPenerimaanPo()">
+        <span class="parent-meja">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; flex-shrink: 0;" aria-hidden="true">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span>BARANG DATANG</span>
+          <span id="poPendingBadge" class="badge-meja" style="display: none; background-color: #ef4444;"></span>
+        </span>
+      </button>
+
       <!-- HAMBURGER MENU -->
       <div class="hamburger-menu-container">
         <button
@@ -6192,6 +6205,9 @@ function updateMejaHeaderUI() {
       updateWaitingListBadge();
     }
   }
+  if (typeof updatePoHeaderBadge === "function") {
+    updatePoHeaderBadge();
+  }
 }
 
 async function updateWaitingListBadge() {
@@ -6214,6 +6230,46 @@ async function updateWaitingListBadge() {
   } catch (error) {
     console.error("Gagal update badge waiting list:", error);
   }
+}
+
+// ==================================================
+// LOGIKA BADGE PO PENDING (PENERIMAAN BARANG)
+// ==================================================
+
+async function updatePoHeaderBadge() {
+  try {
+    if (!sessionStorage.getItem("pbms_session_id")) return;
+    const resp = await fetch(apiUrl("/api/pembelian/po?status=PENDING"), {
+      headers: {
+        "X-Session-Id": sessionStorage.getItem("pbms_session_id"),
+        "X-Device-Id": getOrCreateDeviceId ? getOrCreateDeviceId() : ""
+      }
+    });
+    if (!resp.ok) return;
+    const result = await resp.json();
+    if (!result.success) return;
+    const count = Array.isArray(result.po) ? result.po.length : 0;
+    const badge = document.getElementById("poPendingBadge");
+    if (!badge) return;
+    if (count > 0) {
+      badge.textContent = count;
+      badge.style.display = "inline-flex";
+    } else {
+      badge.textContent = "";
+      badge.style.display = "none";
+    }
+  } catch (error) {
+    console.error("Gagal update badge PO pending:", error);
+  }
+}
+
+function bukaModalPenerimaanPo() {
+  const count = Number(document.getElementById("poPendingBadge")?.textContent || 0);
+  if (count === 0) {
+    alert("Tidak ada PO pending saat ini. Barang akan muncul di sini setelah admin membuat pesanan pembelian.");
+    return;
+  }
+  alert(`Terdapat ${count} PO PENDING menunggu penerimaan barang.\n\nSilakan buka dashboard admin (port 3200) untuk memproses penerimaan.`);
 }
 
 

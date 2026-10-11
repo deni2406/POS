@@ -30,35 +30,238 @@
         <div class="stat-card__value" id="statTotalPenjualan">Rp 0</div>
       </article>
 
-      <article class="stat-card stat-card--loss">
+      <article class="stat-card stat-card--modal">
+        <div class="stat-card__label">Total Modal (HPP) Hari Ini</div>
+        <div class="stat-card__value" id="statTotalModal">Rp 0</div>
+      </article>
+
+      <article class="stat-card stat-card--laba">
+        <div class="stat-card__label">Laba Kotor Hari Ini</div>
+        <div class="stat-card__value" id="statLabaKotor">Rp 0</div>
+      </article>
+
+      <article class="stat-card stat-card--loss stat-card--clickable stat-card--clickable--loss" id="cardKerugianSO">
         <div class="stat-card__label">Kerugian SO Bulan Ini</div>
         <div class="stat-card__value" id="statKerugianSO">Rp 0</div>
       </article>
 
-      <article class="stat-card">
+      <article class="stat-card stat-card--surplus stat-card--clickable" id="cardKelebihanSO">
+        <div class="stat-card__label">Kelebihan SO Bulan Ini</div>
+        <div class="stat-card__value" id="statKelebihanSO">Rp 0</div>
+      </article>
+
+      <article class="stat-card stat-card--clickable" id="cardTotalMasterBarang">
         <div class="stat-card__label">Total Master Barang</div>
         <div class="stat-card__value" id="statTotalBarang">0</div>
+      </article>
+
+      <!-- Kartu Kategori Kasir — buka modal daftar barang kategori Kasir -->
+      <article class="stat-card stat-card--clickable stat-card--kasir" id="cardKategoriKasir">
+        <div class="stat-card__label">Barang Kategori Kasir</div>
+        <div class="stat-card__value" id="statKasirJenis">0</div>
+        <div class="stat-card__kasir-metrics" aria-hidden="true">
+          <div>
+            <span class="stat-card__kasir-lbl">Stok</span>
+            <span class="stat-card__kasir-val" id="statKasirStok">0</span>
+          </div>
+          <div>
+            <span class="stat-card__kasir-lbl">Modal</span>
+            <span class="stat-card__kasir-val" id="statKasirModal">Rp 0</span>
+          </div>
+          <div>
+            <span class="stat-card__kasir-lbl">Nilai Jual</span>
+            <span class="stat-card__kasir-val stat-card__kasir-val--hj" id="statKasirJual">Rp 0</span>
+          </div>
+        </div>
+        <div class="stat-card__sublabel">Klik untuk lihat daftar barang Kasir</div>
+      </article>
+
+      <article class="stat-card stat-card--clickable stat-card--pembelian" id="cardPembelian">
+        <div class="stat-card__label">Restok Barang</div>
+        <div class="stat-card__value stat-card__value--action">
+          + Cart
+        </div>
+      </article>
+
+      <article class="stat-card stat-card--kas stat-card--clickable" id="cardSaldoKas">
+        <div class="stat-card__label">Saldo Kas Laci</div>
+        <div class="stat-card__value" id="statSaldoKas">Rp 0</div>
+      </article>
+
+      <article class="stat-card stat-card--setoran stat-card--clickable" id="cardSetoranKasir">
+        <div class="stat-card__label">
+          Total Setoran Kasir
+          <span class="stat-card__sublabel">(Tgl 1 - Hari Ini)</span>
+        </div>
+        <div class="stat-card__value" id="statSetoranKasir">Rp 0</div>
+      </article>
+
+      <article class="stat-card stat-card--member stat-card--clickable" id="cardListMember">
+        <div class="stat-card__label">Daftar Member</div>
+        <!-- Default "--" (bukan "0"): menampilkan angka cache localStorage
+             secara INSTANT saat init; placeholder -- mencegah berkedip
+             angka 0 bila cache belum ada (Fix #29). -->
+        <div class="stat-card__value" id="statListMember">--</div>
+        <div class="stat-card__sublabel">Klik untuk lihat rincian kunjungan</div>
+      </article>
+
+      <article class="stat-card stat-card--meja stat-card--clickable" id="cardMejaAktif">
+        <div class="stat-card__label">Meja Aktif</div>
+        <div class="stat-card__value" id="statMejaAktif">0</div>
+      </article>
+
+      <article class="stat-card stat-card--qris stat-card--clickable" id="cardQrisHistory">
+        <div class="stat-card__label">QRIS</div>
+        <div class="stat-card__value" id="statQrisHariIni">Rp --</div>
+        <div class="stat-card__sublabel">Akumulasi bulan berjalan · klik untuk detail</div>
+      </article>
+
+      <article class="stat-card stat-card--bank stat-card--clickable" id="cardSaldoBank">
+        <div class="stat-card__label">SALDO BANK</div>
+        <!-- Default "Rp --" (bukan "Rp 0"): angka cache localStorage
+             tampil instant saat init; placeholder mencegah berkedip
+             angka 0 bila cache belum ada (Fix #34). -->
+        <div class="stat-card__value" id="statSaldoBankTotal">Rp --</div>
+        <div class="stat-card__sublabel">Klik untuk verifikasi setoran kode unik</div>
+      </article>
+    </section>
+
+    <!-- Grafik Tren Penjualan (Fix #33) -->
+    <section class="panel-grid" aria-label="Grafik Tren Penjualan">
+      <article class="panel-card panel-card--full panel-card--sales-chart">
+        <div class="panel-card__header-row">
+          <h2 class="panel-card__title panel-card__title--no-mb">Grafik Tren Penjualan</h2>
+          <div class="chart-period-toggle" role="tablist" aria-label="Pilih periode grafik">
+            <button type="button" role="tab" class="chart-period-btn is-active"
+                    data-period="monthly_daily" id="btnPeriodMonthly">Bulan Ini</button>
+            <button type="button" role="tab" class="chart-period-btn"
+                    data-period="last_30_days" id="btnPeriod30Days">30 Hari</button>
+          </div>
+        </div>
+        <div class="chart-summary-row" aria-label="Ringkasan grafik">
+          <div class="chart-summary-item">
+            <span class="chart-summary-label">Maks Harian</span>
+            <span class="chart-summary-value" id="chartMaxOmzet">Rp --</span>
+          </div>
+          <div class="chart-summary-item">
+            <span class="chart-summary-label">Rata-rata</span>
+            <span class="chart-summary-value" id="chartAvgOmzet">Rp --</span>
+          </div>
+          <div class="chart-summary-item">
+            <span class="chart-summary-label">Total Periode</span>
+            <span class="chart-summary-value chart-summary-value--total" id="chartTotalOmzet">Rp --</span>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap" id="chartCanvasWrap">
+          <canvas id="salesBarChart" width="800" height="300"
+                  role="img" aria-label="Grafik batang tren omzet penjualan harian"></canvas>
+          <div class="chart-tooltip" id="chartTooltip"
+               role="tooltip" aria-live="polite" hidden>
+            <span class="chart-tooltip__date" id="chartTooltipDate"></span>
+            <span class="chart-tooltip__value" id="chartTooltipValue"></span>
+            <span class="chart-tooltip__count" id="chartTooltipCount"></span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Fluktuasi HPP vs Harga Jual & Margin Warning (Fix #47) -->
+    <section class="panel-grid" aria-label="Fluktuasi HPP & Margin">
+      <article class="panel-card panel-card--full panel-card--hpp-chart">
+        <div class="panel-card__header-row">
+          <h2 class="panel-card__title panel-card__title--no-mb">Fluktuasi HPP vs Harga Jual</h2>
+          <div class="hpp-filter-bar" role="group" aria-label="Filter grafik fluktuasi">
+            <select id="selectHppKategori" aria-label="Filter kategori">
+              <option value="">Semua Kategori</option>
+            </select>
+            <select id="selectHppBarang" aria-label="Pilih barang">
+              <option value="">Semua Barang</option>
+            </select>
+            <button type="button" id="btnRefreshHppChart" class="hpp-refresh-btn" aria-label="Muat ulang grafik">
+              &times;
+            </button>
+          </div>
+        </div>
+
+        <div class="hpp-summary-row" aria-label="Ringkasan margin">
+          <div class="hpp-summary-item">
+            <span class="hpp-summary-label">Rata-rata Margin</span>
+            <span class="hpp-summary-value" id="hppAvgMargin">--</span>
+          </div>
+          <div class="hpp-summary-item">
+            <span class="hpp-summary-label">Margin Terendah</span>
+            <span class="hpp-summary-value hpp-summary-value--warn" id="hppMinMargin">--</span>
+          </div>
+        </div>
+
+        <div class="chart-canvas-wrap hpp-canvas-wrap" id="hppCanvasWrap">
+          <canvas id="hppTrendChart" width="800" height="260"
+                  role="img" aria-label="Grafik garis fluktuasi HPP vs harga jual"></canvas>
+          <div class="chart-tooltip hpp-chart-tooltip" id="hppChartTooltip"
+               role="tooltip" aria-live="polite" hidden>
+            <span class="chart-tooltip__date" id="hppTooltipDate"></span>
+            <span class="chart-tooltip__value" id="hppTooltipHpp"></span>
+            <span class="chart-tooltip__value hpp-tooltip__hj" id="hppTooltipHj"></span>
+          </div>
+          <!-- Legenda garis -->
+          <div class="hpp-legend" aria-hidden="true">
+            <span class="hpp-legend__item"><i class="hpp-legend__swatch hpp-legend__swatch--hpp"></i> HPP (Modal)</span>
+            <span class="hpp-legend__item"><i class="hpp-legend__swatch hpp-legend__swatch--hj"></i> Harga Jual</span>
+            <span class="hpp-legend__item hpp-legend__item--margin"><i class="hpp-legend__swatch hpp-legend__swatch--margin"></i> Margin</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- (Fix #54) Panel daftar Purchase Order — kelola PO PENDING -->
+      <article class="panel-card panel-card--full panel-card--po" aria-label="Daftar Purchase Order">
+        <div class="panel-card__header-row">
+          <h2 class="panel-card__title panel-card__title--no-mb">
+            Purchase Order
+          </h2>
+          <div class="po-filter-bar" role="group" aria-label="Filter status PO">
+            <select id="selectPoStatus" aria-label="Filter status PO">
+              <option value="">Semua</option>
+              <option value="PENDING">PENDING</option>
+              <option value="BATAL">BATAL</option>
+            </select>
+            <button type="button" id="btnPoRefresh" class="po-refresh-btn" aria-label="Refresh daftar PO">
+              Refresh
+            </button>
+          </div>
+        </div>
+        <p class="po-sublabel">
+          PO berstatus PENDING bisa dibatalkan. Stok barang HANYA bertambah saat PO DITERIMA.
+        </p>
+        <div class="modal-table-wrap">
+          <table class="tx-table" id="tablePoList">
+            <thead>
+              <tr>
+                <th>Nomor PO</th>
+                <th>Kategori</th>
+                <th class="col-num">Item</th>
+                <th class="col-num">Qty</th>
+                <th class="col-num">Total Modal</th>
+                <th>Waktu</th>
+                <th>Status</th>
+                <th class="col-aksi">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="poListBody">
+              <tr class="tx-table__empty"><td colspan="8">Memuat data…</td></tr>
+            </tbody>
+          </table>
+        </div>
       </article>
     </section>
 
     <!-- System Status & Recent Activity -->
-    <section class="panel-grid" aria-label="Status Sistem & Aktivitas Terkini">
-      <article class="panel-card">
+    <section class="panel-grid" aria-label="Status Sistem">
+      <article class="panel-card panel-card--full">
         <h2 class="panel-card__title">Status Sistem</h2>
         <div id="systemStatus" class="status-list" role="list">
           <div class="status-row" role="listitem">
             <span class="status-dot status-dot--loading" aria-hidden="true"></span>
             <span class="status-text">Memuat status sistem…</span>
-          </div>
-        </div>
-      </article>
-
-      <article class="panel-card">
-        <h2 class="panel-card__title">Aktivitas Terkini</h2>
-        <div id="recentActivity" class="activity-list" role="list">
-          <div class="activity-row" role="listitem">
-            <span class="activity-time">—</span>
-            <span class="activity-text">Menunggu data…</span>
           </div>
         </div>
       </article>
@@ -92,6 +295,7 @@
             <input type="search" id="inputSearchTx"
                    placeholder="Cari No. Struk / Kasir..." aria-label="Cari No. Struk / Kasir">
           </div>
+          <input type="date" id="inputTanggalTx" aria-label="Pilih tanggal transaksi">
           <select id="selectFilterMetode" aria-label="Filter metode pembayaran">
             <option value="">Semua Metode</option>
             <option value="CASH">CASH</option>
@@ -185,6 +389,880 @@
             <span id="itemTxKembalian">Rp 0</span>
           </div>
         </footer>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Daftar Master Barang & Stok Terkini -->
+  <div class="modal-overlay" id="modalMasterBarang" role="dialog"
+       aria-modal="true" aria-labelledby="modalBarangTitle" hidden>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalBarangTitle">Daftar Master Barang &amp; Stok Terkini</h2>
+        <button type="button" id="btnCloseModalBarang" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Filter Bar -->
+        <div class="tx-filter-bar">
+          <div class="tx-filter-search">
+            <svg class="tx-filter-search__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+              <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <input type="search" id="inputSearchBarang"
+                   placeholder="Cari nama / kode barang..." aria-label="Cari nama / kode barang">
+          </div>
+          <select id="selectFilterKategoriBarang" aria-label="Filter kategori barang">
+            <option value="">Semua Kategori</option>
+          </select>
+        </div>
+
+        <!-- Stat Chips Ringkasan -->
+        <div class="inventory-summary-bar" aria-label="Ringkasan master barang hasil filter">
+          <div class="tx-chip">
+            <span class="tx-chip__label">Total Jenis Item</span>
+            <span class="tx-chip__value" id="countJenisBarang">0</span>
+          </div>
+          <div class="tx-chip">
+            <span class="tx-chip__label">Total Unit Stok</span>
+            <span class="tx-chip__value" id="sumStokBarang">0</span>
+          </div>
+          <div class="tx-chip tx-chip--omzet">
+            <span class="tx-chip__label">Total Nilai Aset Modal</span>
+            <span class="tx-chip__value" id="sumNilaiAsetBarang">Rp 0</span>
+          </div>
+        </div>
+
+        <!-- Tabel Master Barang -->
+        <div class="modal-table-wrap">
+          <table id="tableMasterBarang" class="tx-table">
+            <thead>
+              <tr>
+                <th>Kode / ID</th>
+                <th>Nama Barang</th>
+                <th>Kategori</th>
+                <th class="col-num">Harga Modal (Rp)</th>
+                <th class="col-num">Harga Jual (Rp)</th>
+                <th class="col-num">Stok Terkini</th>
+                <th>Status Stok</th>
+              </tr>
+            </thead>
+            <tbody id="barangTableBody">
+              <tr class="tx-table__empty">
+                <td colspan="7">Memuat data…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Daftar Barang Kategori Kasir -->
+  <div class="modal-overlay" id="modalKasir" role="dialog"
+       aria-modal="true" aria-labelledby="modalKasirTitle" hidden>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalKasirTitle">Daftar Barang Kategori Kasir</h2>
+        <button type="button" id="btnCloseModalKasir" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Stat Chips Ringkasan -->
+        <div class="inventory-summary-bar" aria-label="Ringkasan barang kategori Kasir">
+          <div class="tx-chip">
+            <span class="tx-chip__label">Total Jenis</span>
+            <span class="tx-chip__value" id="kasirCountJenis">0</span>
+          </div>
+          <div class="tx-chip">
+            <span class="tx-chip__label">Total Stok</span>
+            <span class="tx-chip__value" id="kasirSumStok">0</span>
+          </div>
+          <div class="tx-chip tx-chip--omzet">
+            <span class="tx-chip__label">Total Nilai Modal</span>
+            <span class="tx-chip__value" id="kasirSumModal">Rp 0</span>
+          </div>
+          <div class="tx-chip tx-chip--omzet">
+            <span class="tx-chip__label">Total Nilai Jual</span>
+            <span class="tx-chip__value" id="kasirSumJual">Rp 0</span>
+          </div>
+        </div>
+
+        <!-- Tabel Barang Kasir -->
+        <div class="modal-table-wrap">
+          <table id="tableKasir" class="tx-table">
+            <thead>
+              <tr>
+                <th>Nama Barang</th>
+                <th class="col-num">Stok Aktual</th>
+                <th class="col-num">HPP</th>
+                <th class="col-num">Harga Jual</th>
+              </tr>
+            </thead>
+            <tbody id="kasirTableBody">
+              <tr class="tx-table__empty"><td colspan="4">Memuat data…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Aksi cepat: cek stok kritis & buat PO restok (Fix #53) -->
+        <div class="kasir-poor-stock-actions">
+          <button type="button" id="btnKasirCekStokKritis" class="btn-kasir-check-poor">
+            Cek Stok Kritis (&lt; 2) &amp; Buat PO
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Detail Kerugian Stock Opname (Barang Minus) -->
+  <div class="modal-overlay" id="modalKerugianSO" role="dialog"
+       aria-modal="true" aria-labelledby="modalKerugianTitle" hidden>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalKerugianTitle">Detail Kerugian Stock Opname (Barang Minus)</h2>
+        <button type="button" id="btnCloseModalKerugianSO" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Filter Bar -->
+        <div class="tx-filter-bar">
+          <input type="month" id="inputBulanKerugianSO" aria-label="Pilih bulan kerugian SO">
+          <div class="tx-filter-search">
+            <svg class="tx-filter-search__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+              <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <input type="search" id="inputSearchKerugianSO"
+                   placeholder="Cari nama / kode barang minus..." aria-label="Cari nama / kode barang minus">
+          </div>
+        </div>
+
+        <!-- Stat Chips Ringkasan -->
+        <div class="so-summary-bar" aria-label="Ringkasan kerugian SO hasil filter">
+          <div class="tx-chip">
+            <span class="tx-chip__label">Total Produk Minus</span>
+            <span class="tx-chip__value" id="countProdukMinus">0</span>
+          </div>
+          <div class="tx-chip">
+            <span class="tx-chip__label">Total Unit Minus</span>
+            <span class="tx-chip__value" id="sumUnitMinus">0</span>
+          </div>
+          <div class="tx-chip tx-chip--kerugian">
+            <span class="tx-chip__label">Total Nominal Kerugian</span>
+            <span class="tx-chip__value" id="sumNominalKerugian">Rp 0</span>
+          </div>
+        </div>
+
+        <!-- Tabel Kerugian SO per Produk -->
+        <div class="modal-table-wrap">
+          <table id="tableKerugianSO" class="tx-table">
+            <thead>
+              <tr>
+                <th>Kode / ID</th>
+                <th>Nama Barang</th>
+                <th>Kategori</th>
+                <th class="col-num">Stok Sistem</th>
+                <th class="col-num">Stok Fisik</th>
+                <th class="col-num">Selisih Minus</th>
+                <th class="col-num">HPP / Unit (Rp)</th>
+                <th class="col-num">Total Kerugian Produk (Rp)</th>
+              </tr>
+            </thead>
+            <tbody id="kerugianSOTableBody">
+              <tr class="tx-table__empty">
+                <td colspan="8">Memuat data…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Detail Kelebihan Stock Opname (Barang Plus) -->
+  <div class="modal-overlay" id="modalKelebihanSO" role="dialog"
+       aria-modal="true" aria-labelledby="modalKelebihanTitle" hidden>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalKelebihanTitle">Detail Kelebihan Stock Opname (Barang Plus)</h2>
+        <button type="button" id="btnCloseModalKelebihanSO" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Filter Bar -->
+        <div class="tx-filter-bar">
+          <input type="month" id="inputBulanKelebihanSO" aria-label="Pilih bulan kelebihan SO">
+          <div class="tx-filter-search">
+            <svg class="tx-filter-search__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+              <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <input type="search" id="inputSearchKelebihanSO"
+                   placeholder="Cari nama / kode barang plus..." aria-label="Cari nama / kode barang plus">
+          </div>
+        </div>
+
+        <!-- Stat Chips Ringkasan -->
+        <div class="so-summary-bar" aria-label="Ringkasan kelebihan SO hasil filter">
+          <div class="tx-chip">
+            <span class="tx-chip__label">Total Produk Plus</span>
+            <span class="tx-chip__value" id="countProdukPlus">0</span>
+          </div>
+          <div class="tx-chip">
+            <span class="tx-chip__label">Total Unit Plus</span>
+            <span class="tx-chip__value" id="sumUnitPlus">0</span>
+          </div>
+          <div class="tx-chip tx-chip--plus">
+            <span class="tx-chip__label">Total Nilai Kelebihan</span>
+            <span class="tx-chip__value" id="sumNominalPlus">Rp 0</span>
+          </div>
+        </div>
+
+        <!-- Tabel Kelebihan SO per Produk -->
+        <div class="modal-table-wrap">
+          <table id="tableKelebihanSO" class="tx-table">
+            <thead>
+              <tr>
+                <th>Kode / ID</th>
+                <th>Nama Barang</th>
+                <th>Kategori</th>
+                <th class="col-num">Stok Sistem</th>
+                <th class="col-num">Stok Fisik</th>
+                <th class="col-num">Selisih Plus</th>
+                <th class="col-num">HPP / Unit (Rp)</th>
+                <th class="col-num">Total Nilai Plus (Rp)</th>
+              </tr>
+            </thead>
+            <tbody id="kelebihanSOTableBody">
+              <tr class="tx-table__empty">
+                <td colspan="8">Memuat data…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Riwayat Kas Laci (Uang Masuk & Keluar) -->
+  <div class="modal-overlay" id="modalKasLaci" role="dialog"
+       aria-modal="true" aria-labelledby="modalKasTitle" hidden>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalKasTitle">Riwayat Kas Laci (Uang Masuk &amp; Keluar)</h2>
+        <button type="button" id="btnCloseModalKas" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Filter Bar -->
+        <div class="tx-filter-bar">
+          <div class="kas-date-range">
+            <label class="kas-date-field">
+              <span class="kas-date-field__label">Dari Tanggal</span>
+              <input type="date" id="inputStartDateKas" aria-label="Dari tanggal">
+            </label>
+            <label class="kas-date-field">
+              <span class="kas-date-field__label">Sampai Tanggal</span>
+              <input type="date" id="inputEndDateKas" aria-label="Sampai tanggal">
+            </label>
+          </div>
+          <select id="selectTipeKas" aria-label="Filter tipe kas">
+            <option value="ALL">Semua Jenis</option>
+            <option value="MASUK">Uang Masuk</option>
+            <option value="KELUAR">Uang Keluar</option>
+          </select>
+          <div class="tx-filter-search">
+            <svg class="tx-filter-search__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+              <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <input type="search" id="inputSearchKas"
+                   placeholder="Cari keterangan / kasir..." aria-label="Cari keterangan / kasir">
+          </div>
+        </div>
+
+        <!-- Stat Chips Ringkasan -->
+        <div class="kas-summary-bar" aria-label="Ringkasan kas harian">
+          <div class="tx-chip tx-chip--kas-masuk">
+            <span class="tx-chip__label">Total Kas Masuk</span>
+            <span class="tx-chip__value" id="sumKasMasuk">Rp 0</span>
+          </div>
+          <div class="tx-chip tx-chip--kas-keluar">
+            <span class="tx-chip__label">Total Kas Keluar</span>
+            <span class="tx-chip__value" id="sumKasKeluar">Rp 0</span>
+          </div>
+          <div class="tx-chip tx-chip--kas-net">
+            <span class="tx-chip__label">Net Kas Harian</span>
+            <span class="tx-chip__value" id="sumNetKas">Rp 0</span>
+          </div>
+        </div>
+
+        <!-- Tabel Riwayat Kas -->
+        <div class="modal-table-wrap">
+          <table id="tableKasLaci" class="tx-table">
+            <thead>
+              <tr>
+                <th>Jam</th>
+                <th>Tipe</th>
+                <th class="col-ket">Keterangan</th>
+                <th>Kasir</th>
+                <th class="col-num">Nominal (Rp)</th>
+              </tr>
+            </thead>
+            <tbody id="kasTableBody">
+              <tr class="tx-table__empty">
+                <td colspan="5">Memuat data…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Rekap Setoran & Rincian Kasir -->
+  <div class="modal-overlay" id="modalSetoranKasir" role="dialog"
+       aria-modal="true" aria-labelledby="modalSetoranTitle" hidden>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalSetoranTitle">Rekap Setoran &amp; Rincian Kasir</h2>
+        <button type="button" id="btnCloseModalSetoran" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Filter Bar -->
+        <div class="tx-filter-bar">
+          <input type="date" id="inputTanggalSetoran" aria-label="Pilih tanggal rekap setoran">
+          <div class="tx-filter-search">
+            <svg class="tx-filter-search__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+              <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <input type="search" id="inputSearchSetoran"
+                   placeholder="Cari nama kasir..." aria-label="Cari nama kasir">
+          </div>
+        </div>
+
+        <!-- Stat Chips Ringkasan -->
+        <div class="setoran-summary-bar" aria-label="Ringkasan rekap setoran">
+          <div class="tx-chip tx-chip--setoran-tunai">
+            <span class="tx-chip__label">Total Setoran Tunai</span>
+            <span class="tx-chip__value" id="sumSetoranTunai">Rp 0</span>
+          </div>
+          <div class="tx-chip tx-chip--setoran-non-tunai">
+            <span class="tx-chip__label">Total Non-Tunai (QRIS)</span>
+            <span class="tx-chip__value" id="sumNonTunai">Rp 0</span>
+          </div>
+          <div class="tx-chip tx-chip--setoran-omzet">
+            <span class="tx-chip__label">Total Omzet Keseluruhan</span>
+            <span class="tx-chip__value" id="sumTotalOmzet">Rp 0</span>
+          </div>
+        </div>
+
+        <!-- Tabel Rekap Setoran Kasir -->
+        <div class="modal-table-wrap">
+          <table id="tableSetoranKasir" class="tx-table">
+            <thead>
+              <tr>
+                <th>Nama Kasir</th>
+                <th class="col-num">Total Transaksi</th>
+                <th class="col-num">Omzet Tunai (Setoran Wajib)</th>
+                <th class="col-num">Omzet QRIS</th>
+                <th class="col-num">Omzet Transfer</th>
+                <th class="col-num">Total Omzet</th>
+              </tr>
+            </thead>
+            <tbody id="setoranTableBody">
+              <tr class="tx-table__empty">
+                <td colspan="6">Memuat data…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Daftar Member -->
+  <div class="modal-overlay" id="modalListMember" role="dialog"
+       aria-modal="true" aria-labelledby="modalMemberTitle" hidden>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalMemberTitle">Daftar Member</h2>
+        <button type="button" id="btnCloseModalMember" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Filter Bar -->
+        <div class="member-filter-bar">
+          <select id="selectFilterKategoriMember" aria-label="Filter kategori member">
+            <option value="ALL">Semua Kategori</option>
+            <option value="PELAJAR">Pelajar / Mahasiswa</option>
+            <option value="UMUM">Umum</option>
+            <option value="PLATINUM">Platinum</option>
+          </select>
+          <div class="tx-filter-search">
+            <svg class="tx-filter-search__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+              <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <input type="search" id="inputSearchMember"
+                   placeholder="Cari nama, kode, no. hp..." aria-label="Cari nama, kode, no. hp">
+          </div>
+        </div>
+
+        <!-- Stat Chips Ringkasan -->
+        <div class="member-summary-bar" aria-label="Ringkasan member">
+          <div class="tx-chip">
+            <span class="tx-chip__label">Total Member</span>
+            <span class="tx-chip__value" id="sumTotalMember">0</span>
+          </div>
+          <div class="tx-chip tx-chip--member-pelajar">
+            <span class="tx-chip__label">Member Pelajar</span>
+            <span class="tx-chip__value" id="sumMemberPelajar">0</span>
+          </div>
+          <div class="tx-chip tx-chip--member-umum">
+            <span class="tx-chip__label">Member Umum</span>
+            <span class="tx-chip__value" id="sumMemberUmum">0</span>
+          </div>
+          <div class="tx-chip tx-chip--member-platinum">
+            <span class="tx-chip__label">Member Platinum</span>
+            <span class="tx-chip__value" id="sumMemberPlatinum">0</span>
+          </div>
+        </div>
+
+        <!-- Tabel Daftar Member -->
+        <div class="modal-table-wrap">
+          <table id="tableListMember" class="tx-table">
+            <thead>
+              <tr>
+                <th class="col-member">Kode &amp; Nama Member</th>
+                <th>No. Telepon</th>
+                <th>Kategori</th>
+                <th class="col-num">Total Kunjungan</th>
+                <th class="col-num">Total Belanja (Rp)</th>
+                <th>Tanggal Daftar</th>
+                <th class="col-aksi">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="memberTableBody">
+              <tr class="tx-table__empty">
+                <td colspan="7">Memuat data…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Pendapatan Sewa Meja per Tanggal -->
+  <div class="modal-overlay" id="modalPendapatanMeja" role="dialog"
+       aria-modal="true" aria-labelledby="modalMejaTitle" hidden>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalMejaTitle">Meja Aktif &amp; Total Belanja Berjalan</h2>
+        <button type="button" id="btnCloseModalMeja" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Filter Bar -->
+        <div class="tx-filter-bar">
+          <input type="date" id="inputTanggalMeja" aria-label="Pilih tanggal pendapatan meja">
+        </div>
+
+        <!-- Stat Chips Ringkasan -->
+        <div class="meja-summary-bar" aria-label="Ringkasan pendapatan meja">
+          <div class="tx-chip tx-chip--omzet">
+            <span class="tx-chip__label">Total Belanja Berjalan</span>
+            <span class="tx-chip__value" id="sumBelanjaBerjalan">Rp 0</span>
+          </div>
+          <div class="tx-chip">
+            <span class="tx-chip__label">Meja Aktif Sekarang</span>
+            <span class="tx-chip__value" id="countMejaAktifModal">0</span>
+          </div>
+        </div>
+
+        <!-- Tabel -->
+        <div class="modal-table-wrap">
+          <table id="tablePendapatanMeja" class="tx-table">
+            <thead>
+              <tr>
+                <th>Nomor Meja</th>
+                <th>Pemesan / Sesi</th>
+                <th>Waktu Mulai</th>
+                <th>Durasi</th>
+                <th class="col-num">Total Belanja Berjalan</th>
+              </tr>
+            </thead>
+            <tbody id="mejaRevenueBody">
+              <tr class="tx-table__empty">
+                <td colspan="5">Memuat data…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Pencatatan & Riwayat QRIS -->
+  <div class="modal-overlay" id="modalQrisHistory" role="dialog"
+       aria-modal="true" aria-labelledby="modalQrisTitle" hidden>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalQrisTitle">Pencatatan &amp; Riwayat QRIS</h2>
+        <button type="button" id="btnCloseModalQris" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Filter Bar -->
+        <div class="qris-filter-bar">
+          <div class="kas-date-range">
+            <label class="kas-date-field">
+              <span class="kas-date-field__label">Dari Tanggal</span>
+              <input type="date" id="inputStartDateQris" aria-label="QRIS dari tanggal">
+            </label>
+            <label class="kas-date-field">
+              <span class="kas-date-field__label">Sampai Tanggal</span>
+              <input type="date" id="inputEndDateQris" aria-label="QRIS sampai tanggal">
+            </label>
+          </div>
+          <select id="selectFilterStatusQris" aria-label="Filter status verifikasi QRIS">
+            <option value="ALL">Semua Status</option>
+            <option value="TERVERIFIKASI">Terverifikasi</option>
+            <option value="PENDING">Pending</option>
+          </select>
+          <div class="tx-filter-search">
+            <svg class="tx-filter-search__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+              <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <input type="search" id="inputSearchQris"
+                   placeholder="Cari kode / kasir / RRN..." aria-label="Cari kode transaksi, kasir, atau RRN">
+          </div>
+        </div>
+
+        <!-- Stat Chips Ringkasan -->
+        <div class="qris-summary-bar" aria-label="Ringkasan QRIS">
+          <div class="tx-chip tx-chip--qris-hari">
+            <span class="tx-chip__label">Total Omzet QRIS Hari Ini</span>
+            <span class="tx-chip__value" id="sumQrisHariIni">Rp 0</span>
+          </div>
+          <div class="tx-chip">
+            <span class="tx-chip__label">Transaksi QRIS Hari Ini</span>
+            <span class="tx-chip__value" id="sumQrisCountHariIni">0</span>
+          </div>
+          <div class="tx-chip tx-chip--qris-bulan">
+            <span class="tx-chip__label">Total QRIS Bulan Ini</span>
+            <span class="tx-chip__value" id="sumQrisBulanIni">Rp 0</span>
+          </div>
+          <div class="tx-chip tx-chip--qris-pending">
+            <span class="tx-chip__label">Status Pending</span>
+            <span class="tx-chip__value" id="sumQrisPending">0</span>
+          </div>
+        </div>
+
+        <!-- Tabel Riwayat QRIS -->
+        <div class="modal-table-wrap">
+          <table id="tableQrisHistory" class="tx-table">
+            <thead>
+              <tr>
+                <th>Waktu &amp; Tanggal</th>
+                <th>Kode Transaksi</th>
+                <th>Kasir</th>
+                <th class="col-num">Nominal (Rp)</th>
+                <th>No. Ref / RRN</th>
+                <th>Status &amp; Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="qrisTableBody">
+              <tr class="tx-table__empty">
+                <td colspan="6">Memuat data…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Saldo Bank & Verifikasi Setoran Kode Unik (Fix #34) -->
+  <div class="modal-overlay" id="modalSaldoBank" role="dialog"
+       aria-modal="true" aria-labelledby="modalBankTitle" hidden>
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalBankTitle">Verifikasi Setoran Bank</h2>
+        <button type="button" id="btnCloseModalBank" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Ringkasan ringkas -->
+        <div class="bank-summary-bar" aria-label="Ringkasan bank">
+          <div class="tx-chip tx-chip--bank-saldo">
+            <span class="tx-chip__label">Saldo Bank Terkumpul</span>
+            <span class="tx-chip__value" id="bankSumSaldo">Rp 0</span>
+          </div>
+          <div class="tx-chip tx-chip--bank-pending">
+            <span class="tx-chip__label">Menunggu Setor Bank</span>
+            <span class="tx-chip__value" id="bankSumPending">Rp 0</span>
+          </div>
+          <div class="tx-chip">
+            <span class="tx-chip__label">Jumlah Pending</span>
+            <span class="tx-chip__value" id="bankCountPending">0</span>
+          </div>
+        </div>
+
+        <!-- Tab toggle: Setor Pending / Riwayat -->
+        <div class="bank-tab-bar" role="tablist" aria-label="Pilih tab bank">
+          <button type="button" role="tab" class="bank-tab-btn is-active"
+                  data-tab="pending" id="btnBankTabPending">Setor Pending</button>
+          <button type="button" role="tab" class="bank-tab-btn"
+                  data-tab="history" id="btnBankTabHistory">Riwayat Setor</button>
+        </div>
+
+        <!-- Tab: Setor Pending (Fix #36: check-code + preview) -->
+        <div class="bank-tab-panel is-active" id="bankPanelPending">
+          <!-- Input kode unik tunggal (Fix #36) -->
+          <div class="bank-input-row">
+            <label class="bank-input-label" for="inputBankKodeUnik">Kode Unik Setoran Tutup Kasir</label>
+            <div class="bank-code-row">
+              <input type="text" id="inputBankKodeUnik"
+                     maxlength="6" placeholder="Contoh: VH5EG4" autocomplete="off"
+                     aria-label="Kode unik setoran" inputmode="text">
+              <button type="button" class="bank-check-btn" id="btnBankCheckCode">
+                Cek Kode
+              </button>
+            </div>
+          </div>
+
+          <!-- Alert hasil cek (Fix #36: merah/kuning) -->
+          <div class="bank-alert-box" id="bankAlertBox" hidden></div>
+
+          <!-- Card Preview Detail Setoran (Fix #36) -->
+          <div class="bank-preview-card" id="cardBankDepositPreview" hidden>
+            <div class="bank-preview-header">
+              <span class="bank-preview-title">Pratinjau Setoran</span>
+              <span class="bank-preview-kode" id="bankPreviewKode">—</span>
+            </div>
+            <div class="bank-preview-grid">
+              <div class="bank-preview-row">
+                <span class="bank-preview-key">Kasir</span>
+                <span class="bank-preview-val" id="bankPreviewKasir">—</span>
+              </div>
+              <div class="bank-preview-row">
+                <span class="bank-preview-key">Tanggal</span>
+                <span class="bank-preview-val" id="bankPreviewTanggal">—</span>
+              </div>
+              <div class="bank-preview-row">
+                <span class="bank-preview-key">Total Setoran Tunai</span>
+                <span class="bank-preview-val bank-preview-val--num" id="bankPreviewNominal">Rp 0</span>
+              </div>
+              <div class="bank-preview-row">
+                <span class="bank-preview-key">Omzet Sesi (Ringkasan)</span>
+                <span class="bank-preview-val bank-preview-val--num" id="bankPreviewOmzet">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aksi konfirmasi (hanya muncul setelah preview sukses) -->
+          <div class="bank-action-bar" id="bankActionBar" hidden>
+            <button type="button" class="bank-confirm-btn" id="btnBankSubmitDeposit">
+              Konfirmasi Setor ke Bank
+            </button>
+          </div>
+
+          <!-- Checklist pending (tetap tersedia sebagai alternatif batch) -->
+          <div class="bank-pending-section">
+            <div class="bank-pending-header">
+              <span class="bank-pending-title">Daftar Setoran Pending</span>
+              <label class="bank-select-all">
+                <input type="checkbox" id="bankSelectAllPending" aria-label="Pilih semua pending">
+                Pilih Semua
+              </label>
+            </div>
+            <div class="bank-pending-list" id="bankPendingList">
+              <div class="bank-empty">Memuat data…</div>
+            </div>
+          </div>
+
+          <!-- Aksi konfirmasi batch (checklist) -->
+          <div class="bank-action-bar">
+            <button type="button" class="bank-confirm-btn bank-confirm-btn--batch" id="btnBankConfirm">
+              Konfirmasi Setor ke Bank (Batch)
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab: Riwayat Setor (Fix #36: khusus DISETOR + tombol Detail) -->
+        <div class="bank-tab-panel" id="bankPanelHistory">
+          <div class="modal-table-wrap">
+            <table class="tx-table" id="tableBankHistory">
+              <thead>
+                <tr>
+                  <th class="time">Tgl Setor Bank</th>
+                  <th class="time">Tgl Tutup Kasir</th>
+                  <th>Kode Unik</th>
+                  <th>Kasir</th>
+                  <th class="col-num">Nominal Setoran</th>
+                  <th>Diinput Oleh</th>
+                  <th>Status</th>
+                  <th class="col-aksi">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="bankHistoryBody">
+                <tr class="tx-table__empty">
+                  <td colspan="8">Belum ada riwayat.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drawer: Detail Alur Penjualan & Rekapitulasi Sesi Tutup Kasir (Fix #36) -->
+  <div class="drawer-overlay" id="bankDetailDrawer" role="dialog"
+       aria-modal="true" aria-labelledby="bankDetailDrawerTitle" hidden>
+    <div class="drawer-content">
+      <header class="drawer-header">
+        <h2 class="drawer-title" id="bankDetailDrawerTitle">
+          Detail Setoran Bank
+        </h2>
+        <button type="button" id="btnCloseBankDetail" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+      <div class="drawer-body" id="bankDetailBody">
+        <p class="bank-empty">Memuat detail…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Restok Barang / Purchase Cart (Fix #45) -->
+  <div class="modal-overlay" id="modalPembelian" role="dialog"
+       aria-modal="true" aria-labelledby="modalPembelianTitle" hidden>
+    <div class="modal-content modal-content--wide">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalPembelianTitle">Restok Barang / Purchase Cart</h2>
+        <button type="button" id="btnCloseModalPembelian" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+      <div class="modal-body pembelian-body">
+
+        <!-- Tab Filter Kategori (Fix #46) -->
+        <nav class="pem-kategori-tab" id="pemKategoriTab" aria-label="Kategori Restok">
+          <button type="button" class="pem-kategori-tab__btn is-active" data-pem-kategori="KASIR" aria-pressed="true">🛒 Kasir</button>
+          <button type="button" class="pem-kategori-tab__btn" data-pem-kategori="BAR" aria-pressed="false">🍹 Bar</button>
+          <button type="button" class="pem-kategori-tab__btn" data-pem-kategori="DAPUR" aria-pressed="false">🍳 Dapur</button>
+        </nav>
+
+        <!-- Form: Tambah Item ke Cart -->
+        <section class="pembelian-form">
+          <div class="pembelian-form__header">
+            <span class="pembelian-form__label">Tambah Item</span>
+          </div>
+          <div class="pembelian-form__grid">
+            <div class="pembelian-field">
+              <label for="pemSearchBarang">Barang</label>
+              <input type="text" id="pemSearchBarang"
+                     placeholder="Ketik nama / kode barang…"
+                     autocomplete="off">
+            </div>
+            <div class="pembelian-field">
+              <label for="pemQty">Qty Beli</label>
+              <input type="number" id="pemQty" min="1" step="1" value="1">
+            </div>
+            <div class="pembelian-field">
+              <label for="pemHppBaru">HPP Baru</label>
+              <input type="number" id="pemHppBaru" min="0" step="1" placeholder="Rp">
+            </div>
+            <div class="pembelian-field">
+              <label for="pemHjBaru">Harga Jual Baru</label>
+              <input type="number" id="pemHjBaru" min="0" step="1" placeholder="Rp">
+            </div>
+            <div class="pembelian-field pembelian-field--action">
+              <button type="button" id="btnPemAddItem" class="btn-pem-add">
+                + Tambah
+              </button>
+            </div>
+          </div>
+          <!-- Dropdown hasil pencarian -->
+          <div class="pembelian-search-results" id="pemSearchResults" hidden>
+            <div class="pembelian-search-empty">Memuat���</div>
+          </div>
+        </section>
+
+        <!-- Tabel Keranjang -->
+        <section class="pembelian-cart">
+          <div class="pembelian-cart__header">
+            <span class="pembelian-cart__title">Keranjang <span class="pem-kategori-badge" id="pemKategoriBadge">KASIR</span></span>
+            <span class="pembelian-cart__count" id="pemCartCount">0 item</span>
+          </div>
+          <div class="modal-table-wrap">
+            <table class="pembelian-table" id="pemCartTable">
+              <thead>
+                <tr>
+                  <th>Barang</th>
+                  <th>Kategori</th>
+                  <th class="num">Stok</th>
+                  <th class="num">Qty</th>
+                  <th class="num">HPP Baru</th>
+                  <th class="num">Harga Jual</th>
+                  <th class="num">Subtotal Modal</th>
+                  <th class="col-aksi">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="pemCartBody">
+                <tr class="tx-table__empty"><td colspan="8">Belum ada item.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Ringkasan Cart -->
+        <section class="pembelian-summary">
+          <div class="pembelian-summary__row">
+            <span>Variasi Item</span>
+            <span class="pembelian-summary__val" id="pemSumVariasi">0</span>
+          </div>
+          <div class="pembelian-summary__row">
+            <span>Total Qty</span>
+            <span class="pembelian-summary__val" id="pemSumQty">0</span>
+          </div>
+          <div class="pembelian-summary__row">
+            <span>Total Modal Belanja</span>
+            <span class="pembelian-summary__val" id="pemSumModal">Rp 0</span>
+          </div>
+          <div class="pembelian-summary__row">
+            <span>Estimasi Margin</span>
+            <span class="pembelian-summary__val" id="pemSumMargin">—</span>
+          </div>
+        </section>
+
+        <!-- Opsi & Aksi -->
+        <footer class="pembelian-footer">
+          <label class="pembelian-checkbox">
+            <input type="checkbox" id="pemCatatKasKeluar">
+            <span>Catat pengeluaran ke Kas Laci</span>
+          </label>
+          <button type="button" id="btnPemCheckout" class="btn-pem-checkout" disabled>
+            Simpan &amp; Buat Nomor PO
+          </button>
+        </footer>
+
       </div>
     </div>
   </div>

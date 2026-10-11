@@ -5014,6 +5014,38 @@ function getKasLaciSaldo(waktu = null) {
   }
 
   // ==================================================
+  // PO PENDING API (Penerimaan Barang)
+  // ==================================================
+  if (req.method === "GET" && req.url.startsWith("/api/pembelian/po")) {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+
+    try {
+      const url = new URL(req.url, `http://localhost:${config.PORT}`);
+      const status = String(url.searchParams.get("status") || "PENDING").toUpperCase();
+
+      db.all(
+        `SELECT * FROM pembelian WHERE UPPER(status) = ? ORDER BY id DESC`,
+        [status],
+        (error, rows) => {
+          if (error) {
+            writeLog("ERROR", "PO_PENDING_QUERY_FAILED", "Gagal membaca PO pending", { error: error.message });
+            res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+            return res.end(JSON.stringify({ success: false, message: error.message }));
+          }
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: true, po: rows || [], total: (rows || []).length }));
+        }
+      );
+    } catch (error) {
+      writeLog("ERROR", "PO_PENDING_FAILED", "Gagal memproses permintaan PO pending", { error: error.message });
+      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ success: false, message: error.message }));
+    }
+    return;
+  }
+
+  // ==================================================
   // WAITING LIST API
   // ==================================================
   if (req.method === "GET" && req.url === "/api/waiting-list") {

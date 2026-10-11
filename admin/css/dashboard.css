@@ -102,6 +102,9 @@ body {
   gap: 16px;
 }
 
+/* 8 stat card → tata letak 4x2 simetris (repeat(4, 1fr) sudah
+   menghasilkan 2 baris penuh); responsif tetap 2x2 di <1100px */
+
 @media (max-width: 1100px) {
   .stat-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -143,6 +146,22 @@ body {
   color: var(--error);
 }
 
+.stat-card--modal .stat-card__value {
+  color: var(--warning);
+}
+
+.stat-card--laba .stat-card__value {
+  color: var(--success);
+}
+
+.stat-card--meja {
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.stat-card--meja .stat-card__value {
+  color: var(--accent);
+}
+
 .stat-card--clickable {
   cursor: pointer;
   transition: transform var(--transition-fast),
@@ -179,6 +198,12 @@ body {
   box-shadow: var(--shadow-card);
 }
 
+/* Setelah panel "Aktivitas Terkini" dihapus, Status Sistem kini
+   menduduki satu kolom penuh di panel-grid (2 kolom) */
+.panel-card--full {
+  grid-column: 1 / -1;
+}
+
 .panel-card__title {
   font-size: 0.85rem;
   font-weight: 700;
@@ -190,15 +215,13 @@ body {
 
 /* ── Status List ─────────────────────────────────────────────── */
 
-.status-list,
-.activity-list {
+.status-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.status-row,
-.activity-row {
+.status-row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -224,19 +247,6 @@ body {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.35; }
-}
-
-.activity-time {
-  flex-shrink: 0;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  min-width: 90px;
-}
-
-.activity-text {
-  font-size: 0.88rem;
-  color: var(--text-secondary);
 }
 
 /* ── Modal ─────────────────────────────────────────────────────── */
@@ -416,6 +426,34 @@ body {
   background: rgba(15, 23, 42, 0.9);
 }
 
+.tx-filter-bar input[type="date"] {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+  color-scheme: dark;
+}
+
+.tx-filter-bar input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+.tx-filter-bar input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.tx-filter-bar input[type="date"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .tx-filter-bar select {
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid #334155;
@@ -484,6 +522,13 @@ body {
   color: var(--success);
 }
 
+/* Wrapper ringkasan meja — memuat .tx-chip yang sudah ada */
+.meja-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 @media (max-width: 560px) {
   .tx-filter-bar {
     flex-direction: column;
@@ -493,6 +538,251 @@ body {
   .tx-filter-bar select {
     width: 100%;
   }
+}
+
+/* Hover border aksen merah/warning untuk card kerugian SO */
+.stat-card--clickable--loss:hover {
+  border-color: var(--error);
+}
+
+/* Card kelebihan SO — aksen hijau/sukses (border transparan hijau,
+   nilai hijau) + hover aksen sukses */
+.stat-card--surplus {
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.stat-card--surplus .stat-card__value {
+  color: var(--success);
+}
+
+.stat-card--surplus.stat-card--clickable:hover {
+  border-color: var(--success);
+}
+
+/* ── Modal: Master Barang & Stok Terkini ──────────────────────── */
+
+/* Wrapper ringkasan inventaris — memuat .tx-chip yang sudah ada */
+.inventory-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Modal daftar barang — z-index 400: di atas modal pendapatan meja (300) */
+#modalMasterBarang {
+  z-index: 400;
+}
+
+/* Badge status stok */
+.badge-stok--nipis {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--error);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.badge-stok--aman {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+/* ── Modal: Detail Kerugian Stock Opname ───────────────────────── */
+
+/* Modal kerugian SO — z-index 500: di atas modal master barang (400) */
+#modalKerugianSO {
+  z-index: 500;
+}
+
+/* Wrapper ringkasan kerugian — memuat .tx-chip yang sudah ada */
+.so-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Chip nominal kerugian — aksen merah bata */
+.tx-chip--kerugian {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.tx-chip--kerugian .tx-chip__value {
+  color: var(--error);
+}
+
+/* Aksen merah bata: selisih minus & total kerugian per produk */
+#tableKerugianSO .selisih-minus,
+#tableKerugianSO .total-kerugian {
+  color: var(--error);
+  font-weight: 700;
+}
+
+/* Input bulan — konsisten dengan input tanggal di filter bar */
+.tx-filter-bar input[type="month"] {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+  color-scheme: dark;
+}
+
+.tx-filter-bar input[type="month"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+.tx-filter-bar input[type="month"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.tx-filter-bar input[type="month"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Card saldo kas laci — aksen emas/kuning (border & nilai) + hover */
+.stat-card--kas {
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.stat-card--kas .stat-card__value {
+  color: var(--warning);
+}
+
+.stat-card--kas.stat-card--clickable:hover {
+  border-color: var(--warning);
+}
+
+/* ── Modal: Riwayat Kas Laci ───────────────────────────────────── */
+
+/* Modal kas laci — z-index 600: paling atas, di atas modal kelebihan
+   SO (550) */
+#modalKasLaci {
+  z-index: 600;
+}
+
+/* Wrapper ringkasan kas harian — memuat .tx-chip yang sudah ada */
+.kas-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Chip kas masuk — aksen hijau */
+.tx-chip--kas-masuk {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.tx-chip--kas-masuk .tx-chip__value {
+  color: var(--success);
+}
+
+/* Chip kas keluar — aksen merah */
+.tx-chip--kas-keluar {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.tx-chip--kas-keluar .tx-chip__value {
+  color: var(--error);
+}
+
+/* Chip net kas harian — aksen biru */
+.tx-chip--kas-net {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.tx-chip--kas-net .tx-chip__value {
+  color: var(--accent);
+}
+
+/* Aksen nominal per tipe: masuk = hijau, keluar = merah (angka
+   dinomori dengan tanda +/− agar arah kas langsung terbaca) */
+#tableKasLaci .kas-nominal--masuk {
+  color: var(--success);
+  font-weight: 700;
+}
+
+#tableKasLaci .kas-nominal--keluar {
+  color: var(--error);
+  font-weight: 700;
+}
+
+/* Alokasi lebar 5 kolom #tableKasLaci (tanpa kategori): keterangan
+   dibuat fleksibel agar kolom teks paling panjang mendapat ruang
+   terbaca; col-ket juga boleh turun baris agar panjang tetap
+   terbaca pada modal sempit */
+#tableKasLaci th.col-ket,
+#tableKasLaci td.col-ket {
+  width: 42%;
+  white-space: normal;
+  word-break: break-word;
+}
+
+#tableKasLaci th:nth-child(1),
+#tableKasLaci td:nth-child(1) {
+  width: 72px;
+}
+
+#tableKasLaci th:nth-child(2),
+#tableKasLaci td:nth-child(2) {
+  width: 92px;
+}
+
+#tableKasLaci th:nth-child(4),
+#tableKasLaci td:nth-child(4) {
+  width: 110px;
+}
+
+#tableKasLaci th:nth-child(5),
+#tableKasLaci td:nth-child(5) {
+  width: 150px;
+}
+
+/* Badge tipe kas */
+.badge-kas--masuk {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.badge-kas--keluar {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--error);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+/* ── Modal: Detail Kelebihan Stock Opname (Barang Plus) ───────── */
+
+/* Modal kelebihan SO — z-index 550: paling atas, di atas modal
+   kerugian SO (500) */
+#modalKelebihanSO {
+  z-index: 550;
+}
+
+/* Chip nominal nilai plus — aksen hijau (kebalikan dari kerugian) */
+.tx-chip--plus {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.tx-chip--plus .tx-chip__value {
+  color: var(--success);
+}
+
+/* Aksen hijau: selisih plus & total nilai plus per produk */
+#tableKelebihanSO .selisih-plus,
+#tableKelebihanSO .total-nilai-plus {
+  color: var(--success);
+  font-weight: 700;
 }
 
 /* ── Method badges ─────────────────────────────────────────────── */
@@ -535,6 +825,12 @@ body {
 
 .modal-overlay--item {
   z-index: 200;
+}
+
+/* Modal Pendapatan Meja — z-index di atas modal item (200) agar tidak
+   bertumpuk bila keduanya dibuka bersamaan */
+#modalPendapatanMeja {
+  z-index: 300;
 }
 
 /* Tombol detail (delegasi) di dalam tabel modal utama */
@@ -628,3 +924,1985 @@ body {
 }
 
 /* Tumpuk modal item di atas modal list (overlay-item sudah z-200) */
+
+/* Kolom "Total Pesanan" modal meja — angka rata kanan (sudah di-cover
+   oleh .tx-table .col-num, dipertegas di sini) */
+#tablePendapatanMeja .col-num {
+  text-align: right;
+}
+
+/* ── Badge status sesi meja (Fix #22) ──────────────────────────── */
+
+/* Sesi AKTIF — biru neon, teks terang */
+.badge-sesi--aktif {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  color: #93c5fd;
+}
+
+/* Sesi SELESAI (DIBAYAR/SELESAI) — abu/hijau pekat */
+.badge-sesi--selesai {
+  background: rgba(100, 116, 139, 0.15);
+  border: 1px solid rgba(100, 116, 139, 0.4);
+  color: #94a3b8;
+}
+
+/* Sub-label kecil di bawah label stat card (mis. "(Tgl 1 - Hari Ini)") */
+.stat-card__sublabel {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Rentang tanggal modal kas laci (Fix #22 revisi) ───────────── */
+.kas-date-range {
+  display: flex;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kas-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 0;
+  min-width: 140px;
+}
+
+.kas-date-field__label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.kas-date-field input[type="date"] {
+  background: var(--bg-input, #0f172a);
+  border: 1px solid #334155;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  min-height: 38px;
+  transition: border-color var(--transition-fast);
+}
+
+.kas-date-field input[type="date"]:hover {
+  border-color: var(--accent);
+}
+
+.kas-date-field input[type="date"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+@media (max-width: 560px) {
+  .kas-date-range {
+    flex-direction: column;
+  }
+}
+
+/* ── Card Total Setoran Kasir (Fix #21) — aksen emerald/hijau ───── */
+.stat-card--setoran {
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.stat-card--setoran .stat-card__value {
+  color: #10b981; /* emerald-500 */
+}
+
+.stat-card--setoran.stat-card--clickable:hover {
+  border-color: #10b981;
+}
+
+/* ── Modal: Rekap Setoran & Rincian Kasir ────────────────────────── */
+
+/* Modal rekap setoran — z-index 650: paling atas, di atas modal
+   kas laci (600) */
+#modalSetoranKasir {
+  z-index: 650;
+}
+
+/* Wrapper ringkasan rekap setoran — memuat .tx-chip yang sudah ada */
+.setoran-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Chip setoran tunai — aksen emas/hijau (uang tunai wajib) */
+.tx-chip--setoran-tunai {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.tx-chip--setoran-tunai .tx-chip__value {
+  color: #10b981;
+}
+
+/* Chip non-tunai / QRIS — aksen biru */
+.tx-chip--setoran-non-tunai {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.tx-chip--setoran-non-tunai .tx-chip__value {
+  color: #3b82f6;
+}
+
+/* Chip total omzet — aksen ungu/aksent */
+.tx-chip--setoran-omzet {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: rgba(168, 85, 247, 0.35);
+}
+
+.tx-chip--setoran-omzet .tx-chip__value {
+  color: #a855f7;
+}
+
+/* Highlight kolom Omzet Tunai (Setoran Wajib) — aksen emerald agar
+   mudah dibedakan dengan pembayaran digital */
+#tableSetoranKasir td:nth-child(3),
+#tableSetoranKasir th:nth-child(3) {
+  color: #10b981;
+}
+
+#tableSetoranKasir th:nth-child(3) {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+/* ── Modal: Daftar Member & Riwayat Setia (Fix #23) ────────────── */
+
+/* Card "Daftar Member & Riwayat Setia" — aksen cyan/biru (identitas
+   program loyalty), hover border cyan */
+.stat-card--member {
+  border: 1px solid rgba(0, 210, 255, 0.25);
+}
+
+.stat-card--member .stat-card__value {
+  color: #00d2ff;
+}
+
+.stat-card--member.stat-card--clickable:hover {
+  border-color: #00d2ff;
+}
+
+/* Modal member — z-index 700: paling atas, di atas modal rekap setoran
+   (650) */
+#modalListMember {
+  z-index: 700;
+}
+
+/* Filter bar: dropdown kategori + search box inline */
+.member-filter-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.member-filter-bar .tx-filter-search {
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+/* Wrapper ringkasan member — memuat .tx-chip yang sudah ada.
+   Fix #28: hilangkan tumpang-tindih angka stat chip dengan menegaskan
+   letter-spacing normal + white-space nowrap pada value, dan beri
+   lebar chip yang stabil (flex 1 1 0) agar 4 chip tidak menabrak. */
+.member-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.member-summary-bar .tx-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  letter-spacing: 0;
+}
+
+.member-summary-bar .tx-chip__value {
+  letter-spacing: 0;          /* timpa nilai negatif (bila ada) → angka terbaca jelas */
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dropdown filter kategori member — styling Dark Mode padat (Fix #28) */
+#selectFilterKategoriMember {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  min-height: 38px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+#selectFilterKategoriMember:hover {
+  border-color: #00d2ff;
+}
+#selectFilterKategoriMember:focus {
+  outline: none;
+  border-color: #00d2ff;
+}
+
+/* Chip pelajar — aksen cyan/biru soft (warna #00d2ff sesuai spesifikasi) */
+.tx-chip--member-pelajar {
+  background: rgba(0, 210, 255, 0.1);
+  border-color: rgba(0, 210, 255, 0.35);
+}
+
+.tx-chip--member-pelajar .tx-chip__value {
+  color: #00d2ff;
+}
+
+/* Chip umum — aksen hijau emerald */
+.tx-chip--member-umum {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.tx-chip--member-umum .tx-chip__value {
+  color: #10b981;
+}
+
+/* Chip platinum — aksen emas/gold metallic dengan glow */
+.tx-chip--member-platinum {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(251, 191, 36, 0.4);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.25);
+}
+
+.tx-chip--member-platinum .tx-chip__value {
+  color: #fbbf24;
+}
+
+/* Badge tanda kategori member */
+.badge-member--pelajar {
+  background: rgba(0, 210, 255, 0.12);
+  color: #00d2ff;
+  border: 1px solid rgba(0, 210, 255, 0.4);
+}
+
+.badge-member--umum {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.badge-member--platinum {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(251, 191, 36, 0.15));
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+  text-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
+}
+
+/* ── Tabel Member (Fix #28): layout fixed 7 kolom, tanpa horizontal scroll ── */
+#tableListMember {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 0; /* timpa min-width: 640px bawaan .tx-table agar tetap 100% */
+}
+
+/* Distribusi lebar presisi (persentase total = 100%, tidak memicu
+   horizontal scrollbar): */
+/* Col 1 (Kode & Nama): 22% */
+#tableListMember col:nth-child(1),
+#tableListMember th:nth-child(1),
+#tableListMember td:nth-child(1) {
+  width: 22%;
+}
+/* Col 2 (No. Telepon): 15% */
+#tableListMember col:nth-child(2),
+#tableListMember th:nth-child(2),
+#tableListMember td:nth-child(2) {
+  width: 15%;
+}
+/* Col 3 (Kategori): 12% */
+#tableListMember col:nth-child(3),
+#tableListMember th:nth-child(3),
+#tableListMember td:nth-child(3) {
+  width: 12%;
+}
+/* Col 4 (Total Kunjungan): 13% */
+#tableListMember col:nth-child(4),
+#tableListMember th:nth-child(4),
+#tableListMember td:nth-child(4) {
+  width: 13%;
+}
+/* Col 5 (Total Belanja): 16% */
+#tableListMember col:nth-child(5),
+#tableListMember th:nth-child(5),
+#tableListMember td:nth-child(5) {
+  width: 16%;
+}
+/* Col 6 (Tanggal Daftar): 14% */
+#tableListMember col:nth-child(6),
+#tableListMember th:nth-child(6),
+#tableListMember td:nth-child(6) {
+  width: 14%;
+}
+/* Col 7 (Aksi Hapus): 8%, center, padding pas */
+#tableListMember .col-aksi,
+#tableListMember col:nth-child(7),
+#tableListMember th:nth-child(7),
+#tableListMember td:nth-child(7) {
+  width: 8%;
+  text-align: center;
+}
+#tableListMember td:nth-child(7) {
+  padding: 6px;
+}
+
+/* Wrapper tabel member: matikan overflow-x (layout fixed sudah muat)
+   tapi tetap biarkan overflow-y untuk scroll vertikal (dark). */
+#modalListMember .modal-table-wrap {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ── Scrollbar gelap custom untuk modal member (Fix #28) ──────────
+   Menghilangkan scrollbar native terang; terapkan pada elemen yang
+   bisa di-scroll di dalam #modalListMember (modal-body, tabel wrap). */
+#modalListMember .modal-body::-webkit-scrollbar,
+#modalListMember .modal-table-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+#modalListMember .modal-body::-webkit-scrollbar-track,
+#modalListMember .modal-table-wrap::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+#modalListMember .modal-body::-webkit-scrollbar-thumb,
+#modalListMember .modal-table-wrap::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+#modalListMember .modal-body::-webkit-scrollbar-thumb:hover,
+#modalListMember .modal-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+/* Firefox equivalent (scrollbar-width) */
+#modalListMember .modal-body,
+#modalListMember .modal-table-wrap {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #1e293b;
+}
+
+/* Tombol hapus member — merah solid, ikon tong sampah, hover menguat */
+.btn-member-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius-sm);
+  color: var(--error);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.btn-member-delete:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: var(--error);
+  transform: scale(1.06);
+}
+
+.btn-member-delete svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Sublabel kode member di bawah nama (inline-block, warna muted) */
+.member-kode {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+#tableListMember td:nth-child(4),
+#tableListMember th:nth-child(4),
+#tableListMember td:nth-child(5),
+#tableListMember th:nth-child(5) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#tableListMember td:nth-child(5) {
+  font-weight: 700;
+}
+
+/* ── Modal: Pencatatan & Riwayat QRIS (Fix #25) ─────────────────── */
+
+/* Card QRIS — aksen emerald/QRIS, hover border hijau */
+.stat-card--qris {
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.stat-card--qris .stat-card__value {
+  color: #10b981;
+}
+
+.stat-card--qris.stat-card--clickable:hover {
+  border-color: #10b981;
+}
+
+/* Modal QRIS — z-index 750: paling atas, di atas modal member (700) */
+#modalQrisHistory {
+  z-index: 750;
+}
+
+/* Filter bar: date range + dropdown status + search inline */
+.qris-filter-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.qris-filter-bar .tx-filter-search {
+  flex: 1 1 200px;
+  min-width: 180px;
+}
+
+/* Wrapper ringkasan QRIS — memuat .tx-chip yang sudah ada */
+.qris-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Chip omzet QRIS hari ini — aksen emerald (warna QRIS) */
+.tx-chip--qris-hari {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.tx-chip--qris-hari .tx-chip__value {
+  color: #10b981;
+}
+
+/* Chip total QRIS bulan ini — aksen biru/biru neon (pola kas net) */
+.tx-chip--qris-bulan {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.tx-chip--qris-bulan .tx-chip__value {
+  color: #3b82f6;
+}
+
+/* Chip status pending — aksen kuning/amber (perlu perhatian admin) */
+.tx-chip--qris-pending {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.tx-chip--qris-pending .tx-chip__value {
+  color: #f59e0b;
+}
+
+/* Badge status verifikasi QRIS */
+.badge-qris--terverifikasi {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.badge-qris--pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.badge-qris--batal {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--error);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+/* Tombol aksi verifikasi QRIS — kecil, aksen biru, tidak mengganggu
+   baris tabel */
+.btn-qris-verify {
+  margin-left: 8px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-qris-verify:hover {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: #3b82f6;
+}
+
+/* Kolom tabel QRIS */
+#tableQrisHistory td:nth-child(4),
+#tableQrisHistory th:nth-child(4) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Grafik Tren Penjualan (Fix #33) ─────────────────────────── */
+
+.panel-card--sales-chart {
+  overflow: hidden;
+}
+
+.panel-card__header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.panel-card__title--no-mb {
+  margin-bottom: 0;
+}
+
+/* ── Toggle Periode ─────────────────────────────────────────── */
+
+.chart-period-toggle {
+  display: inline-flex;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.chart-period-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.chart-period-btn + .chart-period-btn {
+  border-left: 1px solid #334155;
+}
+
+.chart-period-btn:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.chart-period-btn.is-active {
+  background: #00d2ff;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+/* ── Ringkasan Grafik ───────────────────────────────────────── */
+
+.chart-summary-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.chart-summary-item {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 130px;
+  flex: 1;
+}
+
+.chart-summary-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.chart-summary-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-summary-value--total {
+  color: #00d2ff;
+}
+
+/* ── Kanvas Grafik ──────────────────────────────────────────── */
+
+.chart-canvas-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 280px;
+}
+
+#salesBarChart {
+  display: block;
+  width: 100%;
+  height: 300px;
+  background: transparent;
+}
+
+/* ── Tooltip ─────────────────────────────────────────────────── */
+
+.chart-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.chart-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chart-tooltip__date {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.chart-tooltip__value {
+  font-size: 0.88rem;
+  color: #00d2ff;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tooltip__count {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+/* ── SALDO BANK (Fix #34) ─────────────────────────────────────── */
+
+/* Stat card aksen gold */
+.stat-card--bank {
+  border-top: 3px solid #f59e0b;
+}
+.stat-card--bank .stat-card__value {
+  color: #fbbf24;
+}
+.stat-card--bank:hover {
+  border-color: #fbbf24;
+}
+
+/* Modal bank — z-index 800: paling atas, di atas modal QRIS (750) */
+#modalSaldoBank {
+  z-index: 800;
+}
+
+/* Chip bank */
+.tx-chip--bank-saldo {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: #f59e0b;
+}
+.tx-chip--bank-saldo .tx-chip__value {
+  color: #fbbf24;
+}
+.tx-chip--bank-pending {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: #ef4444;
+}
+.tx-chip--bank-pending .tx-chip__value {
+  color: #f87171;
+}
+
+/* Tab bar */
+.bank-tab-bar {
+  display: inline-flex;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.bank-tab-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.bank-tab-btn + .bank-tab-btn {
+  border-left: 1px solid #334155;
+}
+.bank-tab-btn:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.05);
+}
+.bank-tab-btn.is-active {
+  background: #f59e0b;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+/* Tab panel */
+.bank-tab-panel {
+  display: none;
+}
+.bank-tab-panel.is-active {
+  display: block;
+}
+
+/* Input manual */
+.bank-input-row {
+  margin-bottom: 14px;
+}
+.bank-input-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.bank-input-row input[type="text"] {
+  width: 100%;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 0.88rem;
+  font-family: inherit;
+  padding: 9px 12px;
+  transition: border-color 0.15s;
+}
+.bank-input-row input[type="text"]:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+/* Daftar pending */
+.bank-pending-section {
+  margin-bottom: 14px;
+}
+.bank-pending-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.bank-pending-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.bank-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  cursor: pointer;
+  user-select: none;
+}
+.bank-select-all input {
+  accent-color: #f59e0b;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.bank-pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Scrollbar dark untuk bank-pending-list */
+.bank-pending-list::-webkit-scrollbar {
+  width: 6px;
+}
+.bank-pending-list::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 3px;
+}
+.bank-pending-list::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+.bank-pending-list::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+.bank-pending-list {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #1e293b;
+}
+
+/* Item pending */
+.bank-pending-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.bank-pending-item:hover {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+.bank-pending-item.is-checked {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+}
+.bank-pending-item input[type="checkbox"] {
+  accent-color: #f59e0b;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.bank-pending-item__code {
+  font-family: monospace;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f8fafc;
+  min-width: 70px;
+}
+.bank-pending-item__meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.bank-pending-item__kasir {
+  font-size: 0.8rem;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bank-pending-item__tanggal {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+.bank-pending-item__nominal {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fbbf24;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bank-empty {
+  font-size: 0.85rem;
+  color: #64748b;
+  padding: 12px;
+  text-align: center;
+}
+
+/* Tombol konfirmasi */
+.bank-action-bar {
+  margin-top: 4px;
+}
+.bank-confirm-btn {
+  width: 100%;
+  background: #f59e0b;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  letter-spacing: 0.02em;
+}
+.bank-confirm-btn:hover {
+  background: #fbbf24;
+}
+.bank-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Tabel riwayat bank */
+#tableBankHistory td:nth-child(5) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+#tableBankHistory .col-oleh {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+/* ── Fix #36: Check-Code, Preview & Drawer Detail Bank ────────── */
+
+/* Baris input + tombol cek kode */
+.bank-code-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Input kode unik — monospace, uppercase, letter-spacing (Fix #36 A) */
+#inputBankKodeUnik {
+  flex: 0 0 160px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 1rem;
+  font-family: monospace;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: bold;
+  padding: 10px 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#inputBankKodeUnik:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+/* Tombol Cek Kode */
+.bank-check-btn {
+  background: #f59e0b;
+  color: #0f172a;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.bank-check-btn:hover {
+  background: #fbbf24;
+}
+
+/* Alert box (merah = error / kuning = info) */
+.bank-alert-box {
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bank-alert-box.is-danger {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid #ef4444;
+  color: #f87171;
+}
+.bank-alert-box.is-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+}
+.bank-alert-box.is-hidden {
+  display: none;
+}
+
+/* Card Preview Detail Setoran (Fix #36 B) */
+.bank-preview-card {
+  background: #0f172a;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-top: 12px;
+  animation: bankPreviewFadeIn 0.2s ease;
+}
+@keyframes bankPreviewFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.bank-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #334155;
+}
+.bank-preview-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.bank-preview-kode {
+  font-family: monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 2px;
+}
+
+.bank-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+}
+@media (max-width: 560px) {
+  .bank-preview-grid { grid-template-columns: 1fr; }
+}
+.bank-preview-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.bank-preview-key {
+  font-size: 0.7rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.bank-preview-val {
+  font-size: 0.88rem;
+  color: #e2e8f0;
+}
+.bank-preview-val--num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+/* Tombol konfirmasi individual (Fix #36) */
+#btnBankSubmitDeposit {
+  width: 100%;
+  background: #f59e0b;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: background 0.15s;
+}
+#btnBankSubmitDeposit:hover {
+  background: #fbbf24;
+}
+
+/* Batch confirm button — versi checklist */
+.bank-confirm-btn--batch {
+  background: #475569;
+  color: #f8fafc;
+}
+.bank-confirm-btn--batch:hover {
+  background: #64748b;
+}
+
+/* ── Drawer Detail Setoran (Fix #36 / Fix #41) ────────���────────────────── */
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 850; /* di atas modal bank (800) */
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  opacity: 0;
+  pointer-events: none; /* (Fix #41) overlay tertutup: tak boleh intercept klik */
+  transition: opacity 0.2s;
+}
+.drawer-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer-content {
+  background: #1e293b;
+  width: min(640px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.4);
+  animation: drawerSlideIn 0.25s ease;
+}
+@keyframes drawerSlideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #334155;
+  background: #0f172a;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.drawer-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.drawer-body {
+  padding: 20px;
+  flex: 1;
+}
+
+/* Bagian-bagian detail di drawer */
+.bank-detail-section {
+  margin-bottom: 20px;
+}
+.bank-detail-section h3 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #334155;
+}
+
+/* Grid info shift */
+.bank-detail-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.bank-detail-info-item {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+.bank-detail-info-item__label {
+  font-size: 0.68rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.bank-detail-info-item__value {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ringkasan penjualan */
+.bank-detail-ringkasan {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bank-detail-ringkasan-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #0f172a;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  font-size: 0.85rem;
+}
+.bank-detail-ringkasan-row .label {
+  color: #94a3b8;
+}
+.bank-detail-ringkasan-row .value {
+  color: #e2e8f0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tabel rekap produk & transaksi (kompak) */
+.bank-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.bank-detail-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 8px;
+  border-bottom: 1px solid #334155;
+}
+.bank-detail-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid #1e293b;
+  color: #e2e8f0;
+}
+.bank-detail-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Wrapper scroll untuk tabel di drawer (Fix #41 — ganti inline style JS) */
+.bank-scroll-x {
+  overflow-x: auto;
+}
+.bank-scroll-x-limit {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 260px;
+}
+/* Tabel aksi: tombol Detail */
+.bank-detail-btn {
+  background: #f59e0b;
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bank-detail-btn:hover {
+  background: #fbbf24;
+}
+
+/* ── Fix #36: tabel riwayat bank ─────────────────────────────── */
+#tableBankHistory .bank-hist-code {
+  font-family: monospace;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #f8fafc;
+}
+#tableBankHistory .col-aksi {
+  text-align: right;
+}
+#tableBankHistory .col-oleh {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+/* ── Purchase Cart / Restok Barang (Fix #45) ──────────────────────────────── */
+#modalPembelian {
+  z-index: 900;
+}
+.modal-content--wide {
+  max-width: 1080px;
+}
+
+.pembelian-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+/* Tab Filter Kategori (Fix #46) */
+.pem-kategori-tab {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 10px;
+}
+.pem-kategori-tab__btn {
+  background: transparent;
+  border: 1px solid #334155;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 7px 18px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.pem-kategori-tab__btn:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+.pem-kategori-tab__btn.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Badge kategori di header cart */
+.pembelian-cart__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.pem-kategori-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 2px 8px;
+  letter-spacing: 0.04em;
+}
+
+/* Chip kategori di sel tabel */
+.pem-kategori-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 2px 8px;
+  display: inline-block;
+}
+
+/* Form Tambah Item */
+.pembelian-form {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+}
+.pembelian-form__header {
+  margin-bottom: 10px;
+}
+.pembelian-form__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.pembelian-form__grid {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.pembelian-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 130px;
+}
+.pembelian-field label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pembelian-field input {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.pembelian-field input:focus {
+  border-color: var(--accent);
+}
+.pembelian-field--action {
+  flex: 0 0 auto;
+  min-width: 100px;
+}
+.btn-pem-add {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.btn-pem-add:hover {
+  background: var(--accent-hover);
+}
+
+/* Search Results */
+.pembelian-search-results {
+  margin-top: 10px;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #1e293b;
+}
+.pembelian-search-results .pembelian-search-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #1e293b;
+  transition: background 0.1s;
+}
+.pembelian-search-results .pembelian-search-item:last-child {
+  border-bottom: none;
+}
+.pembelian-search-results .pembelian-search-item:hover {
+  background: var(--bg-card-hover);
+}
+.pembelian-search-results .pembelian-search-item__nama {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.pembelian-search-results .pembelian-search-item__meta {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  display: flex;
+  gap: 10px;
+}
+.pembelian-search-empty {
+  padding: 12px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+/* Cart Table */
+.pembelian-cart__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.pembelian-cart__count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.pembelian-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.pembelian-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 8px;
+  border-bottom: 1px solid #334155;
+}
+.pembelian-table th.num {
+  text-align: right;
+}
+.pembelian-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid #1e293b;
+  color: var(--text-primary);
+}
+.pembelian-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pembelian-table .col-aksi {
+  text-align: center;
+  width: 60px;
+}
+.btn-pem-remove {
+  background: transparent;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-pem-remove:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+/* Summary */
+.pembelian-summary {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pembelian-summary__row {
+  flex: 1;
+  min-width: 140px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pembelian-summary__row > span:first-child {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pembelian-summary__val {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Footer */
+.pembelian-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid #334155;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pembelian-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.pembelian-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.btn-pem-checkout {
+  background: var(--success);
+  color: #0f172a;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-pem-checkout:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-pem-checkout:not(:disabled):hover {
+  filter: brightness(1.1);
+}
+
+/* Alert */
+.pembelian-alert {
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  display: none;
+}
+.pembelian-alert.is-danger {
+  display: block;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+.pembelian-alert.is-success {
+  display: block;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid #22c55e;
+  color: #86efac;
+}
+
+/* Stat card — Restok Barang (Fix #45) */
+.stat-card--pembelian {
+  border-top: 3px solid var(--success);
+}
+.stat-card--pembelian .stat-card__value--action {
+  color: var(--success);
+  font-size: 1.1rem;
+}
+.stat-card--pembelian:hover {
+  border-color: var(--success);
+}
+
+/* ============================================================
+   Fix #47 — Fluktuasi HPP vs Harga Jual + Margin Warning
+   ============================================================ */
+
+/* ── Filter bar grafik HPP ────────────────────────────────────── */
+.hpp-filter-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.hpp-filter-bar select {
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  max-width: 180px;
+}
+.hpp-filter-bar select:focus {
+  outline: 2px solid rgba(0, 210, 255, 0.4);
+  outline-offset: 1px;
+}
+.hpp-refresh-btn {
+  background: #1e293b;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.hpp-refresh-btn:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+/* ── Ringkasan margin ─────────────────────────────────────────── */
+.hpp-summary-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 12px 0 8px;
+}
+.hpp-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 90px;
+}
+.hpp-summary-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.hpp-summary-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+.hpp-summary-value--warn { color: #fbbf24; }
+.hpp-summary-value--bad  { color: #f87171; }
+
+/* ── Kanvas grafik HPP ────────────────────────────────────────── */
+.hpp-canvas-wrap {
+  min-height: 260px;
+}
+#hppTrendChart {
+  display: block;
+  width: 100%;
+  height: 260px;
+  background: transparent;
+}
+
+/* Legenda garis HPP */
+.hpp-legend {
+  position: absolute;
+  top: 4px;
+  right: 12px;
+  display: flex;
+  gap: 14px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+.hpp-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.hpp-legend__swatch {
+  display: inline-block;
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+}
+.hpp-legend__swatch--hpp    { background: #fbbf24; }
+.hpp-legend__swatch--hj     { background: #00d2ff; }
+.hpp-legend__swatch--margin { background: rgba(16, 185, 129, 0.5); }
+
+/* Tooltip grafik HPP */
+.hpp-chart-tooltip {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.hpp-tooltip__hj { color: #00d2ff; }
+#hppTooltipHpp { color: #fbbf24; }
+
+/* ============================================================
+   Kartu Kategori Kasir — Stat Card + Modal Daftar Barang
+   ============================================================ */
+
+/* ── Stat Card "Barang Kategori Kasir" ───────────────────────── */
+.stat-card--kasir {
+  border-top: 3px solid #f59e0b;
+}
+.stat-card--kasir .stat-card__value {
+  color: #f59e0b;
+}
+.stat-card--kasir:hover {
+  border-color: #f59e0b;
+}
+
+/* Baris metrik kecil: Stok · Modal · Nilai Jual */
+.stat-card__kasir-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin: 6px 0;
+}
+.stat-card__kasir-metrics > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.stat-card__kasir-lbl {
+  font-size: 0.62rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.stat-card__kasir-val {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stat-card__kasir-val--hj {
+  color: #34d399;
+}
+
+/* ── Modal daftar barang Kasir ───────────────────────────────── */
+#modalKasir .tx-table {
+  width: 100%;
+}
+#modalKasir .tx-table thead th {
+  padding: 8px 12px;
+}
+#modalKasir .tx-table tbody td {
+  padding: 7px 12px;
+  border-bottom: 1px solid #1e293b;
+}
+#modalKasir .tx-table .col-num {
+  text-align: right;
+}
+
+/* ── Aksi cepat: tombol cek stok kritis (Fix #53) ─────────────── */
+.kasir-poor-stock-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #1e293b;
+}
+.btn-kasir-check-poor {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-kasir-check-poor:hover {
+  background: rgba(16, 185, 129, 0.22);
+}
+.btn-kasir-check-poor:active {
+  background: rgba(16, 185, 129, 0.35);
+}
+
+/* Baris sukses "Semua stok aman" di tabel kasir */
+#modalKasir .kasir-stock-ok td {
+  color: #34d399;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 12px;
+}
+
+/* ============================================================
+   (Fix #54) Panel Daftar Purchase Order
+   ============================================================ */
+.panel-card--po {
+  border-top: 3px solid #3b82f6;
+}
+.po-filter-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.po-filter-bar select {
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.po-filter-bar select:focus {
+  outline: 2px solid rgba(0, 210, 255, 0.4);
+  outline-offset: 1px;
+}
+.po-refresh-btn {
+  background: #1e293b;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.po-refresh-btn:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+.po-sublabel {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 4px 0 10px;
+}
+#tablePoList .col-aksi {
+  text-align: center;
+}
+.po-aksi-noidle {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+.po-status {
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: inline-block;
+}
+.po-status--pending {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+.po-status--batal {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+.po-status--diterima {
+  background: rgba(34, 197, 94, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+.btn-po-batal {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-po-batal:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+.btn-po-batal:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-po-edit {
+  background: rgba(0, 210, 255, 0.1);
+  color: #00d2ff;
+  border: 1px solid rgba(0, 210, 255, 0.4);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 6px;
+}
+.btn-po-edit:hover {
+  background: rgba(0, 210, 255, 0.25);
+}
+.btn-po-edit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.po-action-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
