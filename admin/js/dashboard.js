@@ -2,6 +2,24 @@
    PBMS ADMIN — DASHBOARD OVERVIEW
    ============================================================ */
 
+// Top-level helpers — needed by both DCL handlers AND bar section (outside DCL)
+const escapeHtml = (str) =>
+  String(str ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+
+// Safe DOM event listener — top-level scope agar bisa diakses dari mana saja.
+// Guard null element + hapus listener lama dulu agar tak double-bind.
+function safeAddEventListener(elementId, eventType, handler) {
+  const elem = typeof elementId === 'string'
+    ? document.getElementById(elementId)
+    : elementId;
+  if (elem && typeof elem.addEventListener === 'function' && typeof handler === 'function') {
+    elem.removeEventListener(eventType, handler);
+    elem.addEventListener(eventType, handler);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // ── SESSION GUARD ────────────────────────────────────────────
   const session = sessionStorage.getItem('pbms_admin_session');
@@ -24,94 +42,90 @@ document.addEventListener('DOMContentLoaded', () => {
   const formatNumber = (num) =>
     (num || 0).toLocaleString('id-ID');
 
-  // ── SAFE EVENT LISTENER (Fix #40) ────────────────────────────
-  // Guard null element agar tidak throw dan menghentikan seluruh
-  // init chain. Dipakai untuk listener kritis yang elemen DOM-nya
-  // bisa tak ada (modular build, conditional render, race condition).
-  const safeAddEventListener = (elementId, eventType, handler) => {
-    const elem = typeof elementId === 'string'
-      ? document.getElementById(elementId)
-      : elementId;
-    if (elem && typeof handler === 'function') {
-      elem.addEventListener(eventType, handler);
-    }
+  // Safe DOM text setter — guard null agar tidak throw
+  const safeSetText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+  const safeSetInnerHTML = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = val;
   };
 
-  // ── FETCH OVERVIEW STATS ─────────────────────────────────────
+  // ── FETCH OVERVIEW STATS (Fix #59) ──────────────────────────
+  // Satu fetch overview-stats, hasil di-parse 3 kali terpisah agar
+  // satu field gagal tidak memacetkan field lain.
   const fetchStats = async () => {
-    const statTotalTx = document.getElementById('statTotalTx');
-    const statTotalPenjualan = document.getElementById('statTotalPenjualan');
-    const statTotalModal = document.getElementById('statTotalModal');
-    const statLabaKotor = document.getElementById('statLabaKotor');
-    const statKerugianSO = document.getElementById('statKerugianSO');
-    const statKelebihanSO = document.getElementById('statKelebihanSO');
-    const statSaldoKas = document.getElementById('statSaldoKas');
-    const statSetoranKasir = document.getElementById('statSetoranKasir');
-    const statTotalBarang = document.getElementById('statTotalBarang');
-    const statMejaAktif = document.getElementById('statMejaAktif');
-    const systemStatus = document.getElementById('systemStatus');
-
+    let data = null;
     try {
       const resp = await fetch('/api/admin/overview-stats');
-      const data = await resp.json();
+      data = await resp.json();
+      if (!resp.ok || !data.success) data = null;
+    } catch (err) { /* handled per-block below */ }
 
-      if (!resp.ok || !data.success) {
-        throw new Error(data.message || 'Gagal memuat data');
-      }
+    if (!data) {
+      ['statTotalTx','statTotalPenjualan','statTotalModal','statLabaKotor',
+       'statKerugianSO','statKelebihanSO','statSaldoKas','statSetoranKasir',
+       'statTotalBarang','statMejaAktif'].forEach(id => safeSetText(id, '—'));
+      safeSetInnerHTML('systemStatus',
+        `<div class="status-row" role="listitem">
+           <span class="status-dot status-dot--error" aria-hidden="true"></span>
+           <span class="status-text">Gagal memuat overview-stats</span>
+         </div>`);
+      return;
+    }
 
-      const s = data.stats || {};
-      const sys = data.system || {};
+    const s = data.stats || {};
+    const sys = data.system || {};
 
-      // Guard: pastikan angka ter-render walau satu field null/undefined
-      statTotalTx.textContent = formatNumber(s.totalTransaksiHariIni ?? 0);
-      statTotalPenjualan.textContent = formatRupiah(s.totalPenjualanHariIni ?? 0);
-      statTotalModal.textContent = formatRupiah(s.totalModalHariIni ?? 0);
-      statLabaKotor.textContent = formatRupiah(s.labaKotorHariIni ?? 0);
-      statKerugianSO.textContent = formatRupiah(s.kerugianSOBulanIni ?? 0);
-      statKelebihanSO.textContent = formatRupiah(s.kelebihanSOBulanIni ?? 0);
-      statSaldoKas.textContent = formatRupiah(s.saldoKasLaci ?? 0);
-      statSetoranKasir.textContent = formatRupiah(s.totalSetoranHariIni ?? 0);
-      statTotalBarang.textContent = formatNumber(s.totalMasterBarang ?? 0);
-      statMejaAktif.textContent = formatNumber(s.totalMejaAktif ?? 0);
+    // ── 1. Metrik utama hari ini ──
+    try {
+      safeSetText('statTotalTx',        formatNumber(s.totalTransaksiHariIni ?? 0));
+      safeSetText('statTotalPenjualan', formatRupiah(s.totalPenjualanHariIni ?? 0));
+      safeSetText('statTotalModal',     formatRupiah(s.totalModalHariIni ?? 0));
+      safeSetText('statLabaKotor',      formatRupiah(s.labaKotorHariIni ?? 0));
+      safeSetText('statSaldoKas',       formatRupiah(s.saldoKasLaci ?? 0));
+      safeSetText('statSetoranKasir',   formatRupiah(s.totalSetoranHariIni ?? 0));
+    } catch (err) {
+      ['statTotalTx','statTotalPenjualan','statTotalModal','statLabaKotor',
+       'statSaldoKas','statSetoranKasir'].forEach(id => safeSetText(id, '—'));
+    }
 
-      // System status rows — akses dari `data.system`, bukan `s.system`
-      // (bug lama: `s` = data.stats tidak punya properti `system` → crash
-      //  catch → semua stat card menampilkan '—')
-      systemStatus.innerHTML = [
-        { label: 'Database', ok: sys.database },
-        { label: 'Server POS', ok: sys.serverPos },
+    // ── 2. Stock-opname & master barang ──
+    try {
+      safeSetText('statKerugianSO',  formatRupiah(s.kerugianSOBulanIni ?? 0));
+      safeSetText('statKelebihanSO', formatRupiah(s.kelebihanSOBulanIni ?? 0));
+      safeSetText('statTotalBarang', formatNumber(s.totalMasterBarang ?? 0));
+      safeSetText('statMejaAktif',   formatNumber(s.totalMejaAktif ?? 0));
+    } catch (err) {
+      ['statKerugianSO','statKelebihanSO','statTotalBarang','statMejaAktif']
+        .forEach(id => safeSetText(id, '—'));
+    }
+
+    // ── 3. System status ──
+    try {
+      safeSetInnerHTML('systemStatus', [
+        { label: 'Database',           ok: sys.database },
+        { label: 'Server POS',         ok: sys.serverPos },
         { label: 'Jadwal Auto-Backup', ok: sys.autoBackup },
       ].map(item =>
         `<div class="status-row" role="listitem">
            <span class="status-dot ${item.ok ? 'status-dot--ok' : 'status-dot--warn'}" aria-hidden="true"></span>
            <span class="status-text">${item.label}: ${item.ok ? 'Normal' : 'Perlu dicek'}</span>
          </div>`
-      ).join('');
-
+      ).join(''));
     } catch (err) {
-      // Graceful error state
-      statTotalTx.textContent = '—';
-      statTotalPenjualan.textContent = '—';
-      statTotalModal.textContent = '—';
-      statLabaKotor.textContent = '—';
-      statKerugianSO.textContent = '—';
-      statKelebihanSO.textContent = '—';
-      statSaldoKas.textContent = '—';
-      statSetoranKasir.textContent = '—';
-      statTotalBarang.textContent = '—';
-      statMejaAktif.textContent = '—';
-
-      systemStatus.innerHTML =
+      safeSetInnerHTML('systemStatus',
         `<div class="status-row" role="listitem">
            <span class="status-dot status-dot--error" aria-hidden="true"></span>
-           <span class="status-text">Gagal memuat: ${err.message}</span>
-         </div>`;
+           <span class="status-text">Gagal memuat status</span>
+         </div>`);
     }
   };
 
   // ── MODAL: Detail Transaksi Hari Ini ──────────────────────────
   const modal = document.getElementById('modalDetailTransaksi');
-  const cardTotalTx = document.getElementById('cardTotalTx');
+  const cardHeroTx = document.getElementById('cardHeroTx');
   const btnClose = document.getElementById('btnCloseModalTx');
   const txBody = document.getElementById('txTableBody');
   const modalTxCount = document.getElementById('modalTxCount');
@@ -136,6 +150,40 @@ document.addEventListener('DOMContentLoaded', () => {
       inputTanggalTx.value = toYMD(new Date());
     }
   };
+
+  // ── TAB SWITCHING (Fix #58) ─────────────────────────────
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach(b => {
+        b.classList.remove('is-active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      tabPanels.forEach(p => p.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      btn.setAttribute('aria-selected', 'true');
+      const target = btn.getAttribute('data-tab').replace(/^tab-/, 'panel-');
+      const panel = document.getElementById(target);
+      if (panel) panel.classList.add('is-active');
+      // Refresh Pembelian Bank saat tabnya aktif (Fix #77)
+      if (target === 'panel-pembelian-bank' && typeof loadPengeluaranBank === 'function') {
+        loadPengeluaranBank();
+      }
+      // Refresh Bahan Mentah Bar saat tabnya aktif
+      if (target === 'panel-bar' && typeof window.__loadBarMaterialsRef === 'function') {
+        window.__loadBarMaterialsRef();
+      } else if (target === 'panel-bar' && typeof loadBarMaterials === 'function') {
+        loadBarMaterials();
+      }
+    });
+  });
+
+  // ── HERO SELISIH CLICK (Fix #58) ────────────────────────
+  const cardHeroSelisih = document.getElementById('cardHeroSelisih');
+  if (cardHeroSelisih) {
+    cardHeroSelisih.addEventListener('click', openSelisihModal);
+  }
 
   // Cache transaksi harian — isian diisi loadTransactions, dipakai renderTxTable
   window.todayTransactionsCache = [];
@@ -179,11 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ).join('')
       : '<tr class="tx-table__empty"><td colspan="6">Tidak ada transaksi yang cocok dengan filter</td></tr>';
   };
-
-  const escapeHtml = (str) =>
-    String(str ?? '').replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
 
   const formatJam = (jam) => {
     if (!jam) return '—';
@@ -273,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTransactions(selected);
   });
 
-  cardTotalTx.addEventListener('click', openModal);
+  cardHeroTx.addEventListener('click', openModal);
   btnClose.addEventListener('click', closeModal);
 
   // Klik di luar dialog (overlay) menutup modal
@@ -292,6 +335,94 @@ document.addEventListener('DOMContentLoaded', () => {
   const barangBody = document.getElementById('barangTableBody');
   const cardTotalMasterBarang = document.getElementById('cardTotalMasterBarang');
   let barangLoaded = false;
+
+  // ── MODAL: Edit HPP & Harga Jual Barang (Fix BAR/DAPUR) ────────
+  const modalEditBarangHarga = document.getElementById('modalEditBarangHarga');
+  const btnCloseEditBarangHarga = document.getElementById('btnCloseEditBarangHarga');
+  const btnBatalEditBarangHarga = document.getElementById('btnBatalEditBarangHarga');
+  const btnSimpanEditBarangHarga = document.getElementById('btnSimpanEditBarangHarga');
+  const editBarangNama = document.getElementById('editBarangNama');
+  const editBarangKategori = document.getElementById('editBarangKategori');
+  const editBarangHpp = document.getElementById('editBarangHpp');
+  const editBarangHj = document.getElementById('editBarangHj');
+  const editBarangAlert = document.getElementById('editBarangAlert');
+  let _editBarangId = null; // id master_barang barang yang sedang di-edit
+
+  const _showEditBarangAlert = (type, msg) => {
+    if (!editBarangAlert) return;
+    editBarangAlert.hidden = false;
+    editBarangAlert.style.color = type === 'danger' ? '#ef4444' : '#16a34a';
+    editBarangAlert.style.fontSize = '0.85rem';
+    editBarangAlert.textContent = msg;
+  };
+
+  const openEditBarangHarga = (barang) => {
+    if (!modalEditBarangHarga || !barang) return;
+    _editBarangId = barang.id;
+    if (editBarangNama) editBarangNama.value = barang.nama_barang || '';
+    if (editBarangKategori) editBarangKategori.value = barang.kategori || '';
+    // HPP & Harga JUAL selalu editable — termasuk kategori BAR & DAPUR
+    if (editBarangHpp) editBarangHpp.value = String(barang.harga_modal ?? barang.hpp ?? 0);
+    if (editBarangHj) editBarangHj.value = String(barang.harga_jual ?? 0);
+    if (editBarangAlert) editBarangAlert.hidden = true;
+    modalEditBarangHarga.classList.add('is-open');
+    modalEditBarangHarga.removeAttribute('hidden');
+    setTimeout(() => { if (editBarangHpp) editBarangHpp.focus(); }, 80);
+  };
+
+  const closeEditBarangHarga = () => {
+    if (!modalEditBarangHarga) return;
+    modalEditBarangHarga.classList.remove('is-open');
+    modalEditBarangHarga.setAttribute('hidden', '');
+    _editBarangId = null;
+  };
+
+  if (btnCloseEditBarangHarga) btnCloseEditBarangHarga.addEventListener('click', closeEditBarangHarga);
+  if (btnBatalEditBarangHarga) btnBatalEditBarangHarga.addEventListener('click', closeEditBarangHarga);
+  if (modalEditBarangHarga) modalEditBarangHarga.addEventListener('click', (e) => {
+    if (e.target === modalEditBarangHarga) closeEditBarangHarga();
+  });
+
+  if (btnSimpanEditBarangHarga) btnSimpanEditBarangHarga.addEventListener('click', async () => {
+    if (!_editBarangId) return;
+    const newHpp = Number(editBarangHpp?.value) || 0;
+    const newHj  = Number(editBarangHj?.value) || 0;
+    if (newHpp < 0 || newHj < 0) { _showEditBarangAlert('danger', 'Harga tidak boleh negatif.'); return; }
+    btnSimpanEditBarangHarga.disabled = true;
+    btnSimpanEditBarangHarga.textContent = 'Menyimpan…';
+    try {
+      const resp = await fetch('/api/admin/inventory/price', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barang_id: _editBarangId, hpp: newHpp, harga_jual: newHj })
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) throw new Error(data.message || 'Gagal menyimpan');
+      _showEditBarangAlert('success', 'HPP & Harga Jual berhasil diperbarui.');
+      // Update cache lokal agar tabel langsung tampil nilai baru
+      if (Array.isArray(masterBarangCache)) {
+        const item = masterBarangCache.find(b => b.id === _editBarangId);
+        if (item) {
+          item.harga_modal = newHpp;
+          item.hpp = newHpp;
+          item.harga_jual = newHj;
+          window.masterBarangCache = masterBarangCache;
+        }
+      }
+      setTimeout(() => {
+        closeEditBarangHarga();
+        // Re-render tabel barang bila modal master barang masih terbuka
+        if (barangModal && barangModal.classList.contains('is-open')) {
+          reRenderBarangTable();
+        }
+      }, 600);
+    } catch (err) {
+      _showEditBarangAlert('danger', 'Gagal simpan: ' + err.message);
+    } finally {
+      btnSimpanEditBarangHarga.disabled = false;
+      btnSimpanEditBarangHarga.textContent = 'Simpan Perubahan';
+    }
+  });
 
   const openBarangModal = () => {
     barangModal.classList.add('is-open');
@@ -382,8 +513,11 @@ document.addEventListener('DOMContentLoaded', () => {
       filtered.reduce((s, r) => s + (Number(r.stok) || 0), 0)
     );
     sumNilaiAsetBarang.textContent = formatRupiah(
-      filtered.reduce((s, r) =>
-        s + (Number(r.stok) || 0) * (Number(r.harga_modal) || 0), 0)
+      filtered.reduce((s, r) => {
+        const kat = String(r.kategori || '').toUpperCase();
+        if (kat === 'BAR' || kat === 'DAPUR') return s;
+        return s + (Number(r.stok) || 0) * (Number(r.harga_modal) || 0);
+      }, 0)
     );
 
     const stokBadge = (stok) =>
@@ -393,18 +527,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Render baris tabel
     barangBody.innerHTML = filtered.length
-      ? filtered.map(r =>
-          `<tr>
-             <td class="num">${escapeHtml(r.kode_barang) || String(r.id) || '—'}</td>
-             <td>${escapeHtml(r.nama_barang) || '—'}</td>
-             <td>${escapeHtml(r.kategori) || '—'}</td>
-             <td class="col-num">${formatRupiah(r.harga_modal)}</td>
-             <td class="col-num">${formatRupiah(r.harga_jual)}</td>
-             <td class="col-num">${formatNumber(r.stok)}</td>
-             <td>${stokBadge(r.stok)}</td>
-           </tr>`
-        ).join('')
-      : '<tr class="tx-table__empty"><td colspan="7">Tidak ada barang yang cocok dengan filter</td></tr>';
+      ? filtered.map(r => {
+          const isTrackedStock = ['ROKOK', 'KASIR'].includes(String(r.kategori || '').toUpperCase().trim());
+          const displayStok = isTrackedStock ? formatNumber(r.stok) : '--';
+          const displayBadge = isTrackedStock ? stokBadge(r.stok) : '<span class="badge badge-neutral">-</span>';
+          return `
+             <tr>
+               <td class="col-no">${escapeHtml(r.kode_barang) || String(r.id) || '—'}</td>
+               <td>${escapeHtml(r.nama_barang) || '—'}</td>
+               <td>${escapeHtml(r.kategori) || '—'}</td>
+               <td class="col-num">${formatRupiah(r.harga_modal)}</td>
+               <td class="col-num">${formatRupiah(r.harga_jual)}</td>
+               <td class="col-num col-center">${displayStok}</td>
+               <td class="col-center">${displayBadge}</td>
+               <td class="col-center">
+                 <button type="button" class="btn btn-sm btn-edit-harga"
+                         data-barang-id="${r.id}" title="Edit HPP &amp; Harga Jual">Edit</button>
+               </td>
+             </tr>`;
+        }).join('')
+      : '<tr class="tx-table__empty"><td colspan="8">Tidak ada barang yang cocok dengan filter</td></tr>';
+
+    // Bind tombol Edit HPP/HJ per baris
+    if (barangBody) {
+      barangBody.querySelectorAll('button[data-barang-id]').forEach(btn => {
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const id = Number(btn.dataset.barangId);
+          const barang = masterBarangCache.find(b => b.id === id);
+          if (!barang) {
+            const fallback = filtered.find(b => b.id === id);
+            openEditBarangHarga(fallback || { id, nama_barang: '', kategori: '', harga_modal: 0, harga_jual: 0 });
+            return;
+          }
+          openEditBarangHarga(barang);
+        });
+      });
+    }
   };
 
   inputSearchBarang.addEventListener('input', reRenderBarangTable);
@@ -492,8 +651,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (kasirTableBody) kasirTableBody.innerHTML = rows.map(r =>
       `<tr>
-         <td>${escapeHtml(r.nama_barang) || '—'}</td>
-         <td class="col-num">${formatNumber(r.stok)}</td>
+         <td class="col-nama">${escapeHtml(r.nama_barang) || '—'}</td>
+         <td class="col-num col-center">${formatNumber(r.stok)}</td>
          <td class="col-num">${formatRupiah(r.harga_modal)}</td>
          <td class="col-num">${formatRupiah(r.harga_jual)}</td>
        </tr>`
@@ -739,34 +898,45 @@ document.addEventListener('DOMContentLoaded', () => {
       : [];
     const q = String(inputSearchKerugianSO.value || '').trim().toLowerCase();
 
-    const filtered = rows.filter(r => {
-      return !q
+    // PERBAIKAN: Filter hanya barang MINUS (stok_fisik < stok_sistem)
+    // Kalkulasi badge dari item minus yang valid saja
+    const minusItems = rows.filter(r => {
+      const isMinus = Number(r.stok_fisik || 0) < Number(r.stok_sistem || 0);
+      return isMinus && (!q
         || String(r.nama_barang || '').toLowerCase().includes(q)
-        || String(r.kode_barang || '').toLowerCase().includes(q);
+        || String(r.kode_barang || '').toLowerCase().includes(q));
     });
 
-    // Update stat chips ringkasan (mengikuti filter pencarian)
-    countProdukMinus.textContent = formatNumber(filtered.length);
+    // Update stat chips ringkasan (mengikuti filter)
+    countProdukMinus.textContent = formatNumber(minusItems.length);
     sumUnitMinus.textContent = formatNumber(
-      filtered.reduce((s, r) => s + (Number(r.qty_minus) || 0), 0)
+      minusItems.reduce((s, r) => s + Math.max(0, Number(r.stok_sistem) - Number(r.stok_fisik)), 0)
     );
     sumNominalKerugian.textContent = formatRupiah(
-      filtered.reduce((s, r) => s + (Number(r.total_kerugian) || 0), 0)
+      minusItems.reduce((s, r) => {
+        const selisih = Math.max(0, Number(r.stok_sistem) - Number(r.stok_fisik));
+        return s + (selisih * (Number(r.hpp) || 0));
+      }, 0)
     );
 
-    kerugianBody.innerHTML = filtered.length
-      ? filtered.map(r =>
-          `<tr>
-             <td class="num">${escapeHtml(r.kode_barang) || String(r.id_barang) || '—'}</td>
+    kerugianBody.innerHTML = minusItems.length
+      ? minusItems.map(r => {
+          // PERBAIKAN: Selisih Minus Unit = STOK_SISTEM - STOK_FISIK (murni, >0)
+          // Nominal Kerugian = Selisih Minus Unit × HPP (harga modal)
+          const hpp = Number(r.hpp) || 0;
+          const selisihMinus = Math.max(0, Number(r.stok_sistem) - Number(r.stok_fisik));
+          const totalKerugian = selisihMinus * hpp;
+          return `<tr>
+             <td class="col-no">${escapeHtml(r.kode_barang) || String(r.id_barang) || '—'}</td>
              <td>${escapeHtml(r.nama_barang) || '—'}</td>
              <td>${escapeHtml(r.kategori) || '—'}</td>
-             <td class="col-num">${formatNumber(r.stok_sistem)}</td>
-             <td class="col-num">${formatNumber(r.stok_fisik)}</td>
-             <td class="col-num selisih-minus">-${formatNumber(r.qty_minus)}</td>
-             <td class="col-num">${formatRupiah(r.hpp)}</td>
-             <td class="col-num total-kerugian">${formatRupiah(r.total_kerugian)}</td>
-           </tr>`
-        ).join('')
+             <td class="col-num col-center">${formatNumber(r.stok_sistem)}</td>
+             <td class="col-num col-center">${formatNumber(r.stok_fisik)}</td>
+             <td class="col-num selisih-minus">${selisihMinus}</td>
+             <td class="col-num">${formatRupiah(hpp)}</td>
+             <td class="col-num total-kerugian">${formatRupiah(totalKerugian)}</td>
+           </tr>`;
+        }).join('')
       : '<tr class="tx-table__empty"><td colspan="8">Tidak ada barang minus untuk bulan ini</td></tr>';
   };
 
@@ -864,18 +1034,24 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
     kelebihanBody.innerHTML = filtered.length
-      ? filtered.map(r =>
-          `<tr>
-             <td class="num">${escapeHtml(r.kode_barang) || String(r.id_barang) || '—'}</td>
+      ? filtered.map(r => {
+          // (UI) Kolom TOTAL KELEBIHAN: prioritas nilai backend r.total_nilai_plus
+          // (sumber kebenaran, sudah konsisten dengan chip ringkasan). Fallback
+          // selisih_plus * hpp bila backend tak mengirimkannya.
+          const selisihPlus = Math.max(0, Number(r.qty_plus) || 0);
+          const hpp = Number(r.hpp) || 0;
+          const totalPlus = (Number(r.total_nilai_plus) || 0) || (selisihPlus * hpp);
+          return `<tr>
+             <td class="col-no">${escapeHtml(r.kode_barang) || String(r.id_barang) || '—'}</td>
              <td>${escapeHtml(r.nama_barang) || '—'}</td>
              <td>${escapeHtml(r.kategori) || '—'}</td>
-             <td class="col-num">${formatNumber(r.stok_sistem)}</td>
-             <td class="col-num">${formatNumber(r.stok_fisik)}</td>
-             <td class="col-num selisih-plus">+${formatNumber(r.qty_plus)}</td>
-             <td class="col-num">${formatRupiah(r.hpp)}</td>
-             <td class="col-num total-nilai-plus">${formatRupiah(r.total_nilai_plus)}</td>
-           </tr>`
-        ).join('')
+             <td class="col-num col-center">${formatNumber(r.stok_sistem)}</td>
+             <td class="col-num col-center">${formatNumber(r.stok_fisik)}</td>
+             <td class="col-num selisih-plus">${selisihPlus}</td>
+             <td class="col-num">${formatRupiah(hpp)}</td>
+             <td class="col-num total-nilai-plus">${formatRupiah(totalPlus)}</td>
+           </tr>`;
+        }).join('')
       : '<tr class="tx-table__empty"><td colspan="8">Tidak ada barang plus untuk bulan ini</td></tr>';
   };
 
@@ -1122,6 +1298,140 @@ document.addEventListener('DOMContentLoaded', () => {
   inputSearchSetoran.addEventListener('input', reRenderSetoranTable);
   cardSetoranKasir.addEventListener('click', openSetoranModal);
   setoranBtnClose.addEventListener('click', closeSetoranModal);
+
+  // ── SELISIH KASIR CARD (Fix #56) ───────────────────────────────
+  const cardSelisihKasir    = document.getElementById('cardSelisihKasir');
+  const statSelisihKasir    = document.getElementById('statSelisihKasir');
+  const modalSelisihKasir   = document.getElementById('modalSelisihKasir');
+  const btnCloseModalSelisih= document.getElementById('btnCloseModalSelisih');
+  const sumSelisihTotal     = document.getElementById('sumSelisihTotal');
+  const sumSelisihPlus      = document.getElementById('sumSelisihPlus');
+  const sumSelisihMinus     = document.getElementById('sumSelisihMinus');
+  const selisihTableBody    = document.getElementById('selisihTableBody');
+  const chipSelisihPlus     = document.getElementById('chipSelisihPlus');
+  const chipSelisihMinus    = document.getElementById('chipSelisihMinus');
+  let   selisihAllRows      = [];  // cached full dataset for re-filtering
+  let   currentSelisihFilter = 'ALL';
+  const SELISIH_CACHE_KEY   = 'pbms_cached_selisih_kasir';
+
+  const persistSelisihCache = (val) => {
+    try { localStorage.setItem(SELISIH_CACHE_KEY, val); } catch (e) { /* private mode */ }
+  };
+  (function initSelisihInstant() {
+    try {
+      const c = localStorage.getItem(SELISIH_CACHE_KEY);
+      if (c !== null && c !== '') {
+        statSelisihKasir.textContent = c;
+        const heroSelisih = document.getElementById('heroSelisihValue');
+        if (heroSelisih) heroSelisih.textContent = c;
+      }
+    } catch (e) { /* abaikan */ }
+  })();
+
+  function openSelisihModal() {
+    modalSelisihKasir.classList.add('is-open');
+    modalSelisihKasir.removeAttribute('hidden');
+    modalSelisihKasir.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    loadSelisihKasir();
+  }
+  function closeSelisihModal() {
+    modalSelisihKasir.classList.remove('is-open');
+    modalSelisihKasir.setAttribute('hidden', '');
+    modalSelisihKasir.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  const loadSelisihKasir = async () => {
+    selisihTableBody.innerHTML = '<tr class="tx-table__empty"><td colspan="6">Memuat data…</td></tr>';
+    try {
+      const resp = await fetch('/api/admin/selisih-kasir');
+      const data = await resp.json();
+      if (!resp.ok || !data.success) throw new Error(data.message || 'Gagal memuat');
+      selisihAllRows   = data.data || [];
+      currentSelisihFilter = 'ALL';
+      chipSelisihPlus.classList.remove('chip--filter-active');
+      chipSelisihMinus.classList.remove('chip--filter-active');
+      chipSelisihPlus.setAttribute('aria-pressed', 'false');
+      chipSelisihMinus.setAttribute('aria-pressed', 'false');
+      renderSelisihTable(selisihAllRows, data.total || 0);
+    } catch (err) {
+      selisihTableBody.innerHTML =
+        `<tr class="tx-table__empty"><td colspan="6">Gagal memuat: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  };
+
+  const renderSelisihTable = (rows, total) => {
+    // Update summary chips — hitung dari data FULL, bukan dari filtered
+    const plusCount  = selisihAllRows.filter(r => r.selisih > 0).length;
+    const minusCount = selisihAllRows.filter(r => r.selisih < 0).length;
+    sumSelisihTotal.textContent = formatRupiah(total);
+    sumSelisihTotal.className = 'tx-chip__value' + (total < 0 ? ' tx-chip__value--minus' : total > 0 ? ' tx-chip__value--plus' : '');
+    sumSelisihPlus.textContent  = String(plusCount);
+    sumSelisihMinus.textContent = String(minusCount);
+
+    if (!rows.length) {
+      selisihTableBody.innerHTML = '<tr class="tx-table__empty"><td colspan="6">Tidak ada data selisih kasir untuk bulan ini</td></tr>';
+      return;
+    }
+    selisihTableBody.innerHTML = rows.map(r => {
+      const selClass = r.selisih < 0
+        ? 'col-num selisih-minus'
+        : r.selisih > 0 ? 'col-num selisih-plus' : 'col-num';
+      const selSign  = r.selisih < 0 ? '' : '+';
+      return `<tr>
+        <td><code class="kode-tutup">${escapeHtml(r.kode_tutup || '—')}</code></td>
+        <td>${escapeHtml(r.tgl_jam || '—')}</td>
+        <td>${escapeHtml(r.kasir || '—')}</td>
+        <td class="col-num">${formatRupiah(r.nominal_aktual)}</td>
+        <td class="col-num">${formatRupiah(r.uang_sistem)}</td>
+        <td class="${selClass}">${selSign}${formatRupiah(r.selisih)}</td>
+      </tr>`;
+    }).join('');
+
+    // Toggle card color class based on total
+    cardSelisihKasir.classList.remove('selisih-positive', 'selisih-negative');
+    if (total > 0)      cardSelisihKasir.classList.add('selisih-positive');
+    else if (total < 0) cardSelisihKasir.classList.add('selisih-negative');
+
+    // Persist instant cache for dashboard card
+    const formatted = formatRupiah(total);
+    statSelisihKasir.textContent = formatted;
+    const heroSelisih = document.getElementById('heroSelisihValue');
+    if (heroSelisih) heroSelisih.textContent = formatted;
+    persistSelisihCache(formatted);
+  };
+
+  // Filter toggle: chip Plus ↔ Minus ↔ All
+  const applySelisihFilter = (filter) => {
+    currentSelisihFilter = filter;
+    // Update aria-pressed visual state
+    chipSelisihPlus.classList.toggle('chip--filter-active', filter === 'PLUS');
+    chipSelisihMinus.classList.toggle('chip--filter-active', filter === 'MINUS');
+    chipSelisihPlus.setAttribute('aria-pressed', filter === 'PLUS');
+    chipSelisihMinus.setAttribute('aria-pressed', filter === 'MINUS');
+    // Re-render table with filtered rows
+    const filtered = filter === 'ALL'
+      ? selisihAllRows
+      : filter === 'PLUS'
+        ? selisihAllRows.filter(r => r.selisih > 0)
+        : selisihAllRows.filter(r => r.selisih < 0);
+    const totalFiltered = filtered.reduce((s, r) => s + r.selisih, 0);
+    renderSelisihTable(filtered, totalFiltered);
+  };
+
+  chipSelisihPlus.addEventListener('click', () => {
+    applySelisihFilter(currentSelisihFilter === 'PLUS' ? 'ALL' : 'PLUS');
+  });
+  chipSelisihMinus.addEventListener('click', () => {
+    applySelisihFilter(currentSelisihFilter === 'MINUS' ? 'ALL' : 'MINUS');
+  });
+
+  cardSelisihKasir.addEventListener('click', openSelisihModal);
+  btnCloseModalSelisih.addEventListener('click', closeSelisihModal);
+  modalSelisihKasir.addEventListener('click', (e) => {
+    if (e.target === modalSelisihKasir) closeSelisihModal();
+  });
   setoranModal.addEventListener('click', (e) => {
     if (e.target === setoranModal) closeSetoranModal();
   });
@@ -1232,7 +1542,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const memberBtnClose = document.getElementById('btnCloseModalMember');
   const inputSearchMember = document.getElementById('inputSearchMember');
   const selectFilterKategoriMember = document.getElementById('selectFilterKategoriMember');
+  const selectFilterStatusMember = document.getElementById('selectFilterStatusMember');
   const sumTotalMember = document.getElementById('sumTotalMember');
+  const sumMemberAktif = document.getElementById('sumMemberAktif');
+  const sumMemberExpired = document.getElementById('sumMemberExpired');
   const sumMemberPelajar = document.getElementById('sumMemberPelajar');
   const sumMemberUmum = document.getElementById('sumMemberUmum');
   const sumMemberPlatinum = document.getElementById('sumMemberPlatinum');
@@ -1312,7 +1625,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const loadMemberList = async () => {
     memberBody.innerHTML =
-      '<tr class="tx-table__empty"><td colspan="7">Memuat data…</td></tr>';
+      '<tr class="tx-table__empty"><td colspan="8">Memuat data…</td></tr>';
     try {
       const resp = await fetch('/api/admin/members');
       const data = await resp.json();
@@ -1325,52 +1638,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Stat card: total member aktif (tanpa filter, dari response penuh)
       // + persist ke localStorage agar refresh berikutnya = INSTANT (Fix #29)
-      const freshCount = (window.memberCache || []).length || 0;
+      // NOTE: gunakan data.summary.totalMember, BUKAN window.memberCache.length —
+      // cache hanya memuat member yang punya transaksi (JOIN), bukan seluruh baris member.
+      const freshCount = Number(data.summary?.totalMember) || (window.memberCache || []).length || 0;
       statListMember.textContent = String(freshCount);
       persistMemberTotal(freshCount);
+
+      // Chip counter GLOBAL — selalu total penuh, tidak terpengaruh filter
+      updateGlobalMemberChips();
 
       reRenderMemberTable();
       memberLoaded = true;
     } catch (err) {
       memberBody.innerHTML =
         `<tr class="tx-table__empty">
-           <td colspan="7">Gagal memuat daftar member: ${escapeHtml(err.message)}</td>
+           <td colspan="8">Gagal memuat daftar member: ${escapeHtml(err.message)}</td>
          </tr>`;
     }
   };
 
-  const reRenderMemberTable = () => {
+  // Member status badge — AKTIF (30 hari内有交易) vs EXPIRED (Fix #60)
+  const memberStatusBadge = (status) => {
+    if (status === 'AKTIF') {
+      return '<span class="badge badge-member--aktif">AKTIF</span>';
+    }
+    return '<span class="badge badge-member--expired">EXPIRED</span>';
+  };
+
+  // ── Chip summary GLOBAL — SELALU total penuh, TIDAK terpengaruh filter (Fix #65)
+const updateGlobalMemberChips = () => {
+  const fullList = window.memberCache || [];
+  sumTotalMember.textContent = String(fullList.length);
+  sumMemberAktif.textContent = String(fullList.filter(m => m.status_aktif === 'AKTIF').length);
+  sumMemberExpired.textContent = String(fullList.filter(m => m.status_aktif === 'EXPIRED').length);
+  sumMemberPelajar.textContent = String(fullList.filter(m => String(m.kategori || '').toUpperCase() === 'PELAJAR').length);
+  sumMemberUmum.textContent = String(fullList.filter(m => String(m.kategori || '').toUpperCase() === 'UMUM').length);
+  sumMemberPlatinum.textContent = String(fullList.filter(m => String(m.kategori || '').toUpperCase() === 'PLATINUM').length);
+};
+
+const reRenderMemberTable = () => {
     const rows = Array.isArray(window.memberCache)
       ? window.memberCache
       : [];
     const q = String(inputSearchMember.value || '').trim().toLowerCase();
     const kategori = selectFilterKategoriMember.value; // 'ALL' = semua
+    const status = selectFilterStatusMember.value; // 'ALL' | 'AKTIF' | 'EXPIRED'
 
     const filtered = rows.filter(r => {
       const matchKategori = kategori === 'ALL'
         || String(r.kategori || '').toUpperCase() === kategori;
+      const matchStatus = status === 'ALL'
+        || String(r.status_aktif || '').toUpperCase() === status;
       const matchCari = !q
         || String(r.nama || '').toLowerCase().includes(q)
         || String(r.kode_member || '').toLowerCase().includes(q)
         || String(r.nomor_hp || '').toLowerCase().includes(q);
-      return matchKategori && matchCari;
+      return matchKategori && matchStatus && matchCari;
     });
 
-    // Update stat chips ringkasan (mengikuti filter, pola setoran)
-    const countKategori = (k) =>
-      filtered.filter(r => String(r.kategori || '').toUpperCase() === k).length;
-    const jmlPlatinum = countKategori('PLATINUM');
-    sumTotalMember.textContent = String(filtered.length);
-    sumMemberPelajar.textContent = String(countKategori('PELAJAR'));
-    sumMemberUmum.textContent = String(countKategori('UMUM'));
-    sumMemberPlatinum.textContent = String(jmlPlatinum);
-
-    // Sembunyikan chip Platinum bila jumlahnya 0 (Fix #28) — grid chip
-    // menjadi simetris 3 chip (Total / Pelajar / Umum) tanpa angka
-    // "0" yang memicu tumpang-tindih angka di layar sempit.
-    if (platinumChipEl) {
-      platinumChipEl.style.display = jmlPlatinum === 0 ? 'none' : '';
-    }
+    // Sinkronkan highlight chip dengan status filter saat ini
+    syncChipFilter();
 
     memberBody.innerHTML = filtered.length
       ? filtered.map(r =>
@@ -1381,26 +1708,41 @@ document.addEventListener('DOMContentLoaded', () => {
              </td>
              <td>${escapeHtml(formatNoHP(r.nomor_hp))}</td>
              <td>${memberKategoriBadge(r.kategori)}</td>
+             <td>${memberStatusBadge(r.status_aktif)}</td>
              <td class="col-num">${r.total_kunjungan} kali</td>
              <td class="col-num">${formatRupiah(r.total_belanja)}</td>
-             <td class="time">${escapeHtml(r.tanggal_daftar || '—')}</td>
+             <td class="time">${escapeHtml(r.last_transaksi)}</td>
              <td class="col-aksi">
-               <button type="button" class="btn-member-delete"
-                       data-member-id="${r.id}"
-                       data-member-kode="${escapeHtml(r.kode_member)}"
-                       data-member-nama="${escapeHtml(r.nama)}"
-                       aria-label="Hapus member ${escapeHtml(r.nama)} (${escapeHtml(r.kode_member)})">
+               <div class="member-action-group">
+                 ${r.status_aktif === 'EXPIRED'
+                   ? `<button type="button" class="btn-activate-member"
+                         data-member-id="${r.id}"
+                         data-member-nama="${escapeHtml(r.nama)}"
+                         aria-label="Aktifkan ${escapeHtml(r.nama)}">⚡</button>`
+                   : ''}
+                 <button type="button" class="btn-edit-member"
+                         data-member-id="${r.id}"
+                         data-member-nama="${escapeHtml(r.nama)}"
+                         data-member-hp="${escapeHtml(formatNoHP(r.nomor_hp))}"
+                         data-member-kategori="${escapeHtml(r.kategori)}"
+                         aria-label="Edit ${escapeHtml(r.nama)}">✏️</button>
+                 <button type="button" class="btn-member-delete"
+                         data-member-id="${r.id}"
+                         data-member-kode="${escapeHtml(r.kode_member)}"
+                         data-member-nama="${escapeHtml(r.nama)}"
+                         aria-label="Hapus member ${escapeHtml(r.nama)} (${escapeHtml(r.kode_member)})">
                  <svg viewBox="0 0 24 24" aria-hidden="true">
                    <polyline points="3 6 5 6 21 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                    <path d="M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                  </svg>
-               </button>
+                 </button>
+               </div>
              </td>
            </tr>`
         ).join('')
-      : '<tr class="tx-table__empty"><td colspan="7">Tidak ada member yang cocok dengan filter</td></tr>';
+      : '<tr class="tx-table__empty"><td colspan="8">Tidak ada member yang cocok dengan filter</td></tr>';
   };
 
   // Hapus member: konfirmasi presisi (Nama & Kode) → DELETE → refresh
@@ -1432,7 +1774,8 @@ document.addEventListener('DOMContentLoaded', () => {
         r => Number(r.id) !== id
       );
       // 2. Perbarui stat card (total member tanpa filter)
-      statListMember.textContent = String(window.memberCache.length || 0);
+      // Gunakan window.memberCache.length setelah filter (setelah delete), bukan length lama.
+      statListMember.textContent = String(Math.max(0, (window.memberCache || []).length - 1));
       // 3. Re-render tabel + chips mengikuti filter aktif
       reRenderMemberTable();
       // 4. Info sukses singkat
@@ -1442,11 +1785,156 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // ── Handle Activate Member (Fix #60) ──────────────────────────
+  const handleActivateMemberClick = async (e) => {
+    const btn = e.target.closest('.btn-activate-member');
+    if (!btn) return;
+    const id = Number(btn.dataset.memberId);
+    const nama = btn.dataset.memberNama || '';
+    if (!id || !nama) return;
+
+    const konfirmasi = window.confirm(
+      `Aktifkan kembali member ${nama}?`
+    );
+    if (!konfirmasi) return;
+
+    try {
+      const resp = await fetch('/api/admin/member/' + id + '/activate', { method: 'POST' });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) throw new Error(data.message || 'Gagal mengaktifkan');
+      // Update cache lokal tanpa re-fetch penuh
+      const idx = (window.memberCache || []).findIndex(m => m.id === id);
+      if (idx !== -1) {
+        window.memberCache[idx].status_aktif = 'AKTIF';
+      }
+      reRenderMemberTable();
+      window.alert(data.message);
+    } catch (err) {
+      window.alert('Gagal mengaktifkan member: ' + err.message);
+    }
+  };
+
+  // ── Handle Edit Member (Fix #60) ────────────────────────────────
+  const modalEditMember = document.getElementById('modalEditMember');
+  const btnCloseModalEditMember = document.getElementById('btnCloseModalEditMember');
+  const formEditMember = document.getElementById('formEditMember');
+  const editMemberId = document.getElementById('editMemberId');
+  const editMemberNama = document.getElementById('editMemberNama');
+  const editMemberNoHp = document.getElementById('editMemberNoHp');
+  const editMemberKategori = document.getElementById('editMemberKategori');
+  const btnBatalEditMember = document.getElementById('btnBatalEditMember');
+
+  const openEditMemberModal = (member) => {
+    editMemberId.value = String(member.id);
+    editMemberNama.value = member.nama;
+    editMemberNoHp.value = member.nomor_hp || '';
+    editMemberKategori.value = String(member.kategori || 'UMUM').toUpperCase();
+    modalEditMember.classList.add('is-open');
+    modalEditMember.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeEditMemberModal = () => {
+    modalEditMember.classList.remove('is-open');
+    modalEditMember.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    formEditMember.reset();
+  };
+
+  formEditMember.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = Number(editMemberId.value);
+    const nama = editMemberNama.value.trim();
+    const noHp = editMemberNoHp.value.trim();
+    const kategori = editMemberKategori.value;
+    if (!id || !nama || !kategori) {
+      window.alert('Nama dan kategori wajib diisi.');
+      return;
+    }
+    try {
+      const resp = await fetch('/api/admin/member/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nama, no_hp: noHp, kategori }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) throw new Error(data.message || 'Gagal memperbarui member');
+      // Update cache lokal
+      const idx = (window.memberCache || []).findIndex(m => m.id === id);
+      if (idx !== -1) {
+        window.memberCache[idx].nama = nama;
+        window.memberCache[idx].nomor_hp = noHp;
+        window.memberCache[idx].kategori = kategori;
+      }
+      closeEditMemberModal();
+      reRenderMemberTable();
+      window.alert(data.message);
+    } catch (err) {
+      window.alert('Gagal memperbarui member: ' + err.message);
+    }
+  });
+
+  btnCloseModalEditMember.addEventListener('click', closeEditMemberModal);
+  btnBatalEditMember.addEventListener('click', closeEditMemberModal);
+  modalEditMember.addEventListener('click', (e) => {
+    if (e.target === modalEditMember) closeEditMemberModal();
+  });
+
   // Delegate di tbody (tombol di-re-render setiap filter berubah)
-  memberBody.addEventListener('click', handleDeleteMemberClick);
+  memberBody.addEventListener('click', (e) => {
+    if (e.target.closest('.btn-activate-member')) {
+      handleActivateMemberClick(e);
+    } else if (e.target.closest('.btn-edit-member')) {
+      const btn = e.target.closest('.btn-edit-member');
+      const id = Number(btn.dataset.memberId);
+      const member = (window.memberCache || []).find(m => m.id === id);
+      if (member) openEditMemberModal(member);
+    } else {
+      handleDeleteMemberClick(e);
+    }
+  });
 
   inputSearchMember.addEventListener('input', reRenderMemberTable);
   selectFilterKategoriMember.addEventListener('change', reRenderMemberTable);
+  selectFilterStatusMember.addEventListener('change', reRenderMemberTable);
+
+  // ── Chip filter interaktif (Fix #64) ────────────────────────────
+  // Klik chip → sinkronkan value <select> filter → refresh tabel
+  const syncChipFilter = () => {
+    const chips = document.querySelectorAll('#chipFilterTotal,#chipFilterAktif,#chipFilterExpired,#chipFilterPelajar,#chipFilterUmum,#chipFilterPlatinum');
+    chips.forEach(chip => {
+      const kat = chip.dataset.filterKategori || 'ALL';
+      const st = chip.dataset.filterStatus || 'ALL';
+      const isActive = selectFilterKategoriMember.value === kat && selectFilterStatusMember.value === st;
+      chip.classList.toggle('is-active', isActive);
+    });
+  };
+
+  const applyChipFilter = (chip) => {
+    const kat = chip.dataset.filterKategori || 'ALL';
+    const st = chip.dataset.filterStatus || 'ALL';
+    selectFilterKategoriMember.value = kat;
+    selectFilterStatusMember.value = st;
+    syncChipFilter();
+    reRenderMemberTable();
+  };
+
+  document.addEventListener('click', (e) => {
+    const chip = e.target.closest('.tx-chip--clickable');
+    if (chip) applyChipFilter(chip);
+  });
+  // Support keyboard Enter/Space
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      const chip = e.target.closest('.tx-chip--clickable');
+      if (chip) { e.preventDefault(); applyChipFilter(chip); }
+    }
+  });
+
+  // Sinkronisasi chip saat user mengubah dropdown filter manual
+  const refreshChipHighlight = () => { syncChipFilter(); };
+  selectFilterKategoriMember.addEventListener('change', refreshChipHighlight);
+  selectFilterStatusMember.addEventListener('change', refreshChipHighlight);
   cardListMember.addEventListener('click', openMemberModal);
   memberBtnClose.addEventListener('click', closeMemberModal);
   memberModal.addEventListener('click', (e) => {
@@ -1537,7 +2025,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const loadQrisHistory = async () => {
     qrisBody.innerHTML =
-      '<tr class="tx-table__empty"><td colspan="6">Memuat data…</td></tr>';
+      '<tr class="tx-table__empty"><td colspan="5">Memuat data…</td></tr>';
     try {
       const s = inputStartDateQris.value || kasMonthStartYMD();
       const e = inputEndDateQris.value || toYMD(new Date());
@@ -1556,7 +2044,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       qrisBody.innerHTML =
         `<tr class="tx-table__empty">
-           <td colspan="6">Gagal memuat riwayat QRIS: ${escapeHtml(err.message)}</td>
+           <td colspan="5">Gagal memuat riwayat QRIS: ${escapeHtml(err.message)}</td>
          </tr>`;
     }
   };
@@ -1576,23 +2064,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     qrisBody.innerHTML = filtered.length
-      ? filtered.map(r =>
-          `<tr data-qris-id="${r.id}">
-             <td class="time">${escapeHtml(r.waktu)} - ${escapeHtml(r.tanggal)}</td>
-             <td>${escapeHtml(r.kode_transaksi)}</td>
-             <td>${escapeHtml(r.kasir)}</td>
-             <td class="col-num">${formatRupiah(r.total_bayar)}</td>
-             <td>${escapeHtml(r.no_ref_qris || '-')}</td>
-             <td>
-               ${qrisStatusBadge(r.status_qris)}
-               <button type="button" class="btn-qris-verify"
+      ? filtered.map(r => {
+          // Tombol "Verifikasi" HANYA untuk PENDING — transaksi yang sudah
+          // TERVERIFIKASI / BATAL tidak perlu tindakan manual (badge saja).
+          const status = String(r.status_qris || '').toUpperCase();
+          const tombolVerifikasi = status === 'PENDING'
+            ? `<button type="button" class="btn-qris-verify"
                        data-id="${r.id}" aria-label="Verifikasi QRIS transaksi ${escapeHtml(r.kode_transaksi)}">
                  Verifikasi
-               </button>
+               </button>`
+            : '';
+          return `<tr data-qris-id="${r.id}">
+             <td class="time col-qris-waktu">${escapeHtml(r.waktu)} - ${escapeHtml(r.tanggal)}</td>
+             <td class="col-qris-kode">${escapeHtml(r.kode_transaksi)}</td>
+             <td class="col-qris-kasir">${escapeHtml(r.kasir)}</td>
+             <td class="col-num col-qris-nominal">${formatRupiah(r.total_bayar)}</td>
+             <td class="col-qris-status">
+               ${qrisStatusBadge(r.status_qris)}${tombolVerifikasi}
              </td>
-           </tr>`
-        ).join('')
-      : '<tr class="tx-table__empty"><td colspan="6">Tidak ada riwayat QRIS untuk filter ini</td></tr>';
+           </tr>`;
+        }).join('')
+      : '<tr class="tx-table__empty"><td colspan="5">Tidak ada riwayat QRIS untuk filter ini</td></tr>';
   };
 
   // Delegate event: tombol "Verifikasi" → prompt status + RRN → PATCH
@@ -1943,6 +2435,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       if (chartDataCache) renderSalesBarChart(chartDataCache);
+      if (typeof hppDataCache !== 'undefined' && hppDataCache) renderHppTrendChart(hppDataCache);
     }, 150);
   });
 
@@ -1959,6 +2452,23 @@ document.addEventListener('DOMContentLoaded', () => {
       loadSalesChart('monthly_daily');
     }
   })();
+
+  // Re-render grafik saat tab Keuangan ditampilkan kembali (Fix #58)
+  // — Canvas di tab non-aktif punya layout 0px, sehingga hasil render
+  // pertama bisa "hilang" / terpotong. Saat tab diaktifkan, paksa
+  // re-render dengan lebar container yang sudah benar.
+  const reRenderChartsOnTabActivate = () => {
+    requestAnimationFrame(() => {
+      if (chartDataCache) renderSalesBarChart(chartDataCache);
+      if (typeof hppDataCache !== 'undefined' && hppDataCache) renderHppTrendChart(hppDataCache);
+    });
+  };
+  // Bind ke tombol tab "Ringkasan Keuangan" — pakai querySelector karena
+  // ID tab-btn bisa berubah antar versi HTML (robust).
+  const tabBtnKeuangan = document.querySelector('[data-tab="tab-keuangan"]');
+  if (tabBtnKeuangan) {
+    tabBtnKeuangan.addEventListener('click', () => reRenderChartsOnTabActivate());
+  }
 
   // ── GRAFIK FLUKTUASI HPP VS HARGA JUAL + MARGIN WARNING (Fix #47) ──
   const HPP_CHART_CACHE_KEY = 'pbms_cached_hpp_trend';
@@ -2287,6 +2797,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadBankSummary();
+    loadBankPendingDeposits();
     loadBankHistory();
   };
 
@@ -3133,10 +3644,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <td>${escapeHtml(c.nama)}</td>
           <td><span class="pem-kategori-chip">${escapeHtml(c.kategori || pemActiveKategori)}</span></td>
           <td class="num">${c.stok}</td>
-          <td class="num">${c.qty}</td>
+          <td class="num"><input type="number" class="pem-qty-input" min="1" value="${c.qty}" data-pem-barang="${c.barang_id}"></td>
           <td class="num">${formatRupiah(c.hpp_baru)}</td>
           <td class="num">${formatRupiah(c.hj_baru)}</td>
-          <td class="num">${formatRupiah(c.hpp_baru * c.qty)}</td>
+          <td class="num pem-subtotal-cell" data-pem-subtotal="${c.barang_id}">${formatRupiah(c.hpp_baru * c.qty)}</td>
           <td class="col-aksi">
             <button type="button" class="btn-pem-remove"
                     data-pem-rm="${c.barang_id}">Hapus</button>
@@ -3170,6 +3681,31 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pemCartBody) {
       pemCartBody.querySelectorAll('[data-pem-rm]').forEach(btn => {
         btn.addEventListener('click', () => removePemItem(Number(btn.dataset.pemRm)));
+      });
+      // (Qty interaktif) input Qty per item → update pemCart + subtotal + summary footer
+      pemCartBody.querySelectorAll('.pem-qty-input').forEach(inp => {
+        inp.addEventListener('input', () => {
+          const barangId = Number(inp.dataset.pemBarang);
+          let qty = parseInt(inp.value, 10);
+          if (isNaN(qty) || qty < 1) qty = 1;
+          const item = pemCart.find(c => c.barang_id === barangId);
+          if (!item) return;
+          item.qty = qty;
+          const subCell = pemCartBody.querySelector(`[data-pem-subtotal="${barangId}"]`);
+          if (subCell) subCell.textContent = formatRupiah(item.hpp_baru * qty);
+          // Re-hitung summary footer
+          const totalModal = visibleCart.reduce((s, c) => s + c.hpp_baru * c.qty, 0);
+          const totalQty   = visibleCart.reduce((s, c) => s + c.qty, 0);
+          const totalHj    = visibleCart.reduce((s, c) => s + c.hj_baru * c.qty, 0);
+          if (pemSumQty)   pemSumQty.textContent   = String(totalQty);
+          if (pemSumModal) pemSumModal.textContent = formatRupiah(totalModal);
+          if (pemSumMargin) {
+            const marginPct = totalHj > 0
+              ? ((totalHj - totalModal) / totalHj * 100).toFixed(1)
+              : null;
+            pemSumMargin.textContent = marginPct === null ? '—' : (100 - Number(marginPct)).toFixed(1) + '%';
+          }
+        });
       });
     }
   };
@@ -3456,3 +3992,604 @@ document.addEventListener('DOMContentLoaded', () => {
   // Init — muat daftar PO saat halaman load
   loadPoList();
 });
+
+  // ── BAR Raw Materials (Fix #69) ─────────────────────────────────
+  const formBarMaterial = document.getElementById('formBarMaterial');
+  const barMaterialBody = document.getElementById('barMaterialBody');
+  const barTotalItems = document.getElementById('barTotalItems');
+  const barLowStock = document.getElementById('barLowStock');
+  let barMaterialsCache = [];
+  let barSelectedId = null;
+  let barSearchTimeout = null;
+
+  const formatBarRupiah = (n) => {
+    if (!n && n !== 0) return 'Rp 0';
+    return 'Rp ' + Number(n).toLocaleString('id-ID');
+  };
+
+  const getBarMaterialBody = () => document.getElementById('barMaterialBody');
+
+  const loadBarMaterials = async () => {
+    const bodyEl = getBarMaterialBody();
+    barMaterialsCache = [];
+    try {
+      const resp = await fetch('/api/admin/bar/raw-materials');
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.message || 'Gagal memuat');
+
+      barMaterialsCache = (data.data || []).map(m => ({
+        ...m,
+        harga_per_satuan: Number(m.harga_per_satuan || m.harga_satuan) || 0,
+        updated_at: m.updated_at || m.terakhir_update || '—'
+      }));
+
+      renderBarMaterials();
+    } catch (err) {
+      console.error('Gagal memuat bar materials:', err);
+      if (bodyEl) {
+        bodyEl.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #f87171; padding: 20px;">Gagal memuat data: ' + escapeHtml(err.message) + '</td></tr>';
+      }
+    }
+  };
+
+  const renderBarMaterials = () => {
+    const bodyEl = getBarMaterialBody();
+    if (!bodyEl) return;
+
+    const items = barMaterialsCache;
+    if (barTotalItems) barTotalItems.textContent = String(items.length);
+    if (barLowStock) barLowStock.textContent = String(items.filter(m => (Number(m.stok) || 0) < 10).length);
+
+    if (!items.length) {
+      bodyEl.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #94a3b8; padding: 20px;">Belum ada data bahan mentah bar</td></tr>';
+      return;
+    }
+
+    bodyEl.innerHTML = items.map(m => {
+      const stok = Number(m.stok) || 0;
+      const hpp = Number(m.harga_per_satuan) || 0;
+      const nilaiStok = stok * hpp;
+      const isLow = stok < 10;
+      return '<tr>' +
+        '<td><code>' + escapeHtml(String(m.kode_barang || '')) + '</code></td>' +
+        '<td><strong>' + escapeHtml(String(m.nama_barang || '')) + '</strong></td>' +
+        '<td class="col-num' + (isLow ? ' bar-low-stock' : '') + '">' + stok.toLocaleString('id-ID') + '</td>' +
+        '<td>' + escapeHtml(String(m.satuan || '')) + '</td>' +
+        '<td class="col-num">' + formatBarRupiah(hpp) + '</td>' +
+        '<td class="col-num">' + formatBarRupiah(nilaiStok) + '</td>' +
+        '<td>' + escapeHtml(String(m.updated_at || '')) + '</td>' +
+        '<td><button type="button" class="btn btn-danger btn-sm" data-bar-delete="' + escapeHtml(String(m.kode_barang)) + '">Hapus</button></td>' +
+        '</tr>';
+    }).join('');
+
+    bodyEl.querySelectorAll('[data-bar-delete]').forEach(btn => {
+      btn.addEventListener('click', () => deleteBarMaterial(btn.dataset.barDelete));
+    });
+  };
+
+  // ── Pembelian & Operasional via Saldo Bank (Fix #77) ────────────
+  const pbForm = document.getElementById('formPengeluaranBank');
+  const pbTableBody = document.getElementById('pbTableBody');
+  const pbBankSaldoDisplay = document.getElementById('pbBankSaldoDisplay');
+  const pbAlertBox = document.getElementById('pbAlert');
+  const pbKategori = document.getElementById('pbKategori');
+  const pbNama = document.getElementById('pbNama');
+  const pbNominal = document.getElementById('pbNominal');
+  const pbKeterangan = document.getElementById('pbKeterangan');
+  const pbFilterQ = document.getElementById('pbFilterQ');
+  const pbFilterKategori = document.getElementById('pbFilterKategori');
+  let pbSearchTimeout = null;
+
+  const PB_KATEGORI_LABEL = {
+    LISTRIK_LUAR: 'Listrik Luar',
+    LISTRIK_DALAM: 'Listrik Dalam',
+    PERLENGKAPAN_DAPUR: 'Perlengkapan / Operasional Dapur',
+    PERLENGKAPAN_BAR: 'Perlengkapan / Operasional Bar',
+    PERLENGKAPAN_KASIR: 'Perlengkapan / Operasional Kasir',
+    PERLENGKAPAN_BILLIARD: 'Perlengkapan Billiard',
+    LAINNYA: 'Lainnya',
+  };
+
+  const pbRupiah = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+
+  const showPbAlert = (kind, msg) => {
+    if (!pbAlertBox) return;
+    pbAlertBox.className = 'bank-alert-box ' + (kind === 'success' ? 'is-success' : 'is-danger');
+    pbAlertBox.textContent = msg;
+    pbAlertBox.hidden = false;
+    clearTimeout(showPbAlert._t);
+    showPbAlert._t = setTimeout(() => { pbAlertBox.hidden = true; }, 5000);
+  };
+
+  const loadPengeluaranBank = async () => {
+    const kategori = pbFilterKategori ? pbFilterKategori.value : '';
+    const q = pbFilterQ ? pbFilterQ.value.trim() : '';
+    try {
+      const url = '/api/admin/pengeluaran-bank' +
+        (kategori ? ('?kategori=' + encodeURIComponent(kategori)) : '') +
+        (q ? ((kategori ? '&' : '?') + 'q=' + encodeURIComponent(q)) : '');
+      const resp = await fetch(url);
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.message || 'Gagal memuat');
+      if (data.saldo_bank_saat_ini !== undefined) {
+        const elSaldo = pbBankSaldoDisplay ||
+          document.getElementById('pbSaldoBank') ||
+          document.querySelector('#sumberDanaBadge');
+        if (elSaldo) elSaldo.textContent = 'Saldo Bank: ' + pbRupiah(data.saldo_bank_saat_ini);
+      }
+      const rows = data.data || [];
+      if (!rows.length) {
+        pbTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Belum ada pengeluaran bank</td></tr>';
+        return;
+      }
+      pbTableBody.innerHTML = rows.map((r, i) => {
+        const ket = r.keterangan ? '<div class="pb-keterangan">' + escapeHtml(r.keterangan) + '</div>' : '';
+        return '<tr>' +
+          '<td class="col-no">' + (i + 1) + '</td>' +
+          '<td class="time">' + escapeHtml(fmtTglJam(r.tanggal)) + '</td>' +
+          '<td>' + escapeHtml(PB_KATEGORI_LABEL[r.kategori] || r.kategori || '') + '</td>' +
+          '<td><strong>' + escapeHtml(r.nama_barang) + '</strong>' + ket + '</td>' +
+          '<td class="col-num">' + pbRupiah(r.nominal) + '</td>' +
+          '<td>' + escapeHtml(r.created_by || 'admin') + '</td>' +
+          '</tr>';
+      }).join('');
+    } catch (err) {
+      pbTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Gagal memuat: ' + escapeHtml(err.message) + '</td></tr>';
+    }
+  };
+
+  const submitPengeluaranBank = async (e) => {
+    e.preventDefault();
+    const adminName = sessionStorage.getItem('pbms_admin_session') || 'admin';
+    const kategori = pbKategori.value;
+    const nama = pbNama.value.trim();
+    const nominal = Math.round(Number(pbNominal.value) || 0);
+    const keterangan = pbKeterangan.value.trim();
+
+    if (!nama) { showPbAlert('danger', 'Nama barang / item wajib diisi.'); return; }
+    if (!(nominal > 0)) { showPbAlert('danger', 'Nominal harus > 0.'); return; }
+
+    const btn = document.getElementById('btnSimpanPengeluaranBank');
+    if (btn) { btn.disabled = true; btn.textContent = 'Memproses…'; }
+    try {
+      const resp = await fetch('/api/admin/pengeluaran-bank', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kategori, nama_barang: nama, nominal, keterangan, admin_name: adminName,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) {
+        if (data.code === 'SALDO_BANK_TIDAK_CUKUP') {
+          showPbAlert('danger',
+            'Saldo bank tidak cukup (Saldo: Rp ' +
+            Number(data.saldo_bank_saat_ini || 0).toLocaleString('id-ID') + ').');
+        } else {
+          showPbAlert('danger', data.message || 'Gagal menyimpan.');
+        }
+        return;
+      }
+      showPbAlert('success',
+        'Pengeluaran bank tersimpan. Saldo kini: ' + pbRupiah(data.saldo_bank_saat_ini) + '.');
+      pbNama.value = ''; pbNominal.value = ''; pbKeterangan.value = '';
+      await loadPengeluaranBank();
+    } catch (err) {
+      showPbAlert('danger', 'Gagal menyimpan: ' + err.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'SIMPAN PEMBELIAN'; }
+    }
+  };
+
+  if (pbForm) {
+    safeAddEventListener(pbForm, 'submit', submitPengeluaranBank);
+  }
+  if (pbFilterQ) {
+    safeAddEventListener(pbFilterQ, 'input', () => {
+      clearTimeout(pbSearchTimeout);
+      pbSearchTimeout = setTimeout(loadPengeluaranBank, 250);
+    });
+  }
+  if (pbFilterKategori) {
+    safeAddEventListener(pbFilterKategori, 'change', loadPengeluaranBank);
+  }
+  // Muat saat init
+  loadPengeluaranBank();
+
+  // ── Bar Form: Search & Auto-fill (Fix #71) ──────────────────────
+  const barNamaInput = document.getElementById('barNama');
+  const barNamaList = document.getElementById('barNamaList');
+  const barNamaResult = document.getElementById('barNamaResult');
+  const barKodeInput = document.getElementById('barKode');
+  const barSatuanSelect = document.getElementById('barSatuan');
+  const barStokLabel = document.getElementById('barStokLabel');
+  const barHargaInput = document.getElementById('barHarga');
+  const btnBarSubmit = document.getElementById('btnBarSubmit');
+
+  const setupBarForm = () => {
+    if (!barNamaInput || !barNamaList) return;
+    // Autocomplete datalist
+    barNamaList.innerHTML = barMaterialsCache.map(m =>
+      '<option value="' + escapeHtml(String(m.nama_barang)) + '">'
+    ).join('');
+
+    // ── Real-time thousands separator on Harga field (Fix #74) ─────────────
+    const formatBarHargaInput = (val) => {
+      const clean = String(val).replace(/[^\d]/g, '');
+      if (!clean) return '';
+      return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
+
+    barHargaInput.addEventListener('input', () => {
+      const raw = barHargaInput.value;
+      const formatted = formatBarHargaInput(raw);
+      if (formatted !== raw) barHargaInput.value = formatted;
+    });
+    // Also handle paste — format the pasted content
+    barHargaInput.addEventListener('paste', (e) => {
+      setTimeout(() => {
+        const formatted = formatBarHargaInput(barHargaInput.value);
+        if (formatted) barHargaInput.value = formatted;
+      }, 0);
+    });
+
+    // Live search on input — always re-enable satuan for new/typo inputs
+    barNamaInput.addEventListener('input', () => {
+      // User is typing — enable satuan dropdown (new material mode)
+      barSelectedId = null;
+      barSatuanSelect.disabled = false;
+      barKodeInput.value = '';
+      barKodeInput.style.opacity = '';
+      barStokLabel.textContent = 'Stok Tambah';
+      btnBarSubmit.textContent = '+ Tambah Bahan';
+
+      clearTimeout(barSearchTimeout);
+      barSearchTimeout = setTimeout(() => {
+        const query = String(barNamaInput.value).trim().toLowerCase();
+        if (!query) {
+          barNamaResult.innerHTML = '';
+          return;
+        }
+        const matches = barMaterialsCache.filter(m =>
+          String(m.nama_barang).toLowerCase().includes(query)
+        );
+        if (!matches.length) {
+          barNamaResult.innerHTML = '<div class="bar-search-none">Tidak ditemukan — ketik nama baru</div>';
+          return;
+        }
+        barNamaResult.innerHTML = matches.map(m =>
+          '<div class="bar-search-item" data-id="' + m.id + '" data-nama="' + escapeHtml(String(m.nama_barang)) + '" data-satuan="' + escapeHtml(String(m.satuan)) + '" data-harga="' + (m.harga_per_satuan || 0) + '">' +
+            '<strong>' + escapeHtml(String(m.nama_barang)) + '</strong>' +
+            ' — Stok: <b>' + Number(m.stok || 0).toFixed(2) + ' ' + escapeHtml(String(m.satuan)) + '</b>' +
+            ' | ' + formatBarRupiah(m.harga_per_satuan) + '/satuan' +
+          '</div>'
+        ).join('');
+        barNamaResult.querySelectorAll('.bar-search-item').forEach(el => {
+          el.addEventListener('click', () => {
+            barSelectedId = Number(el.dataset.id);
+            barNamaInput.value = el.dataset.nama;
+            barNamaResult.innerHTML = '';
+            // Auto-fill satuan & lock for restok mode
+            barSatuanSelect.value = el.dataset.satuan;
+            barSatuanSelect.disabled = true;
+            // Auto-fill harga with thousands separator
+            barHargaInput.value = formatBarHargaInput(el.dataset.harga);
+            // Update UI for restok mode
+            barKodeInput.value = '— Sudah ada';
+            barKodeInput.style.opacity = '0.6';
+            barStokLabel.textContent = 'Tambah Stok (Restok)';
+            btnBarSubmit.textContent = '✓ Restok';
+          });
+        });
+      }, 200);
+    });
+
+    // Blur: hide search results, don't reset form state
+    barNamaInput.addEventListener('blur', () => {
+      setTimeout(() => {
+        barNamaResult.innerHTML = '';
+      }, 200);
+    });
+  };
+
+  const resetBarForm = () => {
+    barSelectedId = null;
+    barKodeInput.value = '';
+    barKodeInput.style.opacity = '';
+    barSatuanSelect.value = 'ml';
+    barSatuanSelect.disabled = false;
+    barStokLabel.textContent = 'Stok Tambah';
+    btnBarSubmit.textContent = '+ Tambah Bahan';
+    barNamaInput.value = '';
+    barNamaResult.innerHTML = '';
+    document.getElementById('barStok').value = '0';
+    barHargaInput.value = '';
+  };
+
+  const addBarMaterial = async (e) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const nama = String(document.getElementById('barNama').value).trim();
+    const satuan = document.getElementById('barSatuan').value;
+    const stok = parseFloat(document.getElementById('barStok').value) || 0;
+    const hargaRaw = String(document.getElementById('barHarga').value).replace(/\./g, '');
+    const harga = parseFloat(hargaRaw) || 0;
+    if (!nama) { alert('Nama bahan wajib diisi.'); return; }
+    if (!satuan) { alert('Satuan wajib dipilih.'); return; }
+    if (stok < 0) { alert('Stok tidak boleh negatif.'); return; }
+    try {
+      const payload = { nama_barang: nama, satuan: satuan, stok: stok, harga_per_satuan: harga };
+      if (barSelectedId) payload.id = barSelectedId;
+      const resp = await fetch('/api/admin/bar/raw-materials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.message || 'Gagal menambah');
+      // Show kode if new material
+      if (data.kode_barang) {
+        barKodeInput.value = data.kode_barang;
+        barKodeInput.style.opacity = '1';
+      }
+      resetBarForm();
+      await loadBarMaterials();
+      if (data.mode === 'restok') {
+        alert('Stok "' + nama + '" berhasil ditambahkan. Stok baru: ' + Number(data.data?.stok || 0).toFixed(2) + ' ' + satuan);
+      } else {
+        alert('Bahan baru "' + nama + '" berhasil ditambahkan dengan kode: ' + data.kode_barang);
+      }
+    } catch (err) { alert('Gagal tambah bahan: ' + err.message); }
+  };
+
+  async function deleteBarMaterial(kode) {
+    if (!confirm('Hapus bahan ' + kode + '?')) return;
+    try {
+      const resp = await fetch('/api/admin/bar/raw-materials', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kode_barang: kode })
+      });
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.message || 'Gagal hapus');
+      await loadBarMaterials();
+    } catch (err) {
+      alert('Gagal hapus bahan: ' + err.message);
+    }
+  }
+
+  if (formBarMaterial) {
+    formBarMaterial.removeEventListener('submit', addBarMaterial);
+    formBarMaterial.addEventListener('submit', addBarMaterial);
+  }
+  if (loadBarMaterials) {
+    const origLoad = loadBarMaterials;
+    // Public wrapper: fetch + refresh datalist autocomplete (dipakai di-init)
+    window.__loadBarMaterialsRef = async () => {
+      await origLoad();
+      if (barNamaList) {
+        barNamaList.innerHTML = barMaterialsCache.map(m =>
+          '<option value="' + escapeHtml(String(m.nama_barang)) + '">'
+        ).join('');
+      }
+    };
+    // Ganti init call loadBarMaterials() dengan wrapper agar datalist terisi
+  }
+  if (setupBarForm) setupBarForm();
+
+  // ── Init: muat Bahan Mentah Bar saat halaman load ─────────────
+  // wrapper __loadBarMaterialsRef juga mengisi datalist autocomplete
+  if (window.__loadBarMaterialsRef) {
+    window.__loadBarMaterialsRef();
+  } else if (typeof loadBarMaterials === 'function') {
+    loadBarMaterials();
+  }
+
+  // ── DAPUR Raw Materials (Fix #75) ──────────────────────────────
+  const formDapurMaterial = document.getElementById('formDapurMaterial');
+  const dapurMaterialBody = document.getElementById('dapurMaterialBody');
+  const dapurTotalItems = document.getElementById('dapurTotalItems');
+  const dapurLowStock = document.getElementById('dapurLowStock');
+
+  let dapurMaterialsCache = [];
+  let dapurSelectedId = null;
+  let dapurSearchTimeout = null;
+
+  const formatDapurRupiah = (n) => {
+    if (!n && n !== 0) return 'Rp 0';
+    return 'Rp ' + Number(n).toLocaleString('id-ID');
+  };
+
+  const loadDapurMaterials = async () => {
+    try {
+      const resp = await fetch('/api/admin/dapur/raw-materials');
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.message || 'Gagal memuat');
+      dapurMaterialsCache = data.data || [];
+      renderDapurMaterials();
+    } catch (err) {
+      dapurMaterialBody.innerHTML = '<tr><td colspan="8" class="text-center">Gagal memuat: ' + escapeHtml(err.message) + '</td></tr>';
+    }
+  };
+
+  const renderDapurMaterials = () => {
+    const items = dapurMaterialsCache;
+    dapurTotalItems.textContent = String(items.length);
+    dapurLowStock.textContent = String(items.filter(m => (m.stok || 0) < 10).length);
+    if (!items.length) {
+      dapurMaterialBody.innerHTML = '<tr><td colspan="8" class="text-center">Belum ada bahan mentah dapur</td></tr>';
+      return;
+    }
+    dapurMaterialBody.innerHTML = items.map(m => {
+      const isLow = (m.stok || 0) < 10;
+      return '<tr>' +
+        '<td><code>' + escapeHtml(String(m.kode_barang || '')) + '</code></td>' +
+        '<td><strong>' + escapeHtml(String(m.nama_barang || '')) + '</strong></td>' +
+        '<td class="col-num' + (isLow ? ' bar-low-stock' : '') + '">' + Number(m.stok || 0).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td>' +
+        '<td>' + escapeHtml(String(m.satuan || '')) + '</td>' +
+        '<td class="col-num">' + formatDapurRupiah(m.harga_per_satuan) + '</td>' +
+        '<td class="col-num">' + formatDapurRupiah(Number(m.stok || 0) * Number(m.harga_per_satuan || 0)) + '</td>' +
+        '<td>' + escapeHtml(String(m.updated_at || '')) + '</td>' +
+        '<td><button type="button" class="btn btn-danger btn-sm" data-dapur-delete="' + escapeHtml(String(m.kode_barang)) + '">Hapus</button></td>' +
+        '</tr>';
+    }).join('');
+    dapurMaterialBody.querySelectorAll('[data-dapur-delete]').forEach(btn => {
+      btn.addEventListener('click', () => deleteDapurMaterial(btn.dataset.dapurDelete));
+    });
+  };
+
+  // ── Dapur Form: Search & Auto-fill ──────────────────────────────
+  const dapurNamaInput = document.getElementById('dapurNama');
+  const dapurNamaList = document.getElementById('dapurNamaList');
+  const dapurNamaResult = document.getElementById('dapurNamaResult');
+  const dapurKodeInput = document.getElementById('dapurKode');
+  const dapurSatuanSelect = document.getElementById('dapurSatuan');
+  const dapurStokLabel = document.getElementById('dapurStokLabel');
+  const dapurHargaInput = document.getElementById('dapurHarga');
+  const btnDapurSubmit = document.getElementById('btnDapurSubmit');
+
+  const setupDapurForm = () => {
+    if (!dapurNamaInput || !dapurNamaList) return;
+
+    const formatDapurHargaInput = (val) => {
+      const clean = String(val).replace(/[^\d]/g, '');
+      if (!clean) return '';
+      return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
+
+    const refreshDapurDatalist = () => {
+      dapurNamaList.innerHTML = dapurMaterialsCache.map(m =>
+        '<option value="' + escapeHtml(String(m.nama_barang)) + '">'
+      ).join('');
+    };
+
+    dapurHargaInput.addEventListener('input', () => {
+      const raw = dapurHargaInput.value;
+      const formatted = formatDapurHargaInput(raw);
+      if (formatted !== raw) dapurHargaInput.value = formatted;
+    });
+    dapurHargaInput.addEventListener('paste', (e) => {
+      setTimeout(() => {
+        const formatted = formatDapurHargaInput(dapurHargaInput.value);
+        if (formatted) dapurHargaInput.value = formatted;
+      }, 0);
+    });
+
+    dapurNamaInput.addEventListener('input', () => {
+      dapurSelectedId = null;
+      dapurSatuanSelect.disabled = false;
+      dapurKodeInput.value = '';
+      dapurKodeInput.style.opacity = '';
+      dapurStokLabel.textContent = 'Stok Tambah';
+      btnDapurSubmit.textContent = '+ Tambah Bahan Dapur';
+
+      clearTimeout(dapurSearchTimeout);
+      dapurSearchTimeout = setTimeout(() => {
+        const query = String(dapurNamaInput.value).trim().toLowerCase();
+        if (!query) { dapurNamaResult.innerHTML = ''; return; }
+        const matches = dapurMaterialsCache.filter(m =>
+          String(m.nama_barang).toLowerCase().includes(query)
+        );
+        if (!matches.length) {
+          dapurNamaResult.innerHTML = '<div class="bar-search-none">Tidak ditemukan — ketik nama baru</div>';
+          return;
+        }
+        dapurNamaResult.innerHTML = matches.map(m =>
+          '<div class="bar-search-item" data-id="' + m.id + '" data-nama="' + escapeHtml(String(m.nama_barang)) + '" data-satuan="' + escapeHtml(String(m.satuan)) + '" data-harga="' + (m.harga_per_satuan || 0) + '">' +
+            '<strong>' + escapeHtml(String(m.nama_barang)) + '</strong>' +
+            ' — Stok: <b>' + Number(m.stok || 0).toFixed(2) + ' ' + escapeHtml(String(m.satuan)) + '</b>' +
+            ' | ' + formatDapurRupiah(m.harga_per_satuan) + '/satuan' +
+          '</div>'
+        ).join('');
+        dapurNamaResult.querySelectorAll('.bar-search-item').forEach(el => {
+          el.addEventListener('click', () => {
+            dapurSelectedId = Number(el.dataset.id);
+            dapurNamaInput.value = el.dataset.nama;
+            dapurNamaResult.innerHTML = '';
+            dapurSatuanSelect.value = el.dataset.satuan;
+            dapurSatuanSelect.disabled = true;
+            dapurHargaInput.value = formatDapurHargaInput(el.dataset.harga);
+            dapurKodeInput.value = '— Sudah ada';
+            dapurKodeInput.style.opacity = '0.6';
+            dapurStokLabel.textContent = 'Tambah Stok (Restok)';
+            btnDapurSubmit.textContent = '✓ Restok';
+          });
+        });
+      }, 200);
+    });
+
+    dapurNamaInput.addEventListener('blur', () => {
+      setTimeout(() => { dapurNamaResult.innerHTML = ''; }, 200);
+    });
+
+    refreshDapurDatalist();
+  };
+
+  const resetDapurForm = () => {
+    dapurSelectedId = null;
+    dapurKodeInput.value = '';
+    dapurKodeInput.style.opacity = '';
+    dapurSatuanSelect.value = 'g';
+    dapurSatuanSelect.disabled = false;
+    dapurStokLabel.textContent = 'Stok Tambah';
+    btnDapurSubmit.textContent = '+ Tambah Bahan Dapur';
+    dapurNamaInput.value = '';
+    dapurNamaResult.innerHTML = '';
+    document.getElementById('dapurStok').value = '0';
+    dapurHargaInput.value = '';
+  };
+
+  const addDapurMaterial = async (e) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const nama = String(document.getElementById('dapurNama').value).trim();
+    const satuan = document.getElementById('dapurSatuan').value;
+    const stok = parseFloat(document.getElementById('dapurStok').value) || 0;
+    const hargaRaw = String(document.getElementById('dapurHarga').value).replace(/\./g, '');
+    const harga = parseFloat(hargaRaw) || 0;
+    if (!nama) { alert('Nama bahan wajib diisi.'); return; }
+    if (!satuan) { alert('Satuan wajib dipilih.'); return; }
+    if (stok < 0) { alert('Stok tidak boleh negatif.'); return; }
+    try {
+      const resp = await fetch('/api/admin/dapur/raw-materials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nama_barang: nama, stok, satuan, harga_per_satuan: harga, id: dapurSelectedId || null })
+      });
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.message || 'Gagal simpan');
+      if (data.mode === 'new') {
+        alert('Bahan baru berhasil: ' + data.kode_barang + ' — ' + nama);
+      } else {
+        alert(data.message || 'Stok berhasil ditambahkan.');
+      }
+      resetDapurForm();
+      await loadDapurMaterials();
+      if (setupDapurForm) setupDapurForm();
+    } catch (err) { alert('Gagal tambah bahan: ' + err.message); }
+  };
+
+  async function deleteDapurMaterial(kode) {
+    if (!confirm('Hapus bahan ' + kode + '?')) return;
+    try {
+      const resp = await fetch('/api/admin/dapur/raw-materials', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kode_barang: kode })
+      });
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.message || 'Gagal hapus');
+      await loadDapurMaterials();
+    } catch (err) {
+      alert('Gagal hapus bahan: ' + err.message);
+    }
+  }
+
+  safeAddEventListener('formDapurMaterial', 'submit', addDapurMaterial);
+  if (setupDapurForm) setupDapurForm();
+
+  const tabBtnDapur = document.querySelector('[data-tab="tab-dapur"]');
+  if (tabBtnDapur) {
+    tabBtnDapur.addEventListener('click', () => {
+      if (!dapurMaterialsCache.length) loadDapurMaterials();
+    });
+  }

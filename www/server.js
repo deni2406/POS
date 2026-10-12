@@ -7602,11 +7602,9 @@ function getKasLaciSaldo(waktu = null) {
         "SELECT so_id, status, is_final FROM stock_opname WHERE source = 'LOCAL' AND kategori = ? ORDER BY id DESC LIMIT 1",
         [category], (error, row) => error ? reject(error) : resolve(row || null)
       ));
-      if (active && Number(active.is_final || 0) !== 1 && String(active.status).toUpperCase() !== "FINAL") {
-        res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
-        return res.end(JSON.stringify({ success: false, code: "SO_STILL_ACTIVE",
-          message: "Stock Opname aktif sudah ada; revisi lokal belum tersedia pada fase ini." }));
-      }
+      // PERBAIKAN: penolakan 409 SO_STILL_ACTIVE dimatikan — draft aktif lama
+      // kini di-OVERWRITE oleh stockOpnameLocal.createStockOpname (DELETE draft
+      // aktif dulu, lalu INSERT baru). Tidak lagi mengembalikan 409.
       const petugasLocal = String(
         data.petugas ||
         (session && (session.nama_kasir || session.nama || session.kasir_nama || session.username || session.user)) ||

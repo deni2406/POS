@@ -132,14 +132,14 @@ async function createStockOpnameUnlocked(db, input, now = new Date()) {
   // BEGIN IMMEDIATE serializes competing writers before checking active state.
   await run(db, "BEGIN IMMEDIATE TRANSACTION");
   try {
-    const active = await get(db, `SELECT so_id FROM stock_opname
-      WHERE source = 'LOCAL' AND kategori = ? AND is_final = 0 AND UPPER(status) != 'FINAL'
-      ORDER BY id DESC LIMIT 1`, [category]);
-    if (active) {
-      const error = new Error("Stock Opname lokal aktif sudah ada; revisi lokal belum tersedia.");
-      error.code = "SO_STILL_ACTIVE";
-      throw error;
-    }
+    // PERBAIKAN: draft SO lokal aktif lama di-OVERWRITE (hapus), bukan ditolak.
+    // Sebelumnya: `if (active) { ... SO_STILL_ACTIVE; throw }` membuat kasir tak
+    // bisa menyimpan SO ulang saat draft sudah ada.
+    await run(db, `DELETE FROM stock_opname_detail
+      WHERE so_id IN (SELECT so_id FROM stock_opname
+        WHERE source = 'LOCAL' AND kategori = ? AND is_final = 0 AND UPPER(status) != 'FINAL')`, [category]);
+    await run(db, `DELETE FROM stock_opname
+      WHERE source = 'LOCAL' AND kategori = ? AND is_final = 0 AND UPPER(status) != 'FINAL'`, [category]);
     await run(db, `INSERT INTO stock_opname
       (so_id, source, kategori, petugas, tanggal, revisi_ke, is_final, status,
        total_plus, total_minus, total_kerugian, created_at, updated_at)

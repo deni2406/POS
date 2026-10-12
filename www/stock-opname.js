@@ -387,15 +387,18 @@
     }
 
     // Susun Payload minimal tanpa melakukan perhitungan apapun di frontend
+    // Endpoint /api/stock-opname/submit (legacy POS, atomic txn) membaca:
+    //   - id / produk_id / idBarang  -> untuk match master_barang (baris keyOf)
+    //   - stok_fisik                -> nilai input kasir (Hasil SO)
     const itemsPayload = filteredItems.map(item => {
       const val = state.inputSO[item.id];
       const qtyHasil = (val === '' || val === undefined || isNaN(Number(val))) ? 0 : Number(val);
       return {
-        local_master_barang_id: item.id || item.local_master_barang_id,
+        produk_id: item.id,               // PK INTEGER dari /api/stock-opname/local/barang
+        idBarang: item.idBarang || null,  // kode TEXT opsional (fallback di backend)
         namaBarang: item.nama || item.Nama,
-        area: item.area || item.kategori || state.kategoriAktif,
         satuan: item.satuan || item.Satuan || 'Pcs',
-        jumlahHasilSO: qtyHasil
+        stok_fisik: qtyHasil              // hasil hitung fisik, di-update ke master_barang.stok_aktual
       };
     });
 
@@ -405,11 +408,10 @@
     const tanggalSO = new Date().toISOString();
 
     const payload = {
-      mode: mode,
-      category: state.kategoriAktif,
+      // kategori = kunci kolom di endpoint legacy; mode/soId diabaikan (NEW selalu dibuat)
+      kategori: state.kategoriAktif,
       petugas: petugas,
       tanggalSO: tanggalSO,
-      soId: mode === 'REVISION' ? (state.soId || '') : '',
       items: itemsPayload
     };
 
@@ -417,7 +419,7 @@
     showLoadingOverlay(true, 'MENGHITUNG STOCK OPNAME...', 'Mohon tunggu.');
 
     try {
-      const res = await fetch('/api/stock-opname/local/simpan', {
+      const res = await fetch('/api/stock-opname/submit', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(payload)
@@ -429,10 +431,10 @@
         throw new Error(json.message || `Gagal memproses SO (HTTP ${res.status})`);
       }
 
-      // Hasil lokal berasal dari SQLite; stok operasional tidak diubah oleh draft.
+      // Hasil dari endpoint legacy POS: stok master_barang sudah di-update secara atomik.
       const hasilData = json.data || json;
       state.hasilSO = hasilData;
-      state.soId = json.soId || hasilData.soId;
+      state.soId = hasilData.so_id || json.soId;
 
       // HANYA jika pengiriman berhasil, revisiKe resmi menjadi 1
       if (state.isRevising) {
@@ -478,8 +480,8 @@
     let itemsListHtml = '';
 
     items.forEach(item => {
-      // Selisih kuantitas berasal dari response SQLite lokal.
-      const selisih = Number(item.selisihBarang || 0);
+      // Selisih kuantitas — dukung bentuk legacy (item.selisih) maupun bentuk lama (selisihBarang).
+      const selisih = Number(item.selisih !== undefined ? item.selisih : (item.selisihBarang || 0));
 
       let badgeClass = 'so-badge-zero';
       let selisihText = '0';
@@ -493,8 +495,10 @@
       }
 
       const namaBarang = item.namaBarang || item.nama || 'Barang';
-      const stokAktual = item.jumlahBarangAktual !== undefined ? item.jumlahBarangAktual : (item.stokAktual || 0);
-      const hasilSO = item.jumlahHasilSO !== undefined ? item.jumlahHasilSO : 0;
+      // Legacy submit: field di item = { stokRiil, stokFisik, selisih, hpp }.
+      // Bentuk lama (local/simpan): jumlahBarangAktual / jumlahHasilSO.
+      const stokAktual = item.stokRiil !== undefined ? item.stokRiil : (item.jumlahBarangAktual !== undefined ? item.jumlahBarangAktual : (item.stokAktual || 0));
+      const hasilSO = item.stokFisik !== undefined ? item.stokFisik : (item.jumlahHasilSO !== undefined ? item.jumlahHasilSO : 0);
 
       itemsListHtml += `
         <div class="so-result-card">

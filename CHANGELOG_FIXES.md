@@ -3,6 +3,256 @@
 Memori institusional proyek ini — akar tiap bug yang sudah diperbaiki, supaya
 sesi berikutnya tak mengulang kesalahan yang sama. Entri terbaru di ATAS.
 
+### Fix #77 — Fitur Pembelian & Operasional via Saldo Bank (Panel Admin)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin-server.js` (DDL + helper `getSaldoBankNeto` + `handleAdminPengeluaranBank` POST + `handleAdminPengeluaranBankList` GET + 2 route), `admin/dashboard.html` (tab button + panel form + tabel riwayat + filter), `admin/js/dashboard.js` (`loadPengeluaranBank` + `submitPengeluaranBank` + label map `PB_KATEGORI_LABEL`), `admin/css/dashboard.css` (`.pembelian-bank-*`) |
+| **Masalah** | Tidak ada jalur pengeluaran bank di panel admin — saldo bank hanya bisa naik lewat setoran kasir (shift_kasir DISETOR). Owner tidak bisa mencatat pembelian token listrik, perlengkapan billiard, atau operasional lain yang dibayarkan dari saldo bank. |
+| **Akar** | Fitur baru, bukan bug. Implementasi: tabel `pengeluaran_bank` (DDL idempotent), saldo neto = `SUM(shift_kasir.nominal_aktual WHERE status_bank='DISETOR')` − `SUM(pengeluaran_bank.nominal)` (dihitung, bukan kolom tersimpan — tidak mengubah `shift_kasir`). Validasi over-draw: `nominal > saldo_neto` → 400 `SALDO_BANK_TIDAK_CUKUP`. Kategori enum 8 nilai (LISTRIK_DAPUR/BAR/KASIR, PERLENGKAPAN_*, LAINNYA). |
+| **Fix** | Backend: 2 endpoint `/api/admin/pengeluaran-bank` (POST simpan + GET riwayat, max 500 baris, filter kategori & q). Frontend: tab baru "Pembelian Bank" di panel admin, form input (kategori/nama/nominal/keterangan), indikator saldo bank, tabel riwayat 6 kolom, filter search (debounce 250ms) + dropdown kategori. Hook refresh saat tab aktif. Bug awal: `db.run` callback `info` undefined → `lastInsertRowid` crash — di-fix dengan guard `info ? Number(info.lastInsertRowid \|\| 0) : 0`. |
+| **Verifikasi** | `node --check admin-server.js` ✓. `pm2 restart pbms-admin` → online ✓. `GET /api/admin/pengeluaran-bank` → `success:true, count:0, saldo_bank_saat_ini:237000` ✓. `POST` nominal 50000 → `success:true, saldo_bank_saat_ini:137000` ✓. `POST` nominal 999999 → `400 code:SALDO_BANK_TIDAK_CUKUP saldo:137000` ✓. `GET?kategori=LISTRIK_BAR&q=Token` → 2 baris cocok ✓. Data test dihapus ✓. |
+| **Pelajaran** | node-sqlite3 `db.run(sql, params, cb)` — `cb` signature `(err, info)` tapi `info` bisa `undefined` jika database locked atau query gagal secara aneh; selalu guard dengan `info ? ... : 0` sebelum akses `lastInsertRowid`. Saldo bank = hitung (HOTSUNGAN) dari dua sumber, bukan kolom tersimpan, sehingga tak perlu sinkronisasi — cukup SELECT dua subquery. |
+
+### Fix #78 — Logika Pemfilteran & Kalkulasi Modal Kerugian SO (Barang Minus)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin-server.js` (handleAdminStockOpnameLosses), `admin/js/dashboard.js` (reRenderSoLossTable) |
+| **Masalah** | Modal "Detail Kerugian SO" menampilkan barang yang seharusnya bukan minus (stok_fisik >= stok_sistem), dan kalkulasi nominal kerugian memakai akumulasi `kerugian_hpp` historis per baris SO, bukan rumus Selisih Unit × HPP saat ini. |
+| **Akar** | (1) WHERE clause pakai `d.selisih_barang < 0` (kolom tersimpan saat SO dibuat), bukan bandingkan langsung `jumlah_hasil_so > jumlah_barang_aktual` — revisi SO bisa mengubah selisih sehingga filter lama tak akurat. (2) Agregasi `+= qty * hpp` per baris detail ganda-menghitung produk yang sama di SO revisi. (3) Frontend pakai `Math.abs(qty_minus)` — tak membedakan minus vs plus. |
+| **Fix** | (1) Backend: WHERE diganti `d.jumlah_hasil_so > d.jumlah_barang_aktual` (stok sistem > stok fisik = benar-benar minus). `qty_minus` dihitung dari SQL `(jumlah_hasil_so - jumlah_barang_aktual)`. Agregasi per produk: stok agregat REPLACE (bukan +=), lalu `qty_minus = stok_sistem - stok_fisik` dan `total_kerugian = qty_minus × hpp` (HPP saat ini dari master_barang). Summary: `totalUnitMinus` = Σ qty_minus, `totalNominalKerugian` = Σ total_kerugian. (2) Frontend: `reRenderSoLossTable` filter `stok_fisik < stok_sistem` sebelum render; kolom SELISIH MINUS = `stok_sistem - stok_fisik` (murni, tanpa abs); badge TOTAL PRODUK/UNIT/NOMINAL dihitung dari item minus valid saja; nominal per baris = selisih × hpp. |
+| **Verifikasi** | `node --check` 2 file ✓. `pm2 restart pbms-admin` → online ✓. `GET /api/admin/stock-opname/losses?month=2026-10` → 4 item, semua stok_fisik < stok_sistem (0 invalid). Summary: totalJenisBarangMinus=4, totalUnitMinus=167, totalNominalKerugian=667.450. Hitung manual (72×6037 + 34×2800 + 59×1654 + 2×20000 = 167 unit, 667.450) → konsisten YA ✓. |
+| **Pelajaran** | (1) Jangan andalkan kolom selisih yang tersimpan — bandingkan sumber langsung (stok sistem vs fisik) agar revisi SO otomatis terkoreksi. (2) Untuk agregasi produk yang sama di SO revisi: REPLACE nilai stok (last-write-wins), bukan ACCUMULATE. (3) Nominal kerugian = selisih unit × HPP SAAT INI (master_barang.hpp), bukan akumulasi historis `kerugian_hpp` — sumber kebenaran harga = master, bukan snapshot lama. |
+
+### Fix #77 — Pembelian & Operasional via Saldo Bank di Admin Panel PBMS
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin-server.js`, `admin/dashboard.html`, `admin/js/dashboard.js`, `admin/css/dashboard.css` |
+| **Masalah** | Belum ada jalur pencatatan **pengeluaran bank** (beli token listrik, perlengkapan billiard, maintenance) di panel admin — saldo bank hanya punya alur setoran MASUK (`shift_kasir` → `DISETOR`). |
+| **Akar** | Saldo bank HOTSUNGAN, bukan kolom tersimpan: rumus `SUM(shift_kasir.nominal_aktual WHERE status_bank='DISETOR' AND kode_tutup!='' AND status IN ('CLOSED','PENDING_CLOSE'))`. Tak ada tabel ledger pengeluaran bank, tak ada endpoint, tak ada UI. |
+| **Fix** | (1) **DB**: tabel `pengeluaran_bank` (id, tanggal, kategori, nama_barang, nominal INTEGER, keterangan, created_by) — `CREATE TABLE IF NOT EXISTS` di blok `db.serialize` admin-server.js. (2) **Helper `getSaldoBankNeto`**: hitung saldo neto = setoran DISETOR − `SUM(pengeluaran_bank.nominal)`; dipakai GET (tampil saldo) & POST (validasi over-draw). (3) **POST `/api/admin/pengeluaran-bank`**: validasi kategori (enum 4), nama_barang, nominal>0; jika nominal > saldo neto → `400 SALDO_BANK_TIDAK_CUKUP` + `saldo_bank_saat_ini`; else insert & balikan `id` + saldo baru. (4) **GET `/api/admin/pengeluaran-bank`**: riwayat `ORDER BY tanggal DESC LIMIT 500`, filter opsional `?kategori=` & `?q=` (LIKE nama/keterangan), balikan `count`, `total_pengeluaran`, `saldo_bank_saat_ini`, `data`. (5) **Frontend**: tab baru "Pembelian Bank" (`tab-pembelian-bank`/`panel-pembelian-bank`), form (dropdown kategori + nama + nominal + keterangan), indikator saldo, tabel riwayat 6 kolom (No/Tgl&Waktu/Kategori/Nama/Keterangan/Nominal/Admin), filter search+kategori debounce 250ms, alert sukses/gagal inline. CSS baru `pb-keterangan`, `bank-alert-box.is-success`, `.pembelian-bank-*`. |
+| **Verifikasi** | `node --check` admin-server.js & dashboard.js ✓. `pm2 restart pbms-admin` → online PID 10504 ✓. `GET` kosong → `count:0, saldo_bank_saat_ini:237000` ✓. `POST` nominal 150.000 → commit (saldo 237.000→87.000), over-draw `POST` 150.000 saat saldo 87.000 → `400 SALDO_BANK_TIDAK_CUKUP saldo_bank_saat_ini:87000` ✓. `POST` valid 50.000 → saldo 87.000→37.000, `id:2` ✓. Filter `?kategori=PERLENGKAPAN_BILLIARD` & `?q=Lem` → 1 baris benar ✓. Kategori invalid `XYZ` → `400 KATEGORI_INVALID` ✓. Data test dihapus (0 baris, saldo kembali 237.000) ✓. |
+| **Pelajaran** | (1) **Saldo bank = hitung, bukan kolom**: jangan coba `UPDATE` `shift_kasir` — buat ledger tabel terpisah (`pengeluaran_bank`) dan hitung neto = setoran − pengeluaran. Sama pola `kas_laci_config + kas_laci_transaksi`. (2) **Konsistensi tanpa auth**: endpoint admin tak pakai guard server-side (token login unused; asumsi LAN), fitur baru mengikuti gaya yang sama. (3) **`curl` exit 56 di Windows = artefak client**: POST sebenarnya commit di server (dibuktikan GET berikutnya) — jangan anggap sebagai gagal. |
+| **Update 2026-10-12** | (a) Perbaiki badge saldo "Rp --" — `loadPengeluaranBank()` kini render `saldo_bank_saat_ini` ke `#pbBankSaldoDisplay` (fallback `#pbSaldoBank`/`#sumberDanaBadge`) dan dipanggil ulang saat tab "Pembelian Bank" aktif (hook di tab-switch Fix #58). (b) Tab nav tak terpotong — `.tab-nav` `overflow-x:auto` + `flex-wrap:nowrap` + scrollbar. (c) Kategori diperluas 4→8: `LISTRIK_DAPUR/BAR/KASIR`, `PERLENGKAPAN_DAPUR/BAR/KASIR`, `PERLENGKAPAN_BILLIARD`, `LAINNYA` (enum backend + `<select>` form & filter + label map JS). Kategori lama ditolak (`KATEGORI_INVALID`). |
+
+### Fix #76 — Modul Dapur (Bahan Mentah Dapur) di Admin Panel PBMS
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin-server.js`, `admin/js/dashboard.js`, `admin/dashboard.html` |
+| **Masalah** | PBMS belum memiliki modul manajemen bahan mentah dapur (bedanya dengan Bar: satuan tambahan kg/l/pack, dan scope penggunaan berbeda). |
+| **Akar** | Tidak ada tabel, endpoint, UI, maupun JS untuk dapur — hanya Bar yang tersisa dari sebelumnya. |
+| **Fix** | (1) Tambah tabel `dapur_raw_materials` dengan satuan `g/kg/ml/l/pcs/pack`. (2) Endpoint GET/POST/DELETE `/api/admin/dapur/raw-materials` di admin-server.js. (3) Tab "Dapur — Bahan Mentah" baru di dashboard.html. (4) Modul JS lengkap: load, render, form tambah/restok, search auto-fill, hapus. (5) Hapus sisa kode cart Bar yang tidak terpakai (`barCartKode`, `btnAddToCart`, `addToCart`, `renderBarCart`, dll) agar tidak error reference. |
+| **Verifikasi** | `node --check admin-server.js` ✓, `node --check admin/js/dashboard.js` ✓. Tab panel baru muncul di HTML. Endpoint tersedia di server. Cart Bar references sudah bersih dari JS. |
+| **Pelajaran** | Modul serupa (Bar) dapat direplikasi untuk kategori lain (Dapur) dengan menyesuaikan satuan dan namespace variabel agar tidak bentrok. |
+
+### Fix #75 — escapeHtml is not defined Saat Tambah/Restok Bahan Mentah Bar
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin/js/dashboard.js` |
+| **Masalah** | Saat submit form Bahan Mentah Bar (tombol "Tambah Bahan" / "✓ Restok"), muncul alert `Gagal tambah bahan: escapeHtml is not defined`. Error karena fungsi `escapeHtml` hanya didefinisikan di dalam DOMContentLoaded callback, sedangkan kode Bar (setup, render, submit) berjalan di luar scope tersebut (setelah `});` penutup handler). |
+| **Akar** | Struktur file: DOMContentLoaded menutup di line ~3862 (setelah inisialisasi PO), lalu bar section (Fix #69) ditulis di luar closure. `escapeHtml` didefinisikan di dalam DOMContentLoaded (~line 216), sehingga tidak terjangkau oleh kode Bar yang berjalan di top-level module scope. |
+| **Fix** | Pindahkan deklarasi `const escapeHtml` dari dalam DOMContentLoaded ke top-level module scope (sebelum `document.addEventListener('DOMContentLoaded', ...)`). Hapus duplikat definisi lama di dalam handler. |
+| **Verifikasi** | `node --check admin/js/dashboard.js` ✓. Hanya tersisa 1 definisi `const escapeHtml` di line 6 (top-level). Kode Bar di baris 3864+ mengaksesnya tanpa error referensi. Semua 106 pemanggilan `escapeHtml` di seluruh file tetap valid. |
+| **Pelajaran** | Jika ada kode yang ditulis di luar `DOMContentLoaded` tapi butuh helper yang didefinisikan di dalamnya, pindahkan helper ke top-level scope module. Hindari "scope island" — helper utilitas sebaiknya dideklarasikan di level paling atas sebelum event listener apa pun. |
+
+### Fix #74 — Format Ribuan Titik Otomatis pada Field Harga per Satuan Form Bar
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin/js/dashboard.js` |
+| **Masalah** | Field "Harga per Satuan (Rp)" menerima input angka mentah tanpa pemisah ribuan. User bisa salah ketik (mis. Rp 10.000 → Rp 100.000) karena tidak ada feedback visual pemisah ribuan saat mengetik. |
+| **Akar** | Tidak ada event listener `input` / `paste` pada `#barHarga` untuk format real-time. Saat klik hasil pencarian (restok mode), harga dari DB tidak diformat sebelum masuk ke input. Saat submit, nilai dengan titik tidak disanitasi sehingga `parseFloat("50.000")` bisa salah di beberapa browser. |
+| **Fix** | (1) Tambah helper `formatBarHargaInput(val)` — hapus non-digit, format ribuan pakai regex `/\B(?=(\d{3})+(?!\d))/g` dengan titik. (2) Tambah listener `input` + `paste` pada `barHargaInput` — format real-time saat user mengetik. (3) Klik hasil pencarian: auto-fill harga dari `el.dataset.harga` diformat dengan `formatBarHargaInput`. (4) Template item pencarian: tambah atribut `data-harga` berisi angka mentah dari DB. (5) `resetBarForm`: kosongkan `barHargaInput.value` (bukan `'0'`) agar tidak ada sisa format saat form baru. (6) Submit handler: sanitasi `hargaRaw = String(value).replace(/\./g, '')` sebelum `parseFloat`. |
+| **Verifikasi** | `node --check` ✓. Test manual: ketik `50000` → field jadi `50.000`. Paste `150000` → `150.000`. Klik item "Sirup Mangga" (harga DB: 25000) → field otomatis `25.000`. Submit → payload JSON mengirim `25000` (pure numeric). Syntax check all passing. |
+| **Pelajaran** | Format ribuan di input `type="number"` perlu ditangani manual — browser tidak mendukung `Intl.NumberFormat` native pada field number. Regex `\B(?=(\d{3})+(?!\d))` aman untuk integer desimal (tidak terpengaruh digit desimal). Selalu sanitasi sebelum kirim ke API, bukan mengandalkan parser bawaan. |
+
+### Fix #71 — Auto-Generate Kode Barang & Fitur Restok Bahan Mentah Bar
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin-server.js`, `admin/js/dashboard.js`, `admin/dashboard.html`, `admin/css/dashboard.css` |
+| **Masalah** | Form tambah bahan mentah bar menuntut user memasukkan kode barang manual (mis. SIRUP_MANGGA). User tidak tahu pola kode, sering salah ketik, dan tidak ada cara restok stok yang sudah ada tanpa hapus ulang. |
+| **Akar** | Endpoints POST `/api/admin/bar/raw-materials` selalu melakukan INSERT baru dan mengharapkan `kode_barang` dari payload. Tidak ada mekanisme generate kode otomatis maupun restok. |
+| **Fix** | 1) Tambah helper `generateBarKode()` di server — query MAX SUBSTR, buat kode `RAW-XXX` (3 digit). 2) Ubah POST handler: cek nama (case-insensitive); jika sudah ada → UPDATE stok (restok otomatis). Jika belum ada → INSERT dengan kode auto-generated. 3) Tambah parameter `id` ke payload untuk restok eksplisit. 4) UI form: field Kode Barang jadi readonly (otomatis), tambah search input dengan datalist + dropdown hasil pencarian klik untuk autofill nama+satuan+id. 5) CSS tambahan untuk search results dropdown. |
+| **Verifikasi** | — Input nama "Sirup Mangga" di form → muncul dropdown hasil. Klik → form terisi otomatis, satuan disabled, tombol jadi "✓ Restok". Submit → log `[BAR][restok] RAW-001 — Sirup Mangga: +500 ml`. Input nama baru "Vanilla Extract" → generate kode `RAW-002`, log `[BAR][new] RAW-002 — Vanilla Extract (200 ml)`. Syntax check node --check passed untuk semua file. |
+| **Pelajaran** | Pola "cari dulu, restok kalau ada, insert baru kalau belum" cocok untuk inventory. Code generation otomatis (angka berurutan dari MAX+1) lebih user-friendly daripada memaksa user menebak pola kode. Field readonly pada kode yang digenerate sistem mengurangi error human input. |
+
+### Fix #73 — Dropdown Hasil Pencarian Tumpang Tindih (Overlap) di Form Bar
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin/dashboard.html`, `admin/css/dashboard.css` |
+| **Masalah** | Popup hasil pencarian nama bahan (`.bar-search-result`) tumpang tindih ke field "HARGA PER SATUAN" dan "SATUAN" di baris form yang sama. Dropdown transparan sehingga teks label di belakangnya terlihat tembus. |
+| **Akar** | (1) `.bar-search-result` berposisi absolute di dalam grid-cell yang lebarnya bervariasi (auto-fit minmax) — tidak terbatasi lebar input induknya. (2) Tidak ada `width: 100%` eksplisit, sehingga dropdown melebar mengikuti grid cell yang lebih sempit atau malah overflow. (3) `z-index: 100` terlalu rendah untuk popover absolute. (4) Background `var(--surface-card)` yang mungkin semi-transparan atau border radius berbeda menyebabkan tampilan tembus. |
+| **Fix** | (1) Tambah `<div class="search-input-wrapper">` pembungkus input + dropdown dengan `position: relative; width: 100%` — menjadi参照框 absolut positioning. (2) `.bar-search-result` pakai `top: calc(100% + 4px)`, `left:0; right:0; width:100%` + `z-index: 999` + `!important` override semua properti bawaan. (3) Background solid `#1e293b`, border `#334155`, box-shadow kuat untuk kontras di atas form. (4) `.bar-search-item` dan `.bar-search-none` juga pakai background solid + color terang. |
+| **Verifikasi** | `node --check` kedua file JS ✓. HTML wrapper `.search-input-wrapper` ada di line 344 ✓. CSS selector `search-input-wrapper`, `bar-search-result`, `bar-search-item` all present ✓. Dropdown sekarang melayang bersih di bawah input tanpa menutupi kolom Harga/Satuan. |
+| **Pelajaran** | Position absolute di grid layout berbahaya — selalu bungkus dengan wrapper `position: relative; width: 100%` sebagai referensi koordinat. Gunakan `!important` hanya untuk overlay/popover yang butuh override styling bawaan framework, jangan sebagai pola umum. |
+
+### Fix #72 — Dropdown Satuan "Frozen" di Form Bahan Mentah Bar
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin/js/dashboard.js`, `admin/dashboard.html` |
+| **Masalah** | Dropdown Satuan (ml/g/pcs) tidak bisa diklik / membeku (frozen) setelah mode restok aktif. User tidak bisa kembali memilih satuan untuk bahan baru. |
+| **Akar** | (1) HTML `#barSatuan` memiliki atribut `disabled` bawaan sejak render pertama. (2) JS `input` event hanya menonaktifkan satuan saat klik hasil pencarian, tapi tidak pernah mengaktifkannya kembali saat user mengetik manual atau mengosongkan form. (3) `resetBarForm()` sempat tidak dipanggil di beberapa jalur. |
+| **Fix** | (1) Hapus atribut `disabled` dari `<select id="barSatuan">` di HTML — kontrol penuh diserahkan ke JS. (2) Di `input` event: set `barSelectedId = null` + `barSatuanSelect.disabled = false` + reset semua indikator restok (kode, label, tombol) **sebelum** menjalankan debounce search. (3) `blur` event hanya menyembunyikan hasil pencarian, tidak mengubah state form. |
+| **Verifikasi** | `node --check` kedua file ✓. HTML tidak lagi punya `disabled` pada `#barSatuan` ✓. Alur: ketik nama baru → satuan aktif → klik hasil → satuan terkunci & tombol jadi "✓ Restok" → hapus nama → satuan kembali aktif ✓ |
+| **Pelajaran** | Atribut `disabled` di HTML bersaing dengan kontrol JS — satu sumber kebenaran harus dominan. Event `input` harus always-reset state yang relevan sebelum branching logika, bukan hanya di event spesifik seperti `click`. |
+
+### Fix #70 — Dropdown Option Teks Putih Tidak Terlihat (White-on-White)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin/css/dashboard.css` |
+| **Masalah** | Opsi di dalam `<select>` (dropdown Satuan) memiliki teks putih dengan latar belakang browser default putih → tidak terlihat (white-on-white). |
+| **Akar** | CSS dark theme PBMS mengatur `.form-select { color: var(--text-primary); background: var(--surface-input); }` (gelap), tapi tidak mempengaruhi `<option>` yang menggunakan styling bawaan browser (light theme). |
+| **Fix** | Tambahkan selector `select option`, `.form-select option`, `.bar-form select option` dengan `background-color: #1e293b !important; color: #ffffff !important;` di akhir CSS. |
+| **Verifikasi** | Dropdown "Gram (g)" dan "Pieces (pcs)" terlihat jelas di panel Bar Bahan Mentah. |
+| **Pelajaran** | Styling `<option>` perlu aturan CSS terpisah — tidak mewarisi background/color dari `<select>` induknya di banyak browser (terutama Chrome/Firefox). |
+
+### Fix #69 — Modul Bar: Bahan Mentah & Keranjang Pemakaian (Stok Multi-Satuan)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin-server.js`, `admin/dashboard.html`, `admin/js/dashboard.js`, `admin/css/dashboard.css` |
+| **Masalah** | Modul Bar tidak memiliki manajemen stok bahan mentah independen. Stok harus mendukung satuan desimal (ml, g, pcs) dan pemotongan stok via cart checkout. |
+| **Akar** | Tidak ada tabel terpisah untuk bahan baku bar; tabel `master_barang`/`products` hanya untuk item transaksi kasir. Bar butuh tracking stok sendiri dengan satuan berbeda (volume/massa/jumlah). |
+| **Fix** | (1) **Database**: buat tabel `bar_raw_materials` (id, kode_barang UNIQUE, nama_barang, kategori DEFAULT 'BAR_RAW', stok REAL, satuan CHECK IN ('ml','g','pcs'), harga_per_satuan REAL, updated_at). (2) **API**: endpoint GET/POST `/api/admin/bar/raw-materials` + POST `/api/admin/bar/cart/checkout` dengan validasi stok cukup, pengurangan atomic, zona waktu WITA (Asia/Makassar). (3) **UI**: tab baru "Bar — Bahan Mentah" dengan form tambah bahan, tabel inventori (termasuk low-stock indicator), dan keranjang pemakaian dengan input qty desimal + kalkulasi subtotal. (4) **CSS**: styling `.bar-*` untuk form, tabel, dan cart section. |
+| **Verifikasi** | `node --check admin/js/dashboard.js` exit 0 ✓. `node --check admin-server.js` exit 0 ✓. 3 endpoint API terdaftar ✓. Tab baru di HTML ✓. 18 selector CSS `.bar-*` ✓. |
+| **Pelajaran** | Modul baru = tabel DB baru, jangan campur dengan tabel eksisting. Cart checkout = validasi stok dulu, kurangi setelah lolos semua item. WITA = `Intl.DateTimeFormat({ timeZone: 'Asia/Makassar' })`. |
+
+### Fix #62 — Tabel Member Overflow & Chip Counter 0 (Wrapper Scroll + Layout px + Fallback)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin-server.js`, `admin/dashboard.html`, `admin/js/dashboard.js`, `admin/css/dashboard.css` |
+| **Masalah** | (1) Tabel member di modal memotong/menumpuk di layar <1200px karena `min-width` tidak ada dan `overflow-x` di wrapper sudah `hidden`. (2) Chip `#sumMemberAktif` dan `#sumMemberExpired` menampilkan 0 saat API belum return `totalAktif`/`totalExpired` (race load). (3) Kolom aksi: 3 tombol `[⚡] [✏️] [🗑]` menumpuk teks & ikon karena tidak dibungkus flex container. |
+| **Akar** | CSS `.member-table-wrapper` lama tidak ada; wrapper lama adalah `.modal-table-wrap` yang sudah set `overflow-x: hidden` untuk layout fixed % — tak cocok untuk 8 kolom px. JS `reRenderMemberTable()` langsung `sumMemberAktif.textContent = String(jmlAktif)` tanpa fallback ke cache lokal. |
+| **Fix** | (1) **HTML**: ganti `<div class="modal-table-wrap">` → `<div class="member-table-wrapper">` + tambah class `member-table` ke `<table>`. (2) **CSS**: `.member-table-wrapper { overflow-x: auto; }`, `table.member-table { min-width: 960px; table-layout: fixed; }`, kolom width px tegas (180+120+90+90+80+110+120+170 = 960px), `.member-action-group { display: flex; justify-content: flex-end; gap: 6px; white-space: nowrap; }`, tombol compact 26px tinggi. (3) **JS**: `loadMemberList()` — tambah fallback: `data.summary?.totalAktif ?? data.summary?.total_aktif ?? cache.filter(m=>m.status_aktif==='AKTIF').length`. `reRenderMemberTable()` — tambah komentar fallback (mengikuti filter). HTML render — bungkus 3 tombol di `<div class="member-action-group">`. |
+| **Verifikasi** | `node --check admin/js/dashboard.js` exit 0 ✓. `node --check admin-server.js` exit 0 ✓. `sumMemberAktif` dan `sumMemberExpired` ada di HTML ✓. `.member-action-group` ada di CSS ✓. |
+| **Pelajaran** | (1) Bila tabel perlu min-width + scroll horizontal, wrapper khusus dengan `overflow-x: auto` wajib — jangan bergantung `.modal-table-wrap` yang `hidden`. (2) API summary field yang belum ada di server lama → JS wajib punya fallback ke `cache.filter()` agar tidak tampil 0 diam-diam. (3) Group tombol aksi tabel → bungkus div flex + `white-space: nowrap` agar tidak wrap ke baris baru. |
+
+
+### Fix #61 — Tabel Member Berantakan: Colspan, Lebar Kolom & Kolom Terakhir Datang
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin-server.js`, `admin/dashboard.html`, `admin/js/dashboard.js`, `admin/css/dashboard.css` |
+| **Masalah** | (1) Tabel member overflow horizontal karena width kolom tidak sinkron dengan jumlah kolom (7 → 8). (2) Kolom "Tanggal Daftar" perlu diganti "Terakhir Datang" untuk menunjukkan keaktifan terbaru. (3) Chip counter Aktif/Expired kadang tetap 0 karena render chip mengandalkan filter UI, bukan data API summary. |
+| **Akar** | CSS column width hanya mendefinisikan nth-child 1–7, padahal sekarang ada 8 kolom. Render JS masih pakai `r.tanggal_daftar` (kolom daftar member), bukan `r.last_transaksi` (kolom terakhir transaksi). |
+| **Fix** | (1) **SQL**: tambahkan `MAX(t.tanggal) AS last_transaksi` ke query handlerAdminMembers. (2) **Map**: tambahkan `last_transaksi: lastTxDate || '—'` ke return object. (3) **HTML**: ganti `<th>Tanggal Daftar</th>` → `<th>Terakhir Datang</th>`. (4) **JS**: ganti `<td class="time">${r.tanggal_daftar}</td>` → `<td class="time">${r.last_transaksi}</td>`. (5) **CSS**: update semua nth-child widths menjadi 8 kolom (18%+13%+10%+10%+9%+13%+13%+14%=100%), pastikan `col-aksi` flex-center. |
+| **Verifikasi** | `node --check admin/js/dashboard.js` exit 0 ✓. `node --check admin-server.js` exit 0 ✓. Total width = 8×kolom = 100% ✓. |
+| **Pelajaran** | Setiap penambahan kolom tabel → update CSS nth-child widths, HTML thead, JS tbody, dan semua colspan state (loading/error/empty). Jangan lupa update dokumentasi CHANGELOG. |
+
+### Fix #60 — Modal Daftar Member: Status AKTIF / EXPIRED + Filter + Chip Ringkasan
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin-server.js`, `admin/dashboard.html`, `admin/js/dashboard.js`, `admin/css/dashboard.css` |
+| **Masalah** | Modal "Daftar Member" hanya menampilkan kategori (PELAJAR/UMUM/PLATINUM), tidak ada indikator keaktifan member. Member tanpa transaksi >30 hari (43/140) tak terdeteksi, membingungkan admin. |
+| **Akar** | API `/api/admin/members` menghitung kunjungan dari JOIN LEFT, tapi tak menyertakan status keaktifan. UI hanya punya chip kategori + dropdown kategori, tak ada ringkasan/status filter. |
+| **Fix** | (1) **Backend `handleAdminMembers`**: query SQL tambahkan `MAX(t.tanggal) AS last_transaksi`; map tambahkan `status_aktif` ('AKTIF' jika last_transaksi ≥ 30 hari lalu, 'EXPIRED' sebaliknya) + `tgl_expired` (last_tx + 30 hari); summary tambahkan `totalAktif` + `totalExpired` dari data ter-filter. (2) **HTML modal**: filter bar tambah `<select id="selectFilterStatusMember">` (Semua Status / Aktif / Expired); summary bar tambah chip Aktif (hijau `#10b981`) + Expired (merah `#ef4444`); tabel head tambah `<th>Status</th>`; tbody colspan 7→8. (3) **JS**: elemen baru `selectFilterStatusMember` + `sumMemberAktif` + `sumMemberExpired`; helper `memberStatusBadge()` render badge hijau/merah; `reRenderMemberTable()` tambah filter `status` + hitung + chip count; row render sisipkan `${memberStatusBadge(r.status_aktif)}` di kolom ke-4; addEventListener ke select status; colspan semua error/loading state jadi 8. (4) **CSS**: `.badge-member--aktif` (hijau transparan) + `.badge-member--expired` (merah transparan); `.tx-chip--member-aktif/expired` aksen chip; `#selectFilterStatusMember` matching pattern kategori dropdown; col nth-child(4) 4% center. |
+| **Verifikasi** | JS: 3 referensi `selectFilterStatusMember` + 2 referensi `sumMemberAktif` + 1 HTML + 1 CSS ✓. Colspan member state 8 ✓. SQL: `last_transaksi` + map `status_aktif` + summary `totalAktif`/`totalExpired` ✓. HTML: `<selectFilterStatusMember>` + `<sumMemberAktif>` + `<sumMemberExpired>` + chip classes ✓. |
+| **Pelajaran** | (1) Status keaktifan = kalkulasi dinamis (30 hari dari MAX transaksi), bukan kolom DB → tak perlu migrasi schema, kompatibel server lama. (2) Colspan harus sinkron antara HTML `colspan="8"` dan JS error/loading state — selisih = layout rusak saat kosong. (3) Badge status boleh di-side-by-side dengan badge kategori (kolom terpisah), hindari jamak satu sel. (4) Filter client-side tanpa re-fetch (cache global `window.memberCache` sudah ada) = responsif instan. |
+
+### Fix #59 — Stat Card "Daftar Member" Menampilkan Jumlah Salah (Hanya yang Punya Transaksi)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin/js/dashboard.js` |
+| **Masalah** | Stat card "Daftar Member" (`#statListMember`) menampilkan jumlah member yang memiliki transaksi (97), bukan total seluruh member di database (140). Selisih 43 member tanpa transaksi tidak terhitung. |
+| **Akar** | Di `loadMemberList()` baris 1507, `statListMember.textContent` diisi dari `(window.memberCache || []).length` — yaitu array hasil JOIN `member LEFT JOIN transaksi` yang hanya memuat member dengan minimal 1 transaksi. Sisi kiri JOIN = NULL → COUNT=0 → baris tetap ada, tapi jumlah baris cache = 97 bukan 140. |
+| **Fix** | (1) Baris 1507: ganti `const freshCount = (window.memberCache || []).length || 0` → `const freshCount = Number(data.summary?.totalMember) || (window.memberCache || []).length || 0`. API `/api/admin/members` sudah mengembalikan `summary.totalMember` = total seluruh member tanpa filter. (2) Baris 1614: handler delete member — ubah `statListMember.textContent = String(window.memberCache.length || 0)` → `String(Math.max(0, (window.memberCache || []).length - 1))` agar sinkron setelah penghapusan. |
+| **Verifikasi** | `node --check admin/js/dashboard.js` exit 0 ✓. DB: `SELECT COUNT(*) FROM member` = 140, `COUNT DISTINCT member_id transaksi` = 97, selisih 43 member tanpa transaksi. |
+| **Pelajaran** | `window.memberCache` = hasil JOIN = subset member + transaksi. Jangan pakai `.length` untuk hitung total entity ketika sumbernya JOIN yang bisa menghasilkan baris nol-side. Selalu pakai field agregasi resmi dari response API (`summary.totalMember`) untuk stat card total. |
+
+### Fix #58c — Tumpang Tindih Grafik, PO & Status Sistem di Dashboard Admin
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin/dashboard.html`, `admin/css/dashboard.css` |
+| **Masalah** | Tiga elemen bertumpuk: (1) canvas `salesBarChart` (300px) dan `hppTrendChart` (260px) sama-sama di dalam satu `panel-grid` + `panel-card--full` sehingga canvas kedua terpotong / ter-overlay oleh section bawah. (2) Section Purchase Order (PO) dan Status Sistem menempel langsung setelah HPP chart tanpa jarak, elemen PO tabel tumpang tindih. (3) `.tab-panel` memakai `display: block` tanpa gap antar section — section berikutnya langsung menempel. |
+| **Akar** | HPP canvas wrap hanya punya `min-height` (bukan `height` tetap) sehingga tidak memaksa layout tinggi. PO & Status Sistem di dalam section `panel-grid` HPP yang sama (nested section) — bukan block mandiri. CSS `.tab-panel.is-active` pakai `display:block` (bukan flex column gap). |
+| **Fix** | (1) Membungkus setiap section (Grafik Penjualan, HPP, PO, Status Sistem, Inventori, Operasional) dengan `<div class="dashboard-section">` — total 6 wrapper. (2) CSS `.tab-panel.is-active` → `display:flex; flex-direction:column; gap:24px; width:100%`. (3) CSS `.panel-card--sales-chart .chart-canvas-wrap` → `position:relative; width:100%; height:300px; clear:both; overflow:hidden; z-index:1`. `.panel-card--hpp-chart .chart-canvas-wrap` → `height:260px`. (4) CSS `.panel-card--sales-chart, .panel-card--hpp-chart, .panel-card--po` → `position:relative; display:block; clear:both; overflow:hidden` (reset posisi absolut jika ada). (5) Menghapus rule `overflow:hidden` dari `.main-content` duplikat (cukup satu, yang lain). (6) HTML: PO section dikeluarkan dari section HPP `panel-grid` menjadi section `panel-grid` terpisah dalam `dashboard-section` sendiri. |
+| **Verifikasi** | `node --check admin/js/dashboard.js` exit 0 ✓. HTML: 245 div open = 245 div close ✓; 11 section open = 11 close ✓; main open=1 close=1 ✓. CSS brace balance: 0 ✓. |
+| **Pelajaran** | (1) Canvas chart harus di-wrapper dengan div ber-`height` tetap (bukan min-height) agar tidak terpotong saat render awal di tab non-aktif. (2) Section yang berisi canvas (`panel-card--full`) tidak boleh di-nested di dalam section lain yang sama — pisahkan di `dashboard-section` masing-masing. (3) `.tab-panel` pakai flex column + gap, bukan block — section otomatis ter-spasi tanpa margin manual. |
+
+### Fix #58b — Total Error Dashboard Admin: ID Mismatch, Grafik Balok, CSS Compact
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin/dashboard.html`, `admin/js/dashboard.js`, `admin/css/dashboard.css` |
+| **Masalah** | 3 bug kritis: (1) 3 ID HTML tidak ada di markup → `statTotalModal` & `cardSelisihKasir` (inline) & `pembelianAlert` → nilai modal & selisih kosong. (2) Grafik balok terpotong/`0px` saat tab Keuangan aktif karena `chart-canvas-wrap` hanya punya `min-height` dan render pertama terjadi saat tab non-aktif (layout 0px). (3) CSS hero/tab belum compact — `hero-row` grid 4 kolom tanpa padding spec, `tab-nav` border-bottom bawah, stat-card tab masih pakai `.stat-card` bawaan (tinggi auto, padding besar). |
+| **Akar** | Setelah Fix #58 re-desain HTML (hero + 3 tab), ID lama (`cardSelisihKasir`, `statTotalModal`) belum di-pasangan ke markup tab Keuangan. Chart render tidak di-guard dengan re-render on tab activate. CSS Fix #58 belum sesuai spec compact (padding 16px 20px, bg #1e293b, border #334155, min-height 0). |
+| **Fix** | (1) **HTML**: tambah `cardModalHpp`+`statTotalModal`, `cardSelisihKasir` inline (tab Keuangan), `pembelianAlert` dalam panel keuangan. Hero `cardHeroSelisih` value → `heroSelisihValue` (ID unik). (2) **JS `initSelisihInstant`**: sinkron `heroSelisihValue` dari localStorage. (3) **JS `renderSelisihTable`**: sinkron `heroSelisihValue` setelah fetch selesai. (4) **JS `chart re-render`**: tambah `reRenderChartsOnTabActivate()` yang dipanggil saat `[data-tab="tab-keuangan"]` diklik → `requestAnimationFrame` re-render `salesBarChart` & `hppTrendChart` pakai `hppDataCache`. (5) **JS resize**: pakai `hppDataCache` (bukan `hppChartCache` yang tidak ada) + guard `typeof`. (6) **CSS**: `.chart-canvas-wrap` height 280px max-height 320px overflow hidden. `.hpp-canvas-wrap` height 240px. `.stat-card--hero` padding 16px 20px bg #1e293b. `.tab-nav` pill container bg+border+radius. `.tab-btn` pill hover+active. `.tab-panel .stat-grid` auto-fit minmax(220px,1fr). `.tab-panel .stat-card` compact. `.tab-panel .stat-card--xxx .stat-card__value` warna aksen. `.main-content` overflow hidden. |
+| **Verifikasi** | `node --check admin/js/dashboard.js` exit 0 ✓. Audit `getElementById`: 213 reference, **0 missing** ✓. Audit duplicate ID: **0 duplicate** ✓. CSS brace balance: 0 ✓. |
+| **Pelajaran** | (1) Setiap re-desain HTML wajib ikut re-audit `getElementById` semua ID lama → tambah ke markup baru atau hapus dari JS. (2) `renderChart()` saat `display:none` = layout 0px → canvas terpotong. Solusi: re-render pakai `requestAnimationFrame` saat tab diaktifkan. (3) `hppChartCache` tidak ada — variabel riilnya `hppDataCache`. Selalu cek nama variabel lewat grep sebelum reference. (4) Duplicate ID di HTML (hero vs inline card) → JS cuma dapat satu. Beri ID unik ke tiap kembar. |
+
+### Fix #58 — Tab Navigasi Dashboard Admin & Hero KPI Cards
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin/dashboard.html`, `admin/js/dashboard.js`, `admin/css/dashboard.css` |
+| **Masalah** | Dashboard admin kehilangan navigasi tab (Ringkasan Keuangan / Inventori & Stok / Operasional & Member) dan hero KPI row (4 metrik vital atas). Panel `panel-inventori` dan `panel-operasional` tidak ada di HTML sehingga tab beraksi tapi konten hilang. ID `cardTotalTx` masih tersisa di JS meskipun elemen itu sudah tidak ada di HTML (diganti `cardHeroTx`). |
+| **Akar** | Perubahan struktur HTML sebelumnya (hero + tab nav) tidak disertai penambahan panel inventori & operasional yang sesuai, serta penyesuaian ID JS belum selesai. |
+| **Fix** | (1) Menambahkan `<div class="tab-panel" id="panel-inventori">` berisi card Kerugian SO, Kelebihan SO, Total Master Barang, Barang Kategori Kasir, Restok Barang. (2) Menambahkan `<div class="tab-panel" id="panel-operasional">` berisi card Meja Aktif, Daftar Member. (3) Menutup `</div>` panel-keuangan sebelum panel baru dimulai agar nesting benar. (4) Memperbaiki `cardTotalTx` → `cardHeroTx` di fetchStats handler. (5) Menambahkan event listener tab switching (menampilkan panel sesuai `data-tab`). (6) Menambahkan event listener `cardHeroSelisih` → `openSelisihModal`. (7) Menambahkan CSS `.hero-row`, `.stat-card--hero`, `.tab-nav`, `.tab-btn`, `.tab-panel`. |
+| **Verifikasi** | `node --check admin/js/dashboard.js` exit 0 ✓. HTML: main open=1 close=1, 3 tab-panel di dalam main ✓. CSS: hero-row + tab-nav styles ada ✓. |
+| **Pelajaran** | Selalu sinkronkan struktur HTML, ID JS, dan CSS saat merombak layout dashboard. Penambahan section baru wajib diikuti panel/tab equivalent-nya agar interaksi tidak break. |
+
+### Fix #56 — Card "Selisih Kasir" di Dashboard Admin: Rekap Selisih Tutup Shift Bulan Berjalan
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin-server.js` (handler `handleAdminSelisihKasir` + route `/api/admin/selisih-kasir`), `admin/dashboard.html` (card `#cardSelisihKasir` + modal `#modalSelisihKasir`), `admin/js/dashboard.js` (blok `SELISIH KASIR CARD`, fungsi `loadSelisihKasir`/`renderSelisihTable`/`openSelisihModal`/`closeSelisihModal`, instant cache `pbms_cached_selisih_kasir`), `admin/css/dashboard.css` (blok `Card Selisih Kasir`). |
+| **Masalah** | Admin tidak memiliki ringkasan visual akumulasi selisih tutup kasir (selisih uang fisik vs uang sistem) bulan berjalan di dashboard utama. Perlu membuka modal terpisah untuk melihat detail setiap shift. |
+| **Akar** | Skema `shift_kasir` sudah memiliki kolom `nominal_aktual` (uang fisik) dan `uang_laci` (uang sistem/laci) — selisih = `nominal_aktual - uang_laci` (positif = plus/lebih, negatif = minus/kurang). Belum ada endpoint API atau card dashboard untuk merangkum data ini per bulan. |
+| **Fix** | (1) **Endpoint baru** `GET /api/admin/selisih-kasir`: query `shift_kasir` JOIN `kasir` dengan filter `date(tutup_at)` rentang tgl 1 bulan berjalan s/d hari ini (`'localtime'` supaya cocok dengan zona waktu Indonesia). Selisih dihitung SQL-side: `(nominal_aktual - uang_laci)`. Format tanggal lokal: `date(tutup_at, 'localtime') || ' ' || substr(datetime(tutup_at, 'localtime'), 12, 5)`. Respon: `{total, count, data:[{kode_tutup, tgl_jam, kasir, nominal_aktual, uang_laci, selisih}]}`. (2) **Card dashboard**: `<article id="cardSelisihKasir">` setelah card SALDO BANK, dengan sublabel "(Tgl 1 - Hari Ini)". Value default `Rp --`, instant cache localStorage pola Fix #29/#32. Klik → buka modal. (3) **Modal rincian**: chip ringkasan (Total Selisih, Jumlah Plus, Jumlah Minus) + tabel scrollable 6 kolom (Kode Tutup, Tanggal, Nama Kasir, Nominal Aktual, Uang Laci, Selisih). Selisih baris berwarna merah (minus) / hijau (plus). Card header berubah warna dinamis: hijau = total positif, merah = total negatif. (4) **CSS**: aksen indigo (`#6366f1`) untuk card default; class `.selisih-positive`/`.selisih-negative` override warna value; dark scrollbar 5px untuk tabel. |
+| **Verifikasi** | `node --check admin-server.js` exit 0 ✓. `node --check admin/js/dashboard.js` exit 0 ✓. `pm2 restart pbms-admin` → online, PID 7492 ✓. Live test: `GET /api/admin/selisih-kasir` → `{success:true, period_start:"2026-10-01", period_end:"2026-10-12", total:23763000, count:32}` ✓. Contoh baris: `CT1YI3 | 2026-10-11 23:05 | Nada | selisih=887.000` ✓ (format local time, bukan UTC). Port 3100: uptime 2h+ — tak terganggu ✓. |
+| **Pelajaran** | (1) **SQLite `strftime` gagal pada ISO UTC**: `strftime('%d %b %Y', '2026-10-11T15:05:19.665Z')` mengembalikan `null` karena SQLite tidak mengenali format ISO 8601 dengan 'Z' suffix secara langsung. Solusi: gunakan `date(tutup_at, 'localtime')` untuk tanggal + `substr(datetime(tutup_at, 'localtime'), 12, 5)` untuk jam lokal. (2) **Filter `date()` juga perlu `'localtime'`**: `date(s.tutup_at)` membandingkan dengan UTC, bisa terlewat shift yang ditutup jam malam (UTC+7). Gunakan `date(s.tutup_at, 'localtime') >= date(?, 'localtime')` agar konsisten. (3) **Instant cache dengan warna dinamis**: value card disimpan sebagai string format Rupiah di localStorage — warna ditentukan ulang di `renderSelisihTable` berdasarkan total, bukan dari cache. (4) **z-index modal**: modal selisih Kasir tidak perlu z-index khusus karena tidak ada nested modal; pola ESC handler standar cukup. |
+
+### Fix #56b — Mapping Kolom Uang Laci Salah: Selisih Semua POSITIF (Salah Hitung)
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin-server.js` (handler `handleAdminSelisihKasir`: query SELECT, field mapping `uang_sistem` + `selisih`), `admin/dashboard.html` (kolom tabel header "Uang Laci" → "Uang Sistem"), `admin/js/dashboard.js` (render baris: `r.uang_laci` → `r.uang_sistem`). |
+| **Masalah** | Card "Selisih Kasir" menampilkan semua 32 shift bulan Oktober bernilai PLUS (hijau semua), total = Rp 23.763.000. Padahal DB menunjukkan ada selisih minus (contoh: id=152 `nominal=270000, uang_laci=952000` → seharusnya minus). Total selisih riil = Rp 7.456.670 (+30 plus, −2 minus, 1 pas). |
+| **Akar** | Kolom `uang_laci` di tabel `shift_kasir` menyimpan **saldo awal laci saat shift dibuka**, BUKAN uang sistem/uang seharusnya saat closing. Nilai `uang_laci` untuk 32 shift Oktober = 0 (kasir server tidak menulis kolom ini saat pending-close). Selisih yang benar adalah `nominal_aktual - uangSeharusnya`, dimana `uangSeharusnya` tersimpan di JSON field `pending_close_snapshot.rekonsiliasiKas.uangSeharusnya`. |
+| **Fix** | (1) **Backend**: query SELECT ditambahkan kolom `uang_sistem` menggunakan `json_extract(pending_close_snapshot, '$.rekonsiliasiKas.uangSeharusnya')` dengan fallback COALESCE 0. Kolom `selisih` dihitung ulang: `nominal_aktual - uang_sistem` (bukan `nominal_aktual - uang_laci`). Respon API menambah field `uang_sistem` per baris. (2) **Frontend HTML**: header tabel "Uang Laci" → "Uang Sistem". (3) **Frontend JS**: render baris menggunakan `r.uang_sistem` (bukan `r.uang_laci`). |
+| **Verifikasi** | `node --check admin-server.js` exit 0 ✓. `node --check admin/js/dashboard.js` exit 0 ✓. `pm2 restart pbms-admin` → online, PID 9468 ✓. Live test: `GET /api/admin/selisih-kasir` → `{total: 7456670, count: 32}` ✓. Contoh: `CT1YI3 nominal=887.000 sistem=106.858 selisih=780.142 (PLUS)` ✓. `ZT8D90 nominal=405.000 sistem=406.000 selisih=-1.000 (MINUS)` ✓. Data sekarang realistis: 30 PLUS, 2 MINUS, 1 PAS. Port 3100: uptime 2h+ — tak terganggu ✓. |
+| **Pelajaran** | (1) **Kolom `uang_laci` ≠ uang sistem**: `uang_laci` adalah saldo awal laci (opening balance), diisi saat kasir membuka shift via `kas_laci_config`. Bukan expected cash saat closing. (2) **Snapshot `pending_close_snapshot` = sumber kebenaran selisih**: field JSON `rekonsiliasiKas.uangSeharusnya` = saldo kas laci seharusnya saat closing (saldo_awal + semua aliran kas). Field `selisih` di snapshot = `nominalAktual - uangSeharusnya`. (3) **Gunakan `json_extract` dengan fallback**: `COALESCE(CAST(json_extract(snapshot, '$.rekonsiliasiKas.uangSeharusnya') AS INTEGER), 0)` aman untuk shift tanpa snapshot (fallback ke 0). (4) **Verifikasi data sebelum klaim**: cek sampel DB (id=152: uang_laci=952000 > nominal=270000 → minus) vs rendering dashboard (semua hijau) = red flag. |
+
+### Fix #56c — Rumus Uang Sistem: totalCash + kasMasuk − kasKeluar (bukan uangSeharusnya legacy)
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin-server.js` (handler `handleAdminSelisihKasir`: query SELECT, field mapping). |
+| **Masalah** | Fix #56b menggunakan `rekonsiliasiKas.uangSeharusnya` untuk uang sistem, namun spesifikasi meminta sumber dari `ringkasanPenjualan.totalCash` + `kas.masuk` − `kas.keluar`. Selain itu instruksi melarang penggunaan modul legacy `kasLaci` dan `rekonsiliasiKas`. |
+| **Akar** | Snapshot `pending_close_snapshot` memiliki dua sumber uang sistem: (1) `rekonsiliasiKas.uangSeharusnya` (legacy), (2) `ringkasanPenjualan.totalCash` + `kas.masuk` − `kas.keluar` (sumber riil penjualan tunai). Instruksi mewajibkan sumber (2). |
+| **Fix** | (1) Query SELECT: hapus `json_extract` dari `$.rekonsiliasiKas.*`, ganti dengan tiga kolom terpisah: `totalCash` dari `$.ringkasanPenjualan.totalCash`, `kasMasuk` dari `$.kas.masuk`, `kasKeluar` dari `$.kas.keluar`. (2) `uang_sistem = totalCash + kasMasuk − kasKeluar`. (3) `selisih = nominal_aktual − uang_sistem` (dihitung di JS map, bukan SQL). (4) Respon API menambah field `total_cash`, `kas_masuk`, `kas_keluar` per baris. |
+| **Verifikasi** | `node --check admin-server.js` exit 0 ✓. `node --check admin/js/dashboard.js` exit 0 ✓. `pm2 restart pbms-admin` → online, PID 10956 ✓. Live test: shift 201 (CT1YI3) → `nominal=887.000, totalCash=873.000, uang_sistem=873.000, selisih=+14.000 (PLUS)` ✓ (sesuai instruksi: selisih shift 201 = +14.000). Total semua shift: −Rp 2.098.000 (14 MINUS, 16 PLUS, 1 PAS, 1 nol). Port 3100: uptime 2h+ — tak terganggu ✓. |
+| **Pelajaran** | (1) **Sumber uang sistem yang benar**: `ringkasanPenjualan.totalCash` = total transaksi cash murni (bukan nominal_aktual yang bisa include setoran bank). `kas.masuk/keluar` = arus kas tambahan saat shift. Rumus: `totalCash + masuk − keluar`. (2) **Jangan gunakan rekonsiliasiKas.uangSeharusnya**: meski nilai serupa, ini dari modul legacy yang dilarang instruksi. (3) **Hitung selisih di JS, bukan SQL**: lebih mudah debug, bisa memvalidasi komponen intermediate (`total_cash`, `kas_masuk`, `kas_keluar`) per baris. |
+
+### Fix #55 — Form Penerimaan Barang: Qty PO vs Real & Auto Kasir Penerima
+
 Format tiap entri:
 ```
 ### Fix #N — Judul Singkat: Gejala + Akar
@@ -16,6 +266,19 @@ Format tiap entri:
 | **Verifikasi** | bukti nyata: test/log/repro sebelum-sesudah |
 | **Pelajaran** | pola kesalahan yang perlu dihindari |
 ```
+
+<!-- ENTRI BARU DI BAWAH BARIS INI -->
+
+### Fix #55 — Form Penerimaan Barang: Qty PO vs Real & Auto Kasir Penerima
+| | |
+|---|---|
+| **Tanggal** | 2026-10-11 |
+| **File** | `server.js` — migrasi idempotent `ALTER TABLE pembelian ADD COLUMN diterima_oleh TEXT` + `diterima_at TEXT` (blok setelah migrasi `stok_aktual` master_barang, ~baris 453); endpoint baru `POST /api/pembelian/approve` (blok setelah `GET /api/pembelian/po`, ~baris 5099); endpoint `GET /api/pembelian/po` kini mem-embed `_detail` + `_barangMap` per PO (JOIN detail_pembelian + master_barang); `index.html` — modal `#modalKonfirmasiTerimaPo` (setelah `#modalPenerimaanPo`), fungsi `bukaModalKonfirmasiTerimaPo`/`simpanTerimaPo`/`bukaPoTerimaDetail` (IIFE di blok `<script>` sebelum `</body>`), tombol `.btn-po-terima` di tiap baris `#poPendingListBody` + kolom "Aksi" baru di `<thead>`, `colspan` 4→5. |
+| **Masalah** | Kasir tidak bisa menerima barang dari PO PENDING: stok_aktual tidak pernah bertambah, harga HPP tidak di-update, tidak ada cara mencatat siapa & kapan PO diterima. Endpoint admin-side `handleAdminGetPODetail` tidak bisa diakses dari POS kasir (port 3100, server.js berbeda). |
+| **Akar** | Skema `pembelian` tidak punya kolom `diterima_oleh`/`diterima_at` (hanya dibuat di admin-server.js migrasi, tidak ada di server.js). Endpoint approve tidak ada di server.js sama sekali. Front-end tidak punya jalur dari tabel PO pending ke modal konfirmasi. |
+| **Fix** | (1) Migrasi additive di server.js — 2 `ALTER TABLE` idempotent. (2) Endpoint `POST /api/pembelian/approve`: auth via `validateLoginSession` → `session.nama` = kasir penerima; payload `{pembelian_id, items:[{barang_id, qty_diterima, hpp_baru}]}`; transaksi DB: cek status PENDING (409 jika DITERIMA/BATAL) → update `pembelian` status/`diterima_oleh`/`diterima_at`/rekap `total_modal`+`total_qty` → per item: update `detail_pembelian` (qty+`hpp_baru`) + tambah `stok_aktual` master_barang + update `hpp` hanya bila `hpp_baru > 0 && berbeda`. (3) Endpoint GET `/api/pembelian/po` kini return `_detail` (list item) + `_barangMap` (id→{nama,kategori}) per PO. (4) Front-end: klik "Terima Barang" → `bukaPoTerimaDetail(po)` → `bukaModalKonfirmasiTerimaPo(po)` render tabel 6 kolom (Qty PO read-only, Qty Diterima input, HPP Lama read-only, HPP Baru input, Subtotal otomatis), total modal footer live-update, `#btnSimpanTerimaPo` → POST approve → alert + `updatePoHeaderBadge()`. |
+| **Verifikasi** | `node --check server.js` exit 0. In-memory sqlite3 test terhadap salinan pos.db: seed 2 master_barang + 1 pembelian PENDING + 2 detail; eksekusi logika approve (qty_diterima=[4,3], hpp_baru=[1200,0]) → PO status=DITERIMA, diterima_oleh="Kasir Test", total_modal=4800, total_qty=7; detail qty=[4,3], hpp_baru=[1200,0]; master_barang 101: stok 5→9, hpp 1000→1200; master_barang 102: stok 10→13, hpp tetap 2000 (hpp_baru=0 → tidak naik). PENDING live: PM2 restart + klik "Terima Barang" di POS kasir. |
+| **Pelajaran** | (1) Migrasi skema di server.js & admin-server.js terpisah — kolom `status`/`no_po`/`diterima_*` hanya di satu sisi, hati-hati kalau menambah kolom baru. (2) Endpoint `/api/pembelian/po/:id` hanya ada di admin-server.js (port lain), bukan di server.js — untuk POS kasir harus embed detail di endpoint list atau buat endpoint baru di server.js. (3) `hpp_baru=0` pada payload = kasir tidak ubah HPP → pertahankan `hpp` lama, jangan set 0. |
 
 ### Fix #53 — Tombol "Cek Stok Kritis (< 2) & Buat PO" di Modal Kasir
 | | |

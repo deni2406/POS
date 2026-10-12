@@ -156,6 +156,72 @@ db.serialize(() => {
   });
 
   console.log('[ADMIN][migrasi] pembelian & detail_pembelian siap.');
+
+  // Migrasi: tabel histori evaluasi tier member
+  db.run(`
+    CREATE TABLE IF NOT EXISTS member_eval_log (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      evaluated_at TEXT NOT NULL,
+      target_month TEXT NOT NULL,
+      promo_count  INTEGER DEFAULT 0,
+      demote_count INTEGER DEFAULT 0,
+      noop_count   INTEGER DEFAULT 0,
+      note         TEXT
+    )
+  `, (ae) => {
+    if (ae) console.error('[ADMIN][migrasi] member_eval_log:', ae.message);
+    else console.log('[ADMIN][migrasi] tabel member_eval_log siap.');
+  });
+
+  // ── Tabel Bahan Mentah Bar (Fix #69) ───────────────────────────
+  // Tabel independen untuk manajemen stok bahan baku bar (ml/g/pcs).
+  // TIDAK beririsan dengan master_barang / products di tabel transaksi.
+  db.run(`CREATE TABLE IF NOT EXISTS bar_raw_materials (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    kode_barang      TEXT UNIQUE NOT NULL,
+    nama_barang      TEXT NOT NULL,
+    kategori         TEXT NOT NULL DEFAULT 'BAR_RAW',
+    stok             REAL NOT NULL DEFAULT 0,
+    satuan           TEXT NOT NULL CHECK(satuan IN ('ml', 'g', 'pcs')),
+    harga_per_satuan REAL NOT NULL DEFAULT 0,
+    updated_at       DATETIME DEFAULT (datetime('now', 'localtime'))
+  )`, (err) => {
+    if (err) console.error('[ADMIN][bar] Gagal buat bar_raw_materials:', err.message);
+    else console.log('[ADMIN][bar] tabel bar_raw_materials siap.');
+  });
+
+  // ── Tabel Bahan Mentah Dapur (Fix #75) ─────────────────────────
+  // Tabel independen untuk manajemen stok bahan mentah dapur.
+  // TIDAK beririsan dengan master_barang / products di tabel transaksi.
+  db.run(`CREATE TABLE IF NOT EXISTS dapur_raw_materials (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    kode_barang      TEXT UNIQUE NOT NULL,
+    nama_barang      TEXT NOT NULL,
+    kategori         TEXT NOT NULL DEFAULT 'DAPUR_RAW',
+    stok             REAL NOT NULL DEFAULT 0,
+    satuan           TEXT NOT NULL CHECK(satuan IN ('g', 'kg', 'ml', 'l', 'pcs', 'pack')),
+    harga_per_satuan REAL NOT NULL DEFAULT 0,
+    updated_at       DATETIME DEFAULT (datetime('now', 'localtime'))
+  )`, (err) => {
+    if (err) console.error('[ADMIN][dapur] Gagal buat dapur_raw_materials:', err.message);
+    else console.log('[ADMIN][dapur] tabel dapur_raw_materials siap.');
+  });
+
+  // ── Ledger Pengeluaran & Operasional via Saldo Bank (Fix #77) ──
+  // Sumber pengeluaran bank. Saldo neto = setoran DISETOR (shift_kasir)
+  // − SUM(nominal) tabel ini. Tidak mengubah shift_kasir.
+  db.run(`CREATE TABLE IF NOT EXISTS pengeluaran_bank (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    tanggal     TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    kategori    TEXT NOT NULL,
+    nama_barang TEXT NOT NULL,
+    nominal     INTEGER NOT NULL,
+    keterangan  TEXT NOT NULL DEFAULT '',
+    created_by  TEXT NOT NULL DEFAULT ''
+  )`, (err) => {
+    if (err) console.error('[ADMIN][migrasi] CREATE pengeluaran_bank:', err.message);
+    else console.log('[ADMIN][migrasi] tabel pengeluaran_bank siap.');
+  });
 });
 
 // ── Static file serving ────────────────────────────────────��─────
@@ -652,12 +718,12 @@ function handleAdminStockOpnameLosses(req, res, parsedUrl) {
             COALESCE(m.hpp, 0) AS hpp,
             d.jumlah_hasil_so AS stok_sistem,
             d.jumlah_barang_aktual AS stok_fisik,
-            -d.selisih_barang AS qty_minus,
+            (d.jumlah_hasil_so - d.jumlah_barang_aktual) AS qty_minus,
             d.kerugian_hpp
      FROM stock_opname_detail d
      JOIN stock_opname h ON h.so_id = d.so_id
      LEFT JOIN master_barang m ON m.id_barang = d.id_barang
-     WHERE d.selisih_barang < 0
+     WHERE d.jumlah_hasil_so > d.jumlah_barang_aktual
        AND strftime('%Y-%m', date(h.tanggal)) = ?`,
     [monthParam],
     (err, rows) => {
@@ -666,12 +732,13 @@ function handleAdminStockOpnameLosses(req, res, parsedUrl) {
       }
 
       // Agregasi per produk: satu produk bisa minus di beberapa SO /
-      // revisi bulan yang sama — jumlahkan selisih & kerugiannya
+      // revisi bulan yang sama — jumlahkan selisih & kerugiannya.
+      // PERBAIKAN: nominal kerugian = Selisih Unit × HPP SAAT INI (bukan
+      // akumulasi kerugian_hpp historis), konsisten dengan rumus frontend.
       const byProduct = new Map();
       for (const r of (rows || [])) {
         const key = String(r.id_master ?? '') + '::' + String(r.id_barang ?? '');
         const qty = Number(r.qty_minus) || 0;
-        const rugi = Number(r.kerugian_hpp) || 0;
         const hpp = Number(r.hpp) || 0;
         const prev = byProduct.get(key);
         if (!prev) {
@@ -688,14 +755,20 @@ function handleAdminStockOpnameLosses(req, res, parsedUrl) {
           });
         }
         const item = byProduct.get(key);
-        item.stok_sistem += Number(r.stok_sistem) || 0;
-        item.stok_fisik += Number(r.stok_fisik) || 0;
-        item.qty_minus += qty;
-        // HPP per unit bisa kosong — fallback hitung kerugian dari HPP
-        item.total_kerugian += rugi || qty * hpp;
+        item.stok_sistem = Number(r.stok_sistem) || 0;
+        item.stok_fisik = Number(r.stok_fisik) || 0;
+        // Satu baris detail per produk per SO — REPLACE, bukan +=
+        item.qty_minus = qty;
       }
 
       const data = [...byProduct.values()];
+      // PERBAIKAN: selisih & nominal dihitung dari stok agregat per produk
+      // (rumus: Selisih Unit = STOK_SISTEM - STOK_FISIK;
+      //  Nominal = Selisih Unit × HPP saat ini)
+      data.forEach(r => {
+        r.qty_minus = Math.max(0, (Number(r.stok_sistem) || 0) - (Number(r.stok_fisik) || 0));
+        r.total_kerugian = r.qty_minus * (Number(r.hpp) || 0);
+      });
       const totalUnitMinus = data.reduce((s, r) => s + r.qty_minus, 0);
       const totalNominalKerugian = data.reduce((s, r) => s + r.total_kerugian, 0);
 
@@ -1000,6 +1073,162 @@ function handleAdminCashierDeposits(req, res, parsedUrl) {
   );
 }
 
+// ── Helper: Evaluasi Bulanan Level Member (Fix #60) ───────────
+// Menghitung total belanja member pada bulan kalender target,
+// lalu menaikkan ke PLATINUM bila ≥ 2.000.000 atau menurunkan
+// ke UMUM bila < 2.000.000.
+// `targetMonth` format 'YYYY-MM' (default: bulan kalender sebelumnya
+// relative to today's local date — misal hari ini Oktober → evaluasi September).
+// Hanya mengubah kategori yang berubah, tidak merobah data historis.
+const MEMBER_PLATINUM_THRESHOLD = 2_000_000;
+
+function evaluateMonthlyMemberTier(targetMonth) {
+  const ym = String(targetMonth || '').trim();
+  if (!/^\d{4}-\d{2}$/.test(ym)) return Promise.resolve({ success: false, message: 'Format bulan salah (harus YYYY-MM)' });
+
+  console.log(`[MEMBER][eval] Evaluasi tier bulanan untuk bulan ${ym}`);
+
+  return new Promise((resolve) => {
+    let promoCount = 0;
+    let demoteCount = 0;
+    db.get(
+      `SELECT id FROM member_kategori WHERE nama = 'PLATINUM' LIMIT 1`,
+      [],
+      (err, platKat) => {
+        if (err || !platKat) {
+          console.error('[MEMBER][eval] Gagal ambil kategori PLATINUM:', err?.message);
+          return resolve({ success: false, message: err?.message || 'Kategori PLATINUM tidak ditemukan' });
+        }
+        const platId = platKat.id;
+
+        db.get(
+          `SELECT id FROM member_kategori WHERE nama = 'UMUM' LIMIT 1`,
+          [],
+          (err, umumKat) => {
+            if (err || !umumKat) {
+              console.error('[MEMBER][eval] Gagal ambil kategori UMUM:', err?.message);
+              return resolve({ success: false, message: err?.message || 'Kategori UMUM tidak ditemukan' });
+            }
+            const umumId = umumKat.id;
+
+            // Total belanja per member di bulan target
+            db.all(
+              `SELECT t.member_id, COALESCE(SUM(t.total), 0) AS total_belanja
+               FROM transaksi t
+               WHERE t.tipe_transaksi = 'PENJUALAN'
+                 AND t.member_id IS NOT NULL
+                 AND t.member_id <> ''
+                 AND date(t.tanggal, 'localtime') >= date(?, 'start of month')
+                 AND date(t.tanggal, 'localtime') <  date(?, 'start of month')
+               GROUP BY t.member_id`,
+              [ym, ym],
+              (err, rows) => {
+                if (err) {
+                  console.error('[MEMBER][eval] Query belanja gagal:', err.message);
+                  return resolve({ success: false, message: err.message });
+                }
+                const eligible = rows || [];
+                const noop = [];
+                let resolved = 0;
+
+                if (eligible.length === 0) {
+                  // No members spent in this month — log and return
+                  db.run(
+                    `INSERT INTO member_eval_log (evaluated_at, target_month, promo_count, demote_count, noop_count, note)
+                     VALUES (datetime('now'), ?, 0, 0, 0, 'Tidak ada transaksi member di bulan ini')`,
+                    [ym],
+                    (ie) => { if (ie) console.error('[MEMBER][eval] Log gagal:', ie.message); }
+                  );
+                  return resolve({
+                    success: true,
+                    targetMonth: ym,
+                    totalEvaluated: 0,
+                    promoCount: 0,
+                    demoteCount: 0,
+                    noopCount: 0,
+                    note: 'Tidak ada transaksi member di bulan ini',
+                  });
+                }
+
+                for (const r of eligible) {
+                  const mbr = r.member_id;
+                  if (!mbr) { resolved++; continue; }
+                  const total = Number(r.total_belanja) || 0;
+                  const newCatId = total >= MEMBER_PLATINUM_THRESHOLD ? platId : umumId;
+
+                  db.get(
+                    `SELECT id, kategori_id FROM member WHERE kode_member = ? LIMIT 1`,
+                    [mbr],
+                    (err2, member) => {
+                      resolved++;
+                      if (err2 || !member) {
+                        if (resolved >= eligible.length) {
+                          db.run(
+                            `INSERT INTO member_eval_log (evaluated_at, target_month, promo_count, demote_count, noop_count, note)
+                             VALUES (datetime('now'), ?, ?, ?, ?, 'Selesai (dengan error beberapa member)')`,
+                            [ym, promoCount, demoteCount, noop.length, 'done_with_errors'],
+                            (le) => { if (le) console.error('[MEMBER][eval] Log gagal:', le.message); }
+                          );
+                          return resolve({
+                            success: true, targetMonth: ym,
+                            totalEvaluated: eligible.length,
+                            promoCount, demoteCount, noopCount: noop.length,
+                          });
+                        }
+                        return;
+                      }
+                      const currentId = Number(member.kategori_id);
+                      if (currentId === newCatId) {
+                        noop.push(mbr);
+                        if (resolved >= eligible.length) {
+                          db.run(
+                            `INSERT INTO member_eval_log (evaluated_at, target_month, promo_count, demote_count, noop_count, note)
+                             VALUES (datetime('now'), ?, ?, ?, ?, ?)`,
+                            [ym, promoCount, demoteCount, noop.length, 'semua noop'],
+                            (le) => { if (le) console.error('[MEMBER][eval] Log gagal:', le.message); }
+                          );
+                          return resolve({
+                            success: true, targetMonth: ym,
+                            totalEvaluated: eligible.length,
+                            promoCount, demoteCount, noopCount: noop.length,
+                          });
+                        }
+                        return;
+                      }
+                      if (newCatId === platId) promoCount++;
+                      else demoteCount++;
+                      db.run(
+                        `UPDATE member SET kategori_id = ? WHERE kode_member = ?`,
+                        [newCatId, mbr],
+                        (err3) => {
+                          if (err3) console.error(`[MEMBER][eval] Update ${mbr} gagal:`, err3.message);
+                        }
+                      );
+                      if (resolved >= eligible.length) {
+                        db.run(
+                          `INSERT INTO member_eval_log (evaluated_at, target_month, promo_count, demote_count, noop_count, note)
+                           VALUES (datetime('now'), ?, ?, ?, ?, ?)`,
+                          [ym, promoCount, demoteCount, noop.length, 'selesai'],
+                          (le) => { if (le) console.error('[MEMBER][eval] Log gagal:', le.message); }
+                        );
+                        resolve({
+                          success: true, targetMonth: ym,
+                          totalEvaluated: eligible.length,
+                          promoCount, demoteCount, noopCount: noop.length,
+                        });
+                      }
+                    }
+                  );
+                }
+              }
+            );
+          }
+        );
+      }
+    );
+  });
+}
+
 // ── API: GET /api/admin/members?search=...&kategori=ALL|PELAJAR|UMUM|PLATINUM
 // Daftar member + statistik kunjungan & total belanja, dipakai modal
 // "Daftar Member & Riwayat Setia" di dashboard admin.
@@ -1048,8 +1277,10 @@ function handleAdminMembers(req, res, parsedUrl) {
             COALESCE(k.nama, 'UMUM')   AS kategori,
             m.tanggal_daftar,
             m.status,
+            m.last_used_at,
             COUNT(DISTINCT t.id)      AS total_kunjungan,
-            COALESCE(SUM(t.total), 0) AS total_belanja
+            COALESCE(SUM(t.total), 0) AS total_belanja,
+            MAX(t.tanggal)            AS last_transaksi
      FROM member m
      LEFT JOIN member_kategori k ON k.id = m.kategori_id
      LEFT JOIN transaksi t ON t.member_id = m.kode_member
@@ -1069,8 +1300,49 @@ function handleAdminMembers(req, res, parsedUrl) {
         ? kategoriParam
         : 'ALL';
 
+      // Status member — sinkronisasi logika 100% dengan POS Kasir (Port 3100).
+      // POS menggunakan WITA (Asia/Makassar) dan ambang 7 hari dari last_used_at.
+      // Ref: server.js `tentukanStatusMember()` (Fix #63)
+      const witaFmt = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Makassar', year: 'numeric', month: '2-digit', day: '2-digit'
+      });
+      const todayWita = (() => {
+        const p = witaFmt.formatToParts(new Date());
+        return `${p.find(x=>x.type==='year')?.value}-${p.find(x=>x.type==='month')?.value}-${p.find(x=>x.type==='day')?.value}`;
+      })();
+
       const data = (rows || []).map(r => {
         const nomorHp = formatNoHP(r.nomor_hp); // normalisasi tampilan (Fix #24)
+        const lastTxDate = r.last_transaksi ? String(r.last_transaksi).slice(0, 10) : null;
+
+        // --- Sinkronisasi status 100% dengan POS Kasir (Fix #63) ---
+        const lastUsedAtStr = r.last_used_at ? String(r.last_used_at).slice(0, 10) : null;
+        const baseDateStr = lastUsedAtStr || lastTxDate;
+        let statusAktif = 'EXPIRED';
+        if (baseDateStr) {
+          // Konversi ke WITA date string
+          const d = new Date(baseDateStr);
+          if (!Number.isNaN(d.getTime())) {
+            const bp = witaFmt.formatToParts(d);
+            const witaDate = `${bp.find(x=>x.type==='year')?.value}-${bp.find(x=>x.type==='month')?.value}-${bp.find(x=>x.type==='day')?.value}`;
+            const baseDate = new Date(`${witaDate}T00:00:00Z`);
+            const todayDate = new Date(`${todayWita}T00:00:00Z`);
+            const diffDays = Math.floor((todayDate.getTime() - baseDate.getTime()) / 86400000);
+            if (!r.last_used_at) {
+              // No last_used_at di member: ambang >= 7 hari = EXPIRED
+              statusAktif = diffDays < 7 ? 'AKTIF' : 'EXPIRED';
+            } else {
+              // Ada last_used_at: ambang > 7 hari = EXPIRED; hari ini (diff===0) juga EXPIRED
+              statusAktif = (diffDays > 0 && diffDays <= 7) ? 'AKTIF' : 'EXPIRED';
+            }
+          } else {
+            // Invalid date: default EXPIRED
+            statusAktif = 'EXPIRED';
+          }
+        } else {
+          // Belum pernah transaksi & belum pernah pakai sesi
+          statusAktif = 'EXPIRED';
+        }
         return {
           id: Number(r.id),
           kode_member: r.kode_member || '—',
@@ -1081,6 +1353,8 @@ function handleAdminMembers(req, res, parsedUrl) {
           status: r.status || '—',
           total_kunjungan: Number(r.total_kunjungan) || 0,
           total_belanja: Number(r.total_belanja) || 0,
+          status_aktif: statusAktif,
+          last_transaksi: lastTxDate || '—',
         };
       }).filter(r => {
         // Cari di nomor_hp NORMAL (dengan '0' di depan) agar ?search=0811
@@ -1099,6 +1373,7 @@ function handleAdminMembers(req, res, parsedUrl) {
       // mengikuti filter UI, bukan seluruh tabel member)
       const totalBelanjaSemuaMember = data.reduce((s, r) => s + r.total_belanja, 0);
       const countKategori = (k) => data.filter(r => r.kategori === k).length;
+      const countStatus = (s) => data.filter(r => r.status_aktif === s).length;
 
       json(200, {
         success: true,
@@ -1109,12 +1384,51 @@ function handleAdminMembers(req, res, parsedUrl) {
           totalPelajar: countKategori('PELAJAR'),
           totalUmum: countKategori('UMUM'),
           totalPlatinum: countKategori('PLATINUM'),
+          totalAktif: countStatus('AKTIF'),
+          totalExpired: countStatus('EXPIRED'),
           totalBelanjaSemuaMember,
         },
         data,
       });
     }
   );
+}
+
+// ── API: GET /api/admin/members/evaluate-tier?month=YYYY-MM ─────
+// Evaluasi + update kategori member berdasarkan total belanja bulan lalu.
+// GET tanpa month → evaluasi bulan kalender sebelumnya secara otomatis.
+// Returns: { success, targetMonth, totalEvaluated, promoCount, demoteCount, noopCount }
+function handleAdminEvaluateMemberTier(req, res, parsedUrl) {
+  const json = (code, payload) => {
+    res.writeHead(code, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(payload));
+  };
+
+  const q = (parsedUrl && parsedUrl.query) || {};
+  const rawMonth = String(q.month || '').trim();
+
+  let targetMonth;
+  if (/^\d{4}-\d{2}$/.test(rawMonth)) {
+    targetMonth = rawMonth;
+  } else {
+    // Default: bulan kalender sebelumnya (misal hari ini Oktober → September)
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth()).padStart(2, '0');
+    const prevMonth = m === '00' ? `${y - 1}-12` : `${y}-${m}`;
+    targetMonth = prevMonth;
+  }
+
+  evaluateMonthlyMemberTier(targetMonth).then(result => {
+    if (result.success) {
+      console.log(`[MEMBER][eval] Selesai: ${targetMonth} — promo=${result.promoCount} demote=${result.demoteCount} noop=${result.noopCount}`);
+      return json(200, result);
+    }
+    json(500, result);
+  }).catch(err => {
+    console.error('[MEMBER][eval] Error:', err.message);
+    json(500, { success: false, message: err.message });
+  });
 }
 
 // ── API: DELETE /api/admin/member/:id ────────────────────────────
@@ -1165,6 +1479,118 @@ function handleAdminDeleteMember(req, res, memberId) {
       );
     }
   );
+}
+
+// ── API: POST /api/admin/member/:id/activate ──────────────────────
+// Aktifkan member EXPIRED dengan mereset tanggal_expired ke +30 hari dari
+// hari ini dan menandai status_aktif = 'AKTIF'. Tanpa mengubah skema DB —
+// status dihitung dinamis dari MAX(transaksi.tanggal) di endpoint members.
+function handleAdminActivateMember(req, res, memberId) {
+  const json = (code, payload) => {
+    res.writeHead(code, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(payload));
+  };
+
+  const id = Number(memberId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return json(400, { success: false, message: 'ID member tidak valid' });
+  }
+
+  db.get(
+    `SELECT id, kode_member, nama FROM member WHERE id = ? LIMIT 1`,
+    [id],
+    (err, row) => {
+      if (err) return json(500, { success: false, message: 'Gagal membaca member: ' + err.message });
+      if (!row) return json(404, { success: false, message: 'Member tidak ditemukan' });
+
+      // Tambah 1 baris transaksi fiktif hari ini → re-evaluasi jadi AKTIF
+      db.run(
+        `INSERT INTO transaksi (tanggal, total, tipe_transaksi, member_id, created_at)
+         VALUES (datetime('now'), 0, 'PENGAKTIFAN', ?, datetime('now'))`,
+        [row.kode_member],
+        (err2) => {
+          if (err2) {
+            console.error('[MEMBER][activate] Insert transaksi gagal:', err2.message);
+            return json(500, { success: false, message: 'Gagal mengaktifkan member: ' + err2.message });
+          }
+          console.log(`[ADMIN] MEMBER_ACTIVATED id=${row.id} kode=${row.kode_member} nama=${row.nama} oleh Admin`);
+          json(200, {
+            success: true,
+            message: `Member ${row.kode_member} - ${row.nama} berhasil diaktifkan kembali`,
+          });
+        }
+      );
+    }
+  );
+}
+
+// ── API: PUT /api/admin/member/:id ────────────────────────────────
+// Edit data member: nama, nomor_hp, kategori_id.
+// Tidak mengubah status/keaktifan — hanya field profil.
+function handleAdminUpdateMember(req, res, memberId) {
+  const json = (code, payload) => {
+    res.writeHead(code, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(payload));
+  };
+
+  const id = Number(memberId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return json(400, { success: false, message: 'ID member tidak valid' });
+  }
+
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    let parsed;
+    try { parsed = JSON.parse(body); } catch (e) {
+      return json(400, { success: false, message: 'JSON payload tidak valid' });
+    }
+
+    // Validasi kategori
+    const validKategori = ['PELAJAR', 'UMUM', 'PLATINUM'];
+    const rawKat = String(parsed.kategori || '').toUpperCase().trim();
+    const kategoriNama = validKategori.includes(rawKat) ? rawKat : null;
+    if (!kategoriNama) {
+      return json(400, { success: false, message: 'Kategori tidak valid (PELAJAR/UMUM/PLATINUM)' });
+    }
+
+    db.get(
+      `SELECT id, kode_member, nama FROM member WHERE id = ? LIMIT 1`,
+      [id],
+      (err, row) => {
+        if (err) return json(500, { success: false, message: 'Gagal membaca member: ' + err.message });
+        if (!row) return json(404, { success: false, message: 'Member tidak ditemukan' });
+
+        // Ambil kategori_id dari member_kategori
+        db.get(
+          `SELECT id FROM member_kategori WHERE nama = ? LIMIT 1`,
+          [kategoriNama],
+          (err2, katRow) => {
+            if (err2 || !katRow) {
+              return json(500, { success: false, message: 'Kategori tidak ditemukan di DB' });
+            }
+            const newNama = String(parsed.nama || '').trim();
+            const newHp = String(parsed.no_hp || '').trim();
+
+            db.run(
+              `UPDATE member SET nama = ?, nomor_hp = ?, kategori_id = ? WHERE id = ?`,
+              [newNama, newHp, katRow.id, id],
+              (err3) => {
+                if (err3) {
+                  return json(500, { success: false, message: 'Gagal memperbarui member: ' + err3.message });
+                }
+                console.log(`[ADMIN] MEMBER_UPDATED id=${row.id} kode=${row.kode_member} nama=${newNama} oleh Admin (PUT /api/admin/member/${id})`);
+                json(200, {
+                  success: true,
+                  message: `Member ${row.kode_member} - ${newNama} berhasil diperbarui`,
+                });
+              }
+            );
+          }
+        );
+      }
+    );
+  });
 }
 
 // ── API: GET /api/admin/qris/summary ─────────────────────────────
@@ -1639,6 +2065,157 @@ function handleAdminBankHistory(req, res, parsedUrl) {
         count: data.length,
         total_history: totalHistory,
         data,
+      });
+    }
+  );
+}
+
+// ── Fix #77: Ledger Pengeluaran & Operasional via Saldo Bank ──────────
+// Saldo bank RIIL = setoran bank yang DISETOR (shift_kasir) MINUS total
+// pengeluaran bank (tabel pengeluaran_bank). Nilai ini HOTSUNGAN — tidak
+// mengubah shift_kasir. Helper dipakai GET (riwayat) & POST (validasi).
+//
+// (Komentar: "HOTSUNGAN" = hasil hitung, bukan kolom tersimpan)
+const PENGELUARAN_BANK_KATEGORI = ['LISTRIK_DAPUR', 'LISTRIK_BAR', 'LISTRIK_KASIR', 'PERLENGKAPAN_DAPUR', 'PERLENGKAPAN_BAR', 'PERLENGKAPAN_KASIR', 'PERLENGKAPAN_BILLIARD', 'LAINNYA'];
+
+function getSaldoBankNeto(cb) {
+  db.all(
+    `SELECT
+       COALESCE((SELECT SUM(nominal_aktual) FROM shift_kasir
+          WHERE status_bank='DISETOR' AND kode_tutup IS NOT NULL
+            AND kode_tutup != '' AND status IN ('CLOSED','PENDING_CLOSE')),0) AS setor,
+       COALESCE((SELECT COALESCE(SUM(nominal),0) FROM pengeluaran_bank),0) AS pengeluaran
+     FROM (SELECT 1)`,
+    [],
+    (err, rows) => {
+      if (err) return cb(err, 0, 0, 0);
+      const r = rows[0] || {};
+      const setor = Number(r.setor) || 0;
+      const pengeluaran = Number(r.pengeluaran) || 0;
+      cb(null, setor, pengeluaran, setor - pengeluaran);
+    }
+  );
+}
+
+// POST /api/admin/pengeluaran-bank
+// Body: { kategori, nama_barang, nominal, keterangan, admin_name }
+// Memotong saldo bank via ledger + menolak over-draw.
+function handleAdminPengeluaranBank(req, res) {
+  const json = (code, payload) => {
+    res.writeHead(code, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(payload));
+  };
+
+  let body = '';
+  req.on('data', (c) => {
+    body += c;
+    if (body.length > 10240) { req.destroy(); }
+  });
+  req.on('end', () => {
+    let payload;
+    try { payload = JSON.parse(body || '{}'); }
+    catch (e) { return json(400, { success: false, message: 'Body JSON tidak valid.' }); }
+
+    const kategori = String(payload.kategori || '').toUpperCase().trim();
+    const namaBarang = String(payload.nama_barang || '').trim();
+    const nominal = Math.round(Number(payload.nominal) || 0);
+    const keterangan = String(payload.keterangan || '').trim();
+    const adminName = String(payload.admin_name || payload.created_by || 'admin').trim() || 'admin';
+
+    if (!PENGELUARAN_BANK_KATEGORI.includes(kategori)) {
+      return json(400, { success: false, code: 'KATEGORI_INVALID',
+        message: 'Kategori tidak valid: ' + kategori });
+    }
+    if (!namaBarang) {
+      return json(400, { success: false, code: 'NAMA_BARANG_KOSONG',
+        message: 'Nama barang / item wajib diisi.' });
+    }
+    if (!(nominal > 0)) {
+      return json(400, { success: false, code: 'NOMINAL_INVALID',
+        message: 'Nominal harus bilangan > 0.' });
+    }
+
+    getSaldoBankNeto((err, _setor, _pengeluaran, saldoNeto) => {
+      if (err) return json(500, { success: false,
+        message: 'Gagal menghitung saldo bank: ' + err.message });
+      if (nominal > saldoNeto) {
+        return json(400, {
+          success: false,
+          code: 'SALDO_BANK_TIDAK_CUKUP',
+          saldo_bank_saat_ini: saldoNeto,
+          message: 'Saldo bank tidak cukup (Saldo: Rp ' + saldoNeto.toLocaleString('id-ID') + ').'
+        });
+      }
+      db.run(
+        `INSERT INTO pengeluaran_bank
+           (kategori, nama_barang, nominal, keterangan, created_by)
+         VALUES (?, ?, ?, ?, ?)`,
+        [kategori, namaBarang, nominal, keterangan, adminName],
+        (insErr, info) => {
+          if (insErr) return json(500, { success: false,
+            message: 'Gagal menyimpan pengeluaran: ' + insErr.message });
+          json(200, {
+            success: true,
+            id: info ? Number(info.lastInsertRowid || 0) : 0,
+            saldo_bank_saat_ini: saldoNeto - nominal,
+            message: 'Pengeluaran bank berhasil dicatat.'
+          });
+        }
+      );
+    });
+  });
+}
+
+// GET /api/admin/pengeluaran-bank?kategori=&q=
+// Riwayat pengeluaran/pembelian bank, urut terbaru. Gabung saldo neto.
+function handleAdminPengeluaranBankList(req, res, parsed) {
+  const json = (code, payload) => {
+    res.writeHead(code, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(payload));
+  };
+
+  const q = (parsed && parsed.query) || {};
+  const kategori = String(q.kategori || '').toUpperCase().trim();
+  const search = String(q.q || '').trim();
+
+  const where = [];
+  const params = [];
+  if (kategori && PENGELUARAN_BANK_KATEGORI.includes(kategori)) {
+    where.push('kategori = ?');
+    params.push(kategori);
+  }
+  if (search) {
+    where.push('(nama_barang LIKE ? OR keterangan LIKE ?)');
+    const like = '%' + search + '%';
+    params.push(like, like);
+  }
+  const whereSql = where.length ? ('WHERE ' + where.join(' AND ')) : '';
+
+  db.all(
+    `SELECT id, tanggal, kategori, nama_barang, nominal, keterangan, created_by
+       FROM pengeluaran_bank ${whereSql}
+       ORDER BY tanggal DESC, id DESC LIMIT 500`,
+    params,
+    (err, rows) => {
+      if (err) return json(500, { success: false, message: 'Gagal membaca: ' + err.message });
+      const data = (rows || []).map((r) => ({
+        id: Number(r.id),
+        tanggal: r.tanggal,
+        kategori: r.kategori,
+        nama_barang: r.nama_barang,
+        nominal: Number(r.nominal) || 0,
+        keterangan: r.keterangan || '',
+        created_by: r.created_by || ''
+      }));
+      const total = data.reduce((s, r) => s + r.nominal, 0);
+      getSaldoBankNeto((e2, _s, _p, saldoNeto) => {
+        json(200, {
+          success: !e2,
+          count: data.length,
+          total_pengeluaran: total,
+          saldo_bank_saat_ini: e2 ? 0 : saldoNeto,
+          data
+        });
       });
     }
   );
@@ -2854,6 +3431,11 @@ const server = http.createServer((req, res) => {
     return handleAdminMembers(req, res, parsed);
   }
 
+  // GET /api/admin/members/evaluate-tier — evaluasi level member bulanan
+  if (req.method === 'GET' && pathname === '/api/admin/members/evaluate-tier') {
+    return handleAdminEvaluateMemberTier(req, res, parsed);
+  }
+
   // GET /api/admin/member/total — hanya COUNT(*) FROM member, sub-ms
   // Dipakai dashboard untuk mengisi stat card "Daftar Member" secara
   // realtime (fallback saat localStorage pbms_cached_total_member kosong).
@@ -2870,6 +3452,18 @@ const server = http.createServer((req, res) => {
   const memberDeleteMatch = /^\/api\/admin\/member\/(\d+)$/.exec(pathname);
   if (req.method === 'DELETE' && memberDeleteMatch) {
     return handleAdminDeleteMember(req, res, memberDeleteMatch[1]);
+  }
+
+  // POST /api/admin/member/:id/activate — aktifkan member EXPIRED
+  const memberActivateMatch = /^\/api\/admin\/member\/(\d+)\/activate$/.exec(pathname);
+  if (req.method === 'POST' && memberActivateMatch) {
+    return handleAdminActivateMember(req, res, memberActivateMatch[1]);
+  }
+
+  // PUT /api/admin/member/:id — edit data member (nama, no_hp, kategori)
+  const memberUpdateMatch = /^\/api\/admin\/member\/(\d+)$/.exec(pathname);
+  if (req.method === 'PUT' && memberUpdateMatch) {
+    return handleAdminUpdateMember(req, res, memberUpdateMatch[1]);
   }
 
   if (req.method === 'GET' && pathname === '/api/admin/reports/sales-chart') {
@@ -2896,6 +3490,108 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'GET' && pathname === '/api/admin/bank/history') {
     return handleAdminBankHistory(req, res, parsed);
+  }
+
+  // ── API: Fix #77 — Ledger Pengeluaran & Operasional via Saldo Bank ──
+  if (req.method === 'POST' && pathname === '/api/admin/pengeluaran-bank') {
+    return handleAdminPengeluaranBank(req, res);
+  }
+  if (req.method === 'GET' && pathname === '/api/admin/pengeluaran-bank') {
+    return handleAdminPengeluaranBankList(req, res, parsed);
+  }
+
+  // ── API: GET /api/admin/bahan-mentah ─────────────────────────
+  if (req.method === 'GET' && pathname === '/api/admin/bahan-mentah') {
+    const kategori = (parsed && parsed.query && parsed.query.kategori || '').toUpperCase();
+    let sql = 'SELECT * FROM bahan_mentah';
+    const params = [];
+    if (kategori) {
+      sql += ' WHERE UPPER(kategori) = ?';
+      params.push(kategori);
+    }
+    sql += ' ORDER BY id DESC';
+    db.all(sql, params, (err, rows) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: err.message }));
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, data: rows || [] }));
+    });
+    return;
+  }
+
+  // ── API: GET /api/admin/selisih-kasir (Fix #56b) ────────────────
+  // Rekap selisih tutup kasir bulan berjalan (tgl 1 s/d hari ini).
+  // Uang Sistem = totalCash (ringkasanPenjualan) + kasMasuk - kasKeluar
+  // Selisih = nominal_aktual - uang_sistem (positif = plus/lebih, negatif = minus/kurang).
+  function handleAdminSelisihKasir(req, res) {
+    const json = (code, payload) => {
+      res.writeHead(code, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(payload));
+    };
+    const now = new Date();
+    const ymdStart = now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-01';
+    const ymdEnd   = now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0');
+    db.all(
+      `SELECT s.id,
+              s.kode_tutup,
+              date(s.tutup_at, 'localtime') || ' ' || substr(datetime(s.tutup_at, 'localtime'), 12, 5) AS tgl_jam,
+              COALESCE(k.nama, CAST(s.kasir_id AS TEXT)) AS kasir,
+              COALESCE(s.nominal_aktual, 0)                                        AS nominal_aktual,
+              COALESCE(CAST(json_extract(s.pending_close_snapshot,
+                                        '$.ringkasanPenjualan.totalCash') AS INTEGER), 0)
+                                                                             AS total_cash,
+              COALESCE(CAST(json_extract(s.pending_close_snapshot,
+                                        '$.kas.masuk') AS INTEGER), 0)       AS kas_masuk,
+              COALESCE(CAST(json_extract(s.pending_close_snapshot,
+                                        '$.kas.keluar') AS INTEGER), 0)      AS kas_keluar,
+              COALESCE(CAST(json_extract(s.pending_close_snapshot,
+                                        '$.ringkasanPenjualan.totalCash') AS INTEGER), 0)
+                      + COALESCE(CAST(json_extract(s.pending_close_snapshot,
+                                                  '$.kas.masuk') AS INTEGER), 0)
+                      - COALESCE(CAST(json_extract(s.pending_close_snapshot,
+                                                  '$.kas.keluar') AS INTEGER), 0)
+                                                                             AS uang_sistem
+       FROM shift_kasir s
+       LEFT JOIN kasir k ON k.id = s.kasir_id
+       WHERE s.kode_tutup IS NOT NULL AND s.kode_tutup != ''
+         AND s.status IN ('CLOSED', 'PENDING_CLOSE')
+         AND date(s.tutup_at, 'localtime') >= date(?, 'localtime')
+         AND date(s.tutup_at, 'localtime') <= date(?, 'localtime')
+       ORDER BY s.tutup_at DESC`,
+      [ymdStart, ymdEnd],
+      (err, rows) => {
+        if (err) return json(500, { success: false, message: 'Gagal baca selisih kasir: ' + err.message });
+        const data = (rows || []).map(r => {
+          const totalCash = Number(r.total_cash) || 0;
+          const kasMasuk  = Number(r.kas_masuk) || 0;
+          const kasKeluar = Number(r.kas_keluar) || 0;
+          const uangSistem = totalCash + kasMasuk - kasKeluar;
+          const selisih    = (Number(r.nominal_aktual) || 0) - uangSistem;
+          return {
+            id: Number(r.id),
+            kode_tutup: r.kode_tutup,
+            tgl_jam: r.tgl_jam || '—',
+            kasir: r.kasir || '—',
+            nominal_aktual: Number(r.nominal_aktual) || 0,
+            total_cash: totalCash,
+            kas_masuk: kasMasuk,
+            kas_keluar: kasKeluar,
+            uang_sistem: uangSistem,
+            selisih,
+          };
+        });
+        const total = data.reduce((s, r) => s + r.selisih, 0);
+        json(200, { success: true, period_start: ymdStart, period_end: ymdEnd, total, count: data.length, data });
+      }
+    );
+  }
+  if (req.method === 'GET' && pathname === '/api/admin/selisih-kasir') {
+    return handleAdminSelisihKasir(req, res);
   }
 
   // (Fix #54) PO lifecycle:
@@ -2943,6 +3639,450 @@ const server = http.createServer((req, res) => {
     return handleAdminPembelian(req, res);
   }
 
+
+  // Helper: Generate auto kode_barang (RAW-001, RAW-002, ...) - Fix #71
+  function generateBarKode() {
+    return new Promise((resolve, reject) => {
+      db.get(
+        `SELECT MAX(CAST(SUBSTR(kode_barang, 5) AS INTEGER)) AS max_id FROM bar_raw_materials WHERE kode_barang LIKE 'RAW-%'`,
+        [],
+        (err, row) => {
+          if (err) return reject(err);
+          const next = (row?.max_id || 0) + 1;
+          resolve('RAW-' + String(next).padStart(3, '0'));
+        }
+      );
+    });
+  }
+
+  // ── API: Bar Raw Materials ─────────────────────────────────────
+  // GET /api/admin/bar/raw-materials — baca dari bahan_mentah (kategori BAR)
+  // Mapping: harga_satuan → harga_per_satuan, terakhir_update → updated_at
+  if (req.method === 'GET' && pathname === '/api/admin/bar/raw-materials') {
+    db.all(
+      `SELECT id, kode_barang, nama_barang, kategori, stok, satuan,
+              harga_satuan AS harga_per_satuan,
+              terakhir_update AS updated_at
+       FROM bahan_mentah WHERE UPPER(kategori) = 'BAR' ORDER BY id ASC`,
+      [], (err, rows) => {
+        if (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: false, message: err.message }));
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, data: rows || [] }));
+      }
+    );
+    return;
+  }
+
+  // POST /api/admin/bar/raw-materials
+  // Target tabel: bahan_mentah (kolom: harga_satuan, terakhir_update, kategori='BAR')
+  if (req.method === 'POST' && pathname === '/api/admin/bar/raw-materials') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > 10240) req.destroy(); });
+    req.on('end', () => {
+      let payload;
+      try { payload = JSON.parse(body || '{}'); }
+      catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'JSON tidak valid.' }));
+      }
+      const nama = String(payload.nama_barang || '').trim();
+      const stokBaru = Number(payload.stok) || 0;
+      const satuan = String(payload.satuan || '').trim();
+      const harga = Number(payload.harga_per_satuan) || 0;
+      const existingId = payload.id ? Number(payload.id) : null;
+
+      if (!nama) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'Nama bahan wajib diisi.' }));
+      }
+      if (!satuan) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'Satuan wajib diisi.' }));
+      }
+      if (stokBaru < 0) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'Stok tidak boleh negatif.' }));
+      }
+
+      // Mapping row DB → format frontend (harga_satuan → harga_per_satuan, terakhir_update → updated_at)
+      const mapRow = (row) => row ? {
+        ...row,
+        harga_per_satuan: Number(row.harga_satuan) || 0,
+        updated_at: row.terakhir_update || '',
+      } : null;
+
+      // Helper: restok (update stok + harga) pada bahan_mentah dengan guard kategori BAR
+      const doRestok = (id, modeLabel) => {
+        db.run(
+          `UPDATE bahan_mentah
+           SET stok = stok + ?, harga_satuan = ?, terakhir_update = CURRENT_TIMESTAMP
+           WHERE id = ? AND UPPER(kategori) = 'BAR'`,
+          [stokBaru, harga, id],
+          (restokErr) => {
+            if (restokErr) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({ success: false, message: 'Gagal restok: ' + restokErr.message }));
+            }
+            db.get(
+              `SELECT id, kode_barang, nama_barang, stok, satuan, harga_satuan, terakhir_update
+               FROM bahan_mentah WHERE id = ?`,
+              [id],
+              (selErr, row) => {
+                if (selErr) {
+                  res.writeHead(500, { 'Content-Type': 'application/json' });
+                  return res.end(JSON.stringify({ success: false, message: selErr.message }));
+                }
+                console.log(`[BAR][restok] ${row.kode_barang} — ${row.nama_barang}: +${stokBaru} ${satuan} (stok baru: ${row.stok})`);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                  success: true, data: mapRow(row), mode: modeLabel,
+                  message: 'Stok berhasil ditambahkan.'
+                }));
+              }
+            );
+          }
+        );
+      };
+
+      // Jika ada id (restok mode), langsung update
+      if (existingId) {
+        doRestok(existingId, 'restok');
+        return;
+      }
+
+      // Cek apakah nama sudah ada di bahan_mentah kategori BAR (case-insensitive)
+      db.get(
+        `SELECT id FROM bahan_mentah WHERE LOWER(nama_barang) = LOWER(?) AND UPPER(kategori) = 'BAR'`,
+        [nama],
+        (err, existing) => {
+          if (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: err.message }));
+          }
+          if (existing) {
+            doRestok(existing.id, 'restok');
+            return;
+          }
+          // Bahan baru: generate kode BRG-BAR-XXX (MAX(id)+1 pada kategori BAR)
+          db.get(
+            `SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM bahan_mentah WHERE UPPER(kategori) = 'BAR'`,
+            [],
+            (err2, maxRow) => {
+              if (err2) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ success: false, message: 'Gagal generate kode: ' + err2.message }));
+              }
+              const kodeBaru = 'BRG-BAR-' + String(maxRow.next_id).padStart(3, '0');
+              db.run(
+                `INSERT INTO bahan_mentah
+                   (kode_barang, nama_barang, kategori, stok, satuan, harga_satuan, terakhir_update)
+                 VALUES (?, ?, 'BAR', ?, ?, ?, CURRENT_TIMESTAMP)`,
+                [kodeBaru, nama, stokBaru, satuan, harga],
+                function(err3) {
+                  if (err3) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    return res.end(JSON.stringify({ success: false, message: 'Gagal menambah: ' + err3.message }));
+                  }
+                  db.get(
+                    `SELECT id, kode_barang, nama_barang, stok, satuan, harga_satuan, terakhir_update
+                     FROM bahan_mentah WHERE id = ?`,
+                    [this.lastID],
+                    (err4, newRow) => {
+                      if (err4) {
+                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        return res.end(JSON.stringify({ success: false, message: err4.message }));
+                      }
+                      console.log(`[BAR][new] ${newRow.kode_barang} — ${newRow.nama_barang} (${stokBaru} ${satuan})`);
+                      res.writeHead(201, { 'Content-Type': 'application/json' });
+                      res.end(JSON.stringify({
+                        success: true, data: mapRow(newRow), mode: 'new',
+                        kode_barang: newRow.kode_barang,
+                        message: 'Bahan mentah baru berhasil ditambahkan.'
+                      }));
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
+    });
+    return;
+  }
+  // Helper: Generate auto kode_barang (DPR-001, DPR-002, ...) — Fix #75
+  function generateDapurKode() {
+    return new Promise((resolve, reject) => {
+      db.get(
+        `SELECT MAX(CAST(SUBSTR(kode_barang, 5) AS INTEGER)) AS max_id FROM dapur_raw_materials WHERE kode_barang LIKE 'DPR-%'`,
+        [],
+        (err, row) => {
+          if (err) return reject(err);
+          const next = (row?.max_id || 0) + 1;
+          resolve('DPR-' + String(next).padStart(3, '0'));
+        }
+      );
+    });
+  }
+
+  // ── API: Dapur Raw Materials (Fix #75) ──────────────────────────
+  // GET  /api/admin/dapur/raw-materials
+  if (req.method === 'GET' && pathname === '/api/admin/dapur/raw-materials') {
+    db.all(
+      `SELECT id, kode_barang, nama_barang, kategori, stok, satuan, harga_per_satuan, updated_at
+       FROM dapur_raw_materials ORDER BY nama_barang ASC`,
+      [], (err, rows) => {
+        if (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: false, message: err.message }));
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, data: rows || [] }));
+      }
+    );
+    return;
+  }
+
+  // POST /api/admin/dapur/raw-materials (Fix #75: Auto-generate Kode + Restok)
+  if (req.method === 'POST' && pathname === '/api/admin/dapur/raw-materials') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > 10240) req.destroy(); });
+    req.on('end', () => {
+      let payload;
+      try { payload = JSON.parse(body || '{}'); }
+      catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'JSON tidak valid.' }));
+      }
+      const nama = String(payload.nama_barang || '').trim();
+      const stokBaru = Number(payload.stok) || 0;
+      const satuan = String(payload.satuan || '').trim().toLowerCase();
+      const harga = Number(payload.harga_per_satuan) || 0;
+      const existingId = payload.id ? Number(payload.id) : null;
+
+      if (!nama) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'Nama bahan wajib diisi.' }));
+      }
+      if (!['g', 'kg', 'ml', 'l', 'pcs', 'pack'].includes(satuan)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'Satuan harus g, kg, ml, l, pcs, atau pack.' }));
+      }
+      if (stokBaru < 0) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'Stok tidak boleh negatif.' }));
+      }
+
+      // Jika ada id (restok mode), langsung update
+      if (existingId) {
+        db.run(
+          `UPDATE dapur_raw_materials SET stok = stok + ?, harga_per_satuan = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`,
+          [stokBaru, harga, existingId],
+          function(err) {
+            if (err) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({ success: false, message: 'Gagal restok: ' + err.message }));
+            }
+            db.get(`SELECT id, kode_barang, nama_barang, stok, satuan, harga_per_satuan, updated_at FROM dapur_raw_materials WHERE id = ?`, [existingId], (err2, row) => {
+              if (err2) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ success: false, message: err2.message }));
+              }
+              console.log(`[DAPUR][restok] ${row.kode_barang} — ${row.nama_barang}: +${stokBaru} ${satuan} (stok baru: ${row.stok})`);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: true, data: row, message: 'Stok berhasil ditambahkan.' }));
+            });
+          }
+        );
+        return;
+      }
+
+      // Cek apakah nama sudah ada (case-insensitive)
+      db.get(`SELECT id, kode_barang, nama_barang, stok, satuan, harga_per_satuan FROM dapur_raw_materials WHERE LOWER(nama_barang) = LOWER(?)`, [nama], (err, existing) => {
+        if (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: false, message: err.message }));
+        }
+        if (existing) {
+          // Restok otomatis
+          db.run(
+            `UPDATE dapur_raw_materials SET stok = stok + ?, harga_per_satuan = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`,
+            [stokBaru, harga, existing.id],
+            function(err2) {
+              if (err2) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ success: false, message: 'Gagal restok: ' + err2.message }));
+              }
+              db.get(`SELECT id, kode_barang, nama_barang, stok, satuan, harga_per_satuan, updated_at FROM dapur_raw_materials WHERE id = ?`, [existing.id], (err3, row) => {
+                console.log(`[DAPUR][restok-auto] ${row.kode_barang} — ${row.nama_barang}: +${stokBaru} ${satuan} (stok baru: ${row.stok})`);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, data: row, mode: 'restok', message: 'Stok berhasil ditambahkan (bahan sudah ada).' }));
+              });
+            }
+          );
+          return;
+        }
+        // Bahan baru: generate kode otomatis
+        generateDapurKode().then(kodeBaru => {
+          db.run(
+            `INSERT INTO dapur_raw_materials (kode_barang, nama_barang, kategori, stok, satuan, harga_per_satuan, updated_at) VALUES (?, ?, 'DAPUR_RAW', ?, ?, ?, datetime('now', 'localtime'))`,
+            [kodeBaru, nama, stokBaru, satuan, harga],
+            function(err) {
+              if (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ success: false, message: 'Gagal menambah: ' + err.message }));
+              }
+              db.get(`SELECT id, kode_barang, nama_barang, stok, satuan, harga_per_satuan, updated_at FROM dapur_raw_materials WHERE id = ?`, [this.lastID], (err2, row) => {
+                console.log(`[DAPUR][new] ${row.kode_barang} — ${row.nama_barang} (${stokBaru} ${satuan})`);
+                res.writeHead(201, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, data: row, mode: 'new', kode_barang: row.kode_barang, message: 'Bahan mentah baru berhasil ditambahkan.' }));
+              });
+            }
+          );
+        }).catch(err => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, message: 'Gagal generate kode: ' + err.message }));
+        });
+      });
+    });
+    return;
+  }
+
+  // POST /api/admin/bar/cart/checkout
+  if (req.method === 'POST' && pathname === '/api/admin/bar/cart/checkout') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > 102400) req.destroy(); });
+    req.on('end', () => {
+      let payload;
+      try { payload = JSON.parse(body || '{}'); }
+      catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'JSON tidak valid.' }));
+      }
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      if (!items.length) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'Keranjang kosong.' }));
+      }
+      const adminName = String(payload.admin_name || 'admin').trim() || 'admin';
+      // Ambil semua bahan sekaligus
+      const placeholders = items.map(() => '?').join(',');
+      db.all(
+        `SELECT id, kode_barang, nama_barang, stok, satuan, harga_per_satuan
+         FROM bar_raw_materials WHERE kode_barang IN (${placeholders})`,
+        items.map(i => String(i.kode_barang || '').trim().toUpperCase()),
+        (err, rows) => {
+          if (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: err.message }));
+          }
+          const byKode = {};
+          (rows || []).forEach(r => { byKode[String(r.kode_barang).toUpperCase()] = r; });
+          const now = new Date();
+          const witaStr = (() => {
+            const fmt = new Intl.DateTimeFormat('en-GB', {
+              timeZone: 'Asia/Makassar', year: 'numeric', month: '2-digit', day: '2-digit',
+              hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            });
+            return fmt.format(now);
+          })();
+          const errors = [];
+          const used = [];
+          let totalCost = 0;
+          for (const item of items) {
+            const kode = String(item.kode_barang || '').trim().toUpperCase();
+            const qty = Number(item.qty) || 0;
+            const mat = byKode[kode];
+            if (!mat) { errors.push(`Bahan "${kode}" tidak ditemukan.`); continue; }
+            if (mat.stok < qty) { errors.push(`Stok ${mat.nama_barang} (${kode}) kurang: tersedia ${mat.stok} ${mat.satuan}, diminta ${qty} ${mat.satuan}.`); continue; }
+            const cost = qty * (mat.harga_per_satuan || 0);
+            totalCost += cost;
+            used.push({ id: mat.id, kode: kode, qty: qty, satuan: mat.satuan, cost: cost });
+          }
+          if (errors.length > 0) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Validasi gagal: ' + errors.join(' | '), details: errors }));
+          }
+          // Kurangi stok atomic
+          const updates = used.map(u => {
+            const newStok = parseFloat((u.mat?.stok || 0) - u.qty).toFixed(4);
+            return db.run(`UPDATE bar_raw_materials SET stok = stok - ?, updated_at = datetime('now', 'localtime') WHERE id = ?`, [u.qty, u.id]);
+          });
+          Promise.all(updates).then(() => {
+            console.log(`[BAR][cart-checkout] ${adminName} | ${witaStr} | ${items.length} item | Total: ${totalCost.toFixed(2)}`);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, message: `Checkout berhasil. ${used.length} bahan digunakan.`, total_cost: totalCost, used: used }));
+          }).catch(err => {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, message: err.message }));
+          });
+        }
+      );
+    });
+    return;
+  }
+
+  // DELETE /api/admin/bar/raw-materials (Fix #69)
+  if (req.method === 'DELETE' && pathname === '/api/admin/bar/raw-materials') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > 4096) req.destroy(); });
+    req.on('end', () => {
+      let payload;
+      try { payload = JSON.parse(body || '{}'); }
+      catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'JSON tidak valid.' }));
+      }
+      const kode = String(payload.kode_barang || '').trim();
+      if (!kode) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'Kode barang wajib diisi.' }));
+      }
+      db.run(`DELETE FROM bahan_mentah WHERE kode_barang = ? AND UPPER(kategori) = 'BAR'`, [kode], function(err) {
+        if (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: false, message: err.message }));
+        }
+        console.log('[BAR][delete] ' + kode);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Bahan berhasil dihapus.' }));
+      });
+    });
+    return;
+  }
+
+  // DELETE /api/admin/dapur/raw-materials (Fix #75)
+  if (req.method === 'DELETE' && pathname === '/api/admin/dapur/raw-materials') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > 4096) req.destroy(); });
+    req.on('end', () => {
+      let payload;
+      try { payload = JSON.parse(body || '{}'); }
+      catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'JSON tidak valid.' }));
+      }
+      const kode = String(payload.kode_barang || '').trim();
+      if (!kode) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'Kode barang wajib diisi.' }));
+      }
+      db.run(`DELETE FROM dapur_raw_materials WHERE kode_barang = ?`, [kode], function(err) {
+        if (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: false, message: err.message }));
+        }
+        console.log('[DAPUR][delete] ' + kode);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Bahan berhasil dihapus.' }));
+      });
+    });
+    return;
+  }
+
   // Static files from admin/ directory
   let filePath;
   if (pathname === '/' || pathname === '' || pathname === '/admin') {
@@ -2971,4 +4111,34 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[ADMIN] PBMS Admin server berjalan di http://0.0.0.0:${PORT}`);
+  // Auto-evaluasi tier member pada bulan terbaru jika belum dievaluasi hari ini
+  (async () => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth()).padStart(2, '0');
+    const currentMonth = `${y}-${m}`;
+    // Cek apakah sudah ada log evaluasi hari ini
+    try {
+      const [row] = await new Promise((resolve, reject) =>
+        db.get(
+          `SELECT COUNT(*) AS c FROM sqlite_master WHERE type='table' AND name='member_eval_log'`,
+          [], (e, r) => e ? reject(e) : resolve([r])
+        )
+      );
+      if (row.c > 0) {
+        const [log] = await new Promise((resolve, reject) =>
+          db.get(
+            `SELECT MAX(evaluated_at) AS last FROM member_eval_log`,
+            [], (e, r) => e ? reject(e) : resolve([r])
+          )
+        );
+        const lastEval = log?.last || '';
+        if (!lastEval.startsWith(currentMonth)) {
+          console.log('[MEMBER][eval] Auto-evaluasi bulanan on-startup...');
+          const result = await evaluateMonthlyMemberTier(currentMonth);
+          console.log('[MEMBER][eval] Result:', result);
+        }
+      }
+    } catch (e) { /* tabel belum ada — abaikan */ }
+  })();
 });

@@ -451,6 +451,32 @@ db.serialize(() => {
     }
   );
 
+  // (Fix: Penerimaan Barang) kolom audit penerima di pembelian — siapa & kapan PO diterima.
+  // Additive & idempotent; tidak merusak skema, tidak menyentuh transaksi kasir reguler.
+  db.run(
+    `
+    ALTER TABLE pembelian
+    ADD COLUMN diterima_oleh TEXT
+    `,
+    error => {
+      if (error && !error.message.includes("duplicate column name")) {
+        writeLog("ERROR", "DATABASE", "Gagal menambahkan diterima_oleh pada pembelian", { error: error.message });
+      }
+    }
+  );
+
+  db.run(
+    `
+    ALTER TABLE pembelian
+    ADD COLUMN diterima_at TEXT
+    `,
+    error => {
+      if (error && !error.message.includes("duplicate column name")) {
+        writeLog("ERROR", "DATABASE", "Gagal menambahkan diterima_at pada pembelian", { error: error.message });
+      }
+    }
+  );
+
   db.run(`
     CREATE TABLE IF NOT EXISTS transaksi (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -5025,7 +5051,30 @@ function getKasLaciSaldo(waktu = null) {
       const status = String(url.searchParams.get("status") || "PENDING").toUpperCase();
 
       db.all(
-        `SELECT * FROM pembelian WHERE UPPER(status) = ? ORDER BY id DESC`,
+        `
+        SELECT
+          p.id,
+          p.nota_no,
+          p.no_po,
+          p.kasir_id,
+          p.total_modal,
+          p.total_qty,
+          p.catat_kas_keluar,
+          p.created_at,
+          p.kategori_target,
+          p.status,
+          (SELECT GROUP_CONCAT(
+              COALESCE(mb.nama, CAST(dp.barang_id AS TEXT)),
+              ' | '
+            )
+           FROM detail_pembelian dp
+           LEFT JOIN master_barang mb ON mb.id = dp.barang_id
+           WHERE dp.pembelian_id = p.id) AS items
+        FROM pembelian p
+        WHERE UPPER(COALESCE(p.status, 'PENDING')) = ?
+          AND UPPER(COALESCE(p.status, 'PENDING')) NOT IN ('BATAL', 'DITERIMA')
+        ORDER BY p.id DESC
+        `,
         [status],
         (error, rows) => {
           if (error) {
@@ -5033,8 +5082,50 @@ function getKasLaciSaldo(waktu = null) {
             res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
             return res.end(JSON.stringify({ success: false, message: error.message }));
           }
-          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-          return res.end(JSON.stringify({ success: true, po: rows || [], total: (rows || []).length }));
+
+          // Ambil detail item per PO + data master_barang agar front-end bisa
+          // menampilkan Qty PO / HPP Lama / HPP Baru per item di modal konfirmasi.
+          const list = Array.isArray(rows) ? rows : [];
+          const done = (enriched) => {
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ success: true, po: enriched, total: enriched.length }));
+          };
+
+          const enrich = (idx) => {
+            if (idx >= list.length) return done(list);
+            const po = list[idx];
+            db.all(
+              `
+              SELECT dp.id, dp.barang_id, dp.hpp_lama, dp.hpp_baru,
+                     dp.harga_jual_lama, dp.harga_jual_baru, dp.qty, dp.subtotal_modal,
+                     mb.nama AS barang_nama, mb.kategori AS barang_kategori
+               FROM detail_pembelian dp
+               LEFT JOIN master_barang mb ON mb.id = dp.barang_id
+               WHERE dp.pembelian_id = ?
+               ORDER BY dp.id ASC`,
+              [po.id],
+              (dErr, detailRows) => {
+                if (dErr) {
+                  writeLog("ERROR", "PO_PENDING_DETAIL_FAILED", "Gagal membaca detail PO", { error: dErr.message, pembelian_id: po.id });
+                }
+                const details = Array.isArray(detailRows) ? detailRows : [];
+                po._detail = details;
+                const barangMap = {};
+                details.forEach(d => {
+                  barangMap[d.barang_id] = {
+                    id: d.barang_id,
+                    nama: d.barang_nama || ("Barang #" + d.barang_id),
+                    kategori: d.barang_kategori || ""
+                  };
+                });
+                po._barangMap = barangMap;
+                enrich(idx + 1);
+              }
+            );
+          };
+
+          if (list.length === 0) done(list);
+          else enrich(0);
         }
       );
     } catch (error) {
@@ -5042,6 +5133,218 @@ function getKasLaciSaldo(waktu = null) {
       res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
       return res.end(JSON.stringify({ success: false, message: error.message }));
     }
+    return;
+  }
+
+  // ==================================================
+  // APPROVE PO / PENERIMAAN BARANG (KASIR)
+  // POST /api/pembelian/approve
+  //  - Auth: X-Session-Id & X-Device-Id → identitas kasir penerima (diterima_oleh)
+  //  - Payload: { pembelian_id, items: [{ barang_id, qty_diterima, hpp_baru }] }
+  //  - Alur: validasi status PENDING → simpan qty terima & hpp baru ke detail,
+  //    rekap total_modal/total_qty, tambah stok_aktual master_barang, update harga_modal.
+  // ==================================================
+  if (req.method === "POST" && req.url === "/api/pembelian/approve") {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+
+    const penerimaNama = String(session.nama || session.username || "").trim();
+    const kasirId = Number(session.kasirId) || 0;
+
+    let rawBody = "";
+    req.on("data", chunk => { rawBody += chunk; });
+    req.on("end", () => {
+      let payload;
+      try {
+        payload = rawBody ? JSON.parse(rawBody) : {};
+      } catch (parseErr) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: "Payload tidak valid: JSON salah format." }));
+      }
+
+      const pembelianId = Number(payload && payload.pembelian_id) || 0;
+      const items = Array.isArray(payload && payload.items) ? payload.items : [];
+
+      if (!pembelianId) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: "pembelian_id wajib diisi." }));
+      }
+      if (items.length === 0) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ success: false, message: "Daftar item penerimaan wajib diisi." }));
+      }
+
+      // Validasi & normalisasi item: qty_diterima (integer ≥0), hpp_baru (integer ≥0)
+      const normalized = [];
+      for (const it of items) {
+        const barangId = Number(it && it.barang_id) || 0;
+        let qtyDiterima = Number(it && it.qty_diterima);
+        let hppBaru = Number(it && it.hpp_baru);
+        if (!Number.isInteger(qtyDiterima) || qtyDiterima < 0) qtyDiterima = 0;
+        if (!Number.isInteger(hppBaru) || hppBaru < 0) hppBaru = 0;
+        if (!barangId) {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          return res.end(JSON.stringify({ success: false, message: "Item tidak valid: barang_id hilang." }));
+        }
+        normalized.push({ barangId, qtyDiterima, hppBaru });
+      }
+
+      // Ambil status PO sebelum transaksi.
+      db.get(
+        `SELECT id, status, kasir_id FROM pembelian WHERE id = ?`,
+        [pembelianId],
+        (poErr, poRow) => {
+          if (poErr) {
+            writeLog("ERROR", "PO_APPROVE_QUERY_FAILED", "Gagal membaca PO untuk approve", { error: poErr.message, pembelian_id: pembelianId });
+            res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+            return res.end(JSON.stringify({ success: false, message: poErr.message }));
+          }
+          if (!poRow) {
+            res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+            return res.end(JSON.stringify({ success: false, message: "PO tidak ditemukan." }));
+          }
+
+          const poStatus = String(poRow.status || "PENDING").toUpperCase();
+          if (poStatus === "DITERIMA" || poStatus === "BATAL") {
+            // Sudah diproses — tolak dengan 409
+            res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
+            return res.end(JSON.stringify({ success: false, message: `PO sudah berstatus ${poStatus}, tidak bisa diterima ulang.` }));
+          }
+
+          const nowLocal = new Date().toISOString().slice(0, 19).replace("T", " ");
+
+          const finish = (action, cb) => {
+            db.run(action, err => {
+              if (err) {
+                writeLog("ERROR", "PO_APPROVE_TX_FAILED", `Transaksi ${action} gagal`, { error: err.message, pembelian_id: pembelianId });
+                db.run("ROLLBACK", () => {
+                  res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+                  res.end(JSON.stringify({ success: false, message: err.message }));
+                });
+                return;
+              }
+              cb();
+            });
+          };
+
+          finish("BEGIN IMMEDIATE", () => {
+            // (a) Update header pembelian: status, diterima_oleh, diterima_at, rekap total
+            let totalModal = 0;
+            let totalQty = 0;
+            normalized.forEach(n => {
+              totalModal += n.hppBaru * n.qtyDiterima;
+              totalQty += n.qtyDiterima;
+            });
+
+            db.run(
+              `UPDATE pembelian
+               SET status = 'DITERIMA',
+                   diterima_oleh = ?,
+                   diterima_at = ?,
+                   total_modal = ?,
+                   total_qty = ?
+               WHERE id = ?`,
+              [penerimaNama, nowLocal, totalModal, totalQty, pembelianId],
+              (updErr) => {
+                if (updErr) {
+                  db.run("ROLLBACK", () => {
+                    res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+                    res.end(JSON.stringify({ success: false, message: updErr.message }));
+                  });
+                  return;
+                }
+
+                let idx = 0;
+                const next = () => {
+                  if (idx >= normalized.length) {
+                    db.run("COMMIT", commitErr => {
+                      if (commitErr) {
+                        writeLog("ERROR", "PO_APPROVE_COMMIT_FAILED", "Commit approve PO gagal", { error: commitErr.message, pembelian_id: pembelianId });
+                        res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+                        return res.end(JSON.stringify({ success: false, message: commitErr.message }));
+                      }
+                      writeLog("INFO", "PO_APPROVE_OK", "Penerimaan barang disetujui & stok bertambah", {
+                        pembelian_id: pembelianId, kasir_id: kasirId, diterima_oleh: penerimaNama,
+                        total_modal: totalModal, total_qty: totalQty
+                      });
+                      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+                      return res.end(JSON.stringify({
+                        success: true,
+                        message: "Penerimaan barang sukses disetujui & stok bertambah",
+                        total_modal: totalModal,
+                        total_qty: totalQty
+                      }));
+                    });
+                    return;
+                  }
+
+                  const n = normalized[idx];
+                  idx += 1;
+
+                  // (b) Update detail_pembelian per item: qty diterima & hpp baru
+                  db.run(
+                    `UPDATE detail_pembelian
+                     SET qty = ?, hpp_baru = ?, subtotal_modal = ?
+                     WHERE pembelian_id = ? AND barang_id = ?`,
+                    [n.qtyDiterima, n.hppBaru, n.hppBaru * n.qtyDiterima, pembelianId, n.barangId],
+                    (detailErr) => {
+                      if (detailErr) {
+                        db.run("ROLLBACK", () => {
+                          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+                          res.end(JSON.stringify({ success: false, message: detailErr.message }));
+                        });
+                        return;
+                      }
+
+                      // (c) Tambah stok_aktual master_barang; update harga_modal bila hpp_baru > 0 & berubah
+                      db.get(
+                        `SELECT hpp FROM master_barang WHERE id = ?`,
+                        [n.barangId],
+                        (mbErr, mbRow) => {
+                          if (mbErr) {
+                            db.run("ROLLBACK", () => {
+                              res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+                              res.end(JSON.stringify({ success: false, message: mbErr.message }));
+                            });
+                            return;
+                          }
+
+                          const hppBaruAkhir = n.hppBaru;
+                          const hppLama = mbRow ? Number(mbRow.hpp) : 0;
+                          const updateHargaModal = hppBaruAkhir > 0 && hppBaruAkhir !== hppLama;
+
+                          db.run(
+                            `UPDATE master_barang
+                             SET stok_aktual = COALESCE(stok_aktual,0) + ?,
+                                 hpp = ?,
+                                 updated_at = ?
+                             WHERE id = ?`,
+                            [n.qtyDiterima, updateHargaModal ? hppBaruAkhir : hppLama,
+                             nowLocal, n.barangId],
+                            (stokErr) => {
+                              if (stokErr) {
+                                db.run("ROLLBACK", () => {
+                                  res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+                                  res.end(JSON.stringify({ success: false, message: stokErr.message }));
+                                });
+                                return;
+                              }
+                              next();
+                            }
+                          );
+                        }
+                      );
+                    }
+                  );
+                };
+
+                next();
+              }
+            );
+          });
+        }
+      );
+    });
     return;
   }
 
@@ -5897,6 +6200,24 @@ function getKasLaciSaldo(waktu = null) {
         if (!foundMember) {
           res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
           return res.end(JSON.stringify({ success: false, message: "Member tidak ditemukan." }));
+        }
+
+        // ── Validasi: 1 Member hanya boleh 1 Meja Aktif (Fix #68) ──────
+        const activeSessions = await new Promise((resolve, reject) => {
+          db.all("SELECT nomor_meja FROM sesi_meja WHERE member_id = ? AND status = 'AKTIF'", [memberIdInput], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows || []);
+          });
+        });
+        if (activeSessions.length > 0) {
+          const existingMeja = activeSessions.find(s => s.nomor_meja !== nomorMeja);
+          if (existingMeja) {
+            res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+            return res.end(JSON.stringify({
+              success: false,
+              message: `Member ${foundMember.nama} sedang digunakan di Meja ${existingMeja.nomor_meja}! Selesaikan transaksi di Meja tersebut terlebih dahulu.`
+            }));
+          }
         }
 
 	console.log("[MEMBER DEBUG]", {
@@ -7634,11 +7955,9 @@ function getKasLaciSaldo(waktu = null) {
         "SELECT so_id, status, is_final FROM stock_opname WHERE source = 'LOCAL' AND kategori = ? ORDER BY id DESC LIMIT 1",
         [category], (error, row) => error ? reject(error) : resolve(row || null)
       ));
-      if (active && Number(active.is_final || 0) !== 1 && String(active.status).toUpperCase() !== "FINAL") {
-        res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
-        return res.end(JSON.stringify({ success: false, code: "SO_STILL_ACTIVE",
-          message: "Stock Opname aktif sudah ada; revisi lokal belum tersedia pada fase ini." }));
-      }
+      // PERBAIKAN: penolakan 409 SO_STILL_ACTIVE dimatikan — draft aktif lama
+      // kini di-OVERWRITE oleh stockOpnameLocal.createStockOpname (DELETE draft
+      // aktif dulu, lalu INSERT baru). Tidak lagi mengembalikan 409.
       const petugasLocal = String(
         data.petugas ||
         (session && (session.nama_kasir || session.nama || session.kasir_nama || session.username || session.user)) ||
