@@ -1,0 +1,675 @@
+/* ============================================================
+   SALDO BANK — Modul Terpisah (Fix #34, #36, #41, #77, #80)
+   ============================================================ */
+
+/* Stat card aksen gold */
+.stat-card--bank {
+  border-top: 3px solid #f59e0b;
+}
+.stat-card--bank .stat-card__value {
+  color: #fbbf24;
+}
+.stat-card--bank:hover {
+  border-color: #fbbf24;
+}
+
+/* Modal bank — z-index 1000: di atas .burger-drawer (997) & .burger-overlay (996),
+   tetap di bawah modal edit member (10050) (Fix #79 & Fix #80) */
+#modalSaldoBank {
+  z-index: 1000;
+}
+
+/* Chip bank */
+.tx-chip--bank-saldo {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: #f59e0b;
+}
+.tx-chip--bank-saldo .tx-chip__value {
+  color: #fbbf24;
+}
+.tx-chip--bank-pending {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: #ef4444;
+}
+.tx-chip--bank-pending .tx-chip__value {
+  color: #f87171;
+}
+
+/* Tab bar */
+.bank-tab-bar {
+  display: inline-flex;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.bank-tab-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.bank-tab-btn + .bank-tab-btn {
+  border-left: 1px solid #334155;
+}
+.bank-tab-btn:hover {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f8fafc;
+}
+.bank-tab-btn.is-active {
+  background: #f59e0b;
+  color: #0f172a;
+}
+.bank-tab-panel {
+  display: none;
+}
+.bank-tab-panel.is-active {
+  display: block;
+}
+
+/* Header modal bank */
+.bank-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  flex-wrap: wrap;
+}
+
+/* Baris input + tombol cek kode */
+.bank-code-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Input kode unik — monospace, uppercase, letter-spacing (Fix #36 A) */
+#inputBankKodeUnik {
+  flex: 0 0 160px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 1rem;
+  font-family: monospace;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: bold;
+  padding: 10px 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#inputBankKodeUnik:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+/* Tombol Cek Kode */
+.bank-check-btn {
+  background: #f59e0b;
+  color: #0f172a;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.bank-check-btn:hover {
+  background: #fbbf24;
+}
+
+/* Alert box (merah = error / kuning = info) */
+.bank-alert-box {
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bank-alert-box.is-danger {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid #ef4444;
+  color: #f87171;
+}
+.bank-alert-box.is-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+}
+.bank-alert-box.is-success {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid #22c55e;
+  color: #4ade80;
+}
+.bank-alert-box.is-hidden {
+  display: none;
+}
+
+/* Input manual */
+.bank-input-row {
+  margin-bottom: 14px;
+}
+.bank-input-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.bank-input-row input[type="text"] {
+  width: 100%;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 0.88rem;
+  font-family: inherit;
+  padding: 9px 12px;
+  transition: border-color 0.15s;
+}
+.bank-input-row input[type="text"]:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+/* Daftar pending */
+.bank-pending-section {
+  margin-bottom: 14px;
+}
+.bank-pending-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.bank-pending-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.bank-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  cursor: pointer;
+  user-select: none;
+}
+.bank-select-all input {
+  accent-color: #f59e0b;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.bank-pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Scrollbar dark untuk bank-pending-list */
+.bank-pending-list::-webkit-scrollbar {
+  width: 6px;
+}
+.bank-pending-list::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 3px;
+}
+.bank-pending-list::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+.bank-pending-list::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+.bank-pending-list {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #1e293b;
+}
+
+/* Item pending */
+.bank-pending-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.bank-pending-item:hover {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+.bank-pending-item.is-checked {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+}
+.bank-pending-item input[type="checkbox"] {
+  accent-color: #f59e0b;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.bank-pending-item__code {
+  font-family: monospace;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f8fafc;
+  min-width: 70px;
+}
+.bank-pending-item__meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.bank-pending-item__kasir {
+  font-size: 0.8rem;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bank-pending-item__tanggal {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+.bank-pending-item__nominal {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fbbf24;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bank-empty {
+  font-size: 0.85rem;
+  color: #64748b;
+  padding: 12px;
+  text-align: center;
+}
+
+/* Tombol konfirmasi */
+.bank-action-bar {
+  margin-top: 4px;
+}
+.bank-confirm-btn {
+  width: 100%;
+  background: #f59e0b;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  letter-spacing: 0.02em;
+}
+.bank-confirm-btn:hover {
+  background: #fbbf24;
+}
+.bank-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Tabel riwayat bank */
+#tableBankHistory td:nth-child(5) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+#tableBankHistory .col-oleh {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+/* Card Preview Detail Setoran (Fix #36 B) */
+.bank-preview-card {
+  background: #0f172a;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-top: 12px;
+  animation: bankPreviewFadeIn 0.2s ease;
+}
+@keyframes bankPreviewFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.bank-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #334155;
+}
+.bank-preview-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.bank-preview-kode {
+  font-family: monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 2px;
+}
+
+.bank-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+}
+@media (max-width: 560px) {
+  .bank-preview-grid { grid-template-columns: 1fr; }
+}
+.bank-preview-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.bank-preview-key {
+  font-size: 0.7rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.bank-preview-val {
+  font-size: 0.88rem;
+  color: #e2e8f0;
+}
+.bank-preview-val--num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+/* Tombol konfirmasi individual (Fix #36) */
+#btnBankSubmitDeposit {
+  width: 100%;
+  background: #f59e0b;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: background 0.15s;
+}
+#btnBankSubmitDeposit:hover {
+  background: #fbbf24;
+}
+
+/* Batch confirm button — versi checklist */
+.bank-confirm-btn--batch {
+  background: #475569;
+  color: #f8fafc;
+}
+.bank-confirm-btn--batch:hover {
+  background: #64748b;
+}
+
+/* ── Pembelian & Operasional via Saldo Bank (Fix #77) ─────────── */
+.pembelian-bank-saldo {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+}
+.pembelian-bank-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pb-keterangan {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #94a3b8);
+  margin-top: 2px;
+}
+#panel-pembelian-bank .form-group--wide {
+  flex: 1 1 200px;
+}
+
+/* ── Drawer Detail Setoran (Fix #36 / Fix #41) ─────────────── */
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1050; /* di atas modal bank (1000), masih di bawah modal edit member (10050) */
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  opacity: 0;
+  pointer-events: none; /* (Fix #41) overlay tertutup: tak boleh intercept klik */
+  transition: opacity 0.2s;
+}
+.drawer-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer-content {
+  background: #1e293b;
+  width: min(640px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.4);
+  animation: drawerSlideIn 0.25s ease;
+}
+@keyframes drawerSlideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #334155;
+  background: #0f172a;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.drawer-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.drawer-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.drawer-close:hover {
+  color: #f8fafc;
+}
+
+.drawer-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.bank-detail-section {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.bank-detail-section h3 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #334155;
+}
+
+.bank-detail-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 14px;
+}
+@media (max-width: 480px) {
+  .bank-detail-info-grid { grid-template-columns: 1fr; }
+}
+.bank-detail-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bank-detail-info-item__label {
+  font-size: 0.72rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.bank-detail-info-item__value {
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+.bank-detail-ringkasan {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bank-detail-ringkasan-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #1e293b;
+}
+.bank-detail-ringkasan-row:last-child {
+  border-bottom: none;
+}
+.bank-detail-ringkasan-row .label {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+.bank-detail-ringkasan-row .value {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  text-align: right;
+}
+
+.bank-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.bank-detail-table th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 6px;
+  text-align: left;
+  border-bottom: 1px solid #334155;
+}
+.bank-detail-table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid #1e293b;
+  color: #e2e8f0;
+}
+.bank-detail-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.bank-scroll-x {
+  overflow-x: auto;
+}
+.bank-scroll-x-limit {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 260px;
+}
+/* Tabel aksi: tombol Detail */
+.bank-detail-btn {
+  background: #f59e0b;
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bank-detail-btn:hover {
+  background: #fbbf24;
+}
+
+/* ── Stat-card accent color (tab panel, bank module) ────────── */
+.tab-panel .stat-card--bank .stat-card__value        { color: #a78bfa; }
+
+/* ── Fix #36: tabel riwayat bank ─────────────────────────────── */
+#tableBankHistory .bank-hist-code {
+  font-family: monospace;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #f8fafc;
+}
+#tableBankHistory .col-aksi {
+  text-align: right;
+}
+#tableBankHistory .col-oleh {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}

@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Admin</title>
   <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/kas.css">
+  <link rel="stylesheet" href="css/bank.css">
 </head>
 <body>
   <!-- Topbar -->
@@ -17,9 +19,38 @@
           POS Live Sync (Port 3100)
         </span>
       </div>
-      <button type="button" id="btnLogout" class="btn-logout">Logout</button>
+      <div class="topbar__right">
+        <button type="button" id="btnToggleBurger" class="btn-burger" aria-label="Buka menu navigasi"
+                aria-controls="burgerDrawer" aria-expanded="false">&#9776;</button>
+        <button type="button" id="btnLogout" class="btn-logout">Logout</button>
+      </div>
     </div>
   </header>
+
+  <!-- Burger Drawer Navigation -->
+  <div id="burgerOverlay" class="burger-overlay" aria-hidden="true"></div>
+  <aside id="burgerDrawer" class="burger-drawer" role="dialog" aria-modal="true"
+         aria-labelledby="burgerDrawerTitle">
+    <div class="burger-header">
+      <h3 class="burger-title" id="burgerDrawerTitle">Menu Navigasi</h3>
+      <button type="button" id="btnCloseBurger" class="btn-close" aria-label="Tutup">&times;</button>
+    </div>
+    <ul class="burger-menu-list" id="burgerMenuList">
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnSaldoBank">
+          <span class="burger-menu-icon">&#127974;</span>
+          <span class="burger-menu-label">Saldo Bank</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnSaldoKas">
+          <span class="burger-menu-icon">&#128176;</span>
+          <span class="burger-menu-label">Saldo Kas Laci</span>
+        </button>
+      </li>
+      <!-- Tempat list menu akan dipindah satu per satu -->
+    </ul>
+  </aside>
 
   <!-- Main content -->
   <main id="adminMainContent" class="main-content" role="main">
@@ -119,7 +150,11 @@
           <div class="stat-card__sublabel">Akumulasi bulan berjalan</div>
         </article>
 
-        <article class="stat-card stat-card--bank stat-card--clickable" id="cardSaldoBank">
+        <!-- Kartu SALDO BANK disembunyikan (Fix #79) — aksesnya pindah ke
+             burger menu (#burgerBtnSaldoBank) yang membuka #modalSaldoBank.
+             Elemen tak dihapus agar DOM & listener lama tak rusak. -->
+        <article class="stat-card stat-card--bank stat-card--clickable is-hidden"
+                 id="cardSaldoBank" style="display:none" aria-hidden="true">
           <div class="stat-card__label">SALDO BANK</div>
           <div class="stat-card__value" id="statSaldoBankTotal">Rp --</div>
           <div class="stat-card__sublabel">Verifikasi setoran kode unik</div>
@@ -806,7 +841,6 @@
           <table id="tableMasterBarang" class="tx-table">
             <thead>
               <tr>
-                <th>Kode / ID</th>
                 <th>Nama Barang</th>
                 <th>Kategori</th>
                 <th class="col-num">Harga Modal (Rp)</th>
@@ -1752,5 +1786,7 @@
   </div>
 
   <script src="js/dashboard.js" defer></script>
+  <script src="js/kas.js" defer></script>
+  <script src="js/bank.js" defer></script>
 </body>
 </html>

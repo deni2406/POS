@@ -1,0 +1,163 @@
+/* Card saldo kas laci — aksen emas/kuning (border & nilai) + hover */
+.stat-card--kas {
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.stat-card--kas .stat-card__value {
+  color: var(--warning);
+}
+
+.stat-card--kas.stat-card--clickable:hover {
+  border-color: var(--warning);
+}
+
+/* ── Modal: Riwayat Kas Laci ───────────────────────────────────── */
+
+/* Modal kas laci — z-index 1000: di atas Burger Drawer (z-997) & Overlay (z-996)
+   Fix #80 */
+#modalKasLaci {
+  z-index: 1000;
+}
+
+/* Wrapper ringkasan kas harian — memuat .tx-chip yang sudah ada */
+.kas-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Chip kas masuk — aksen hijau */
+.tx-chip--kas-masuk {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.tx-chip--kas-masuk .tx-chip__value {
+  color: var(--success);
+}
+
+/* Chip kas keluar — aksen merah */
+.tx-chip--kas-keluar {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.tx-chip--kas-keluar .tx-chip__value {
+  color: var(--error);
+}
+
+/* Chip net kas harian — aksen biru */
+.tx-chip--kas-net {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.tx-chip--kas-net .tx-chip__value {
+  color: var(--accent);
+}
+
+/* Aksen nominal per tipe: masuk = hijau, keluar = merah (angka
+   dinomori dengan tanda +/− agar arah kas langsung terbaca) */
+#tableKasLaci .kas-nominal--masuk {
+  color: var(--success);
+  font-weight: 700;
+}
+
+#tableKasLaci .kas-nominal--keluar {
+  color: var(--error);
+  font-weight: 700;
+}
+
+/* Alokasi lebar 5 kolom #tableKasLaci (tanpa kategori): keterangan
+   dibuat fleksibel agar kolom teks paling panjang mendapat ruang
+   terbaca; col-ket juga boleh turun baris agar panjang tetap
+   terbaca pada modal sempit */
+#tableKasLaci th.col-ket,
+#tableKasLaci td.col-ket {
+  width: 180px;
+  min-width: 150px;
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* JAM — rata tengah */
+#tableKasLaci th:nth-child(1),
+#tableKasLaci td:nth-child(1) {
+  width: 70px;
+  min-width: 70px;
+  text-align: center;
+}
+
+/* TIPE — rata tengah (chip) */
+#tableKasLaci th:nth-child(2),
+#tableKasLaci td:nth-child(2) {
+  width: 90px;
+  min-width: 90px;
+  text-align: center;
+}
+
+/* KASIR — rata kiri */
+#tableKasLaci th:nth-child(4),
+#tableKasLaci td:nth-child(4) {
+  width: 110px;
+  text-align: left;
+}
+
+/* NOMINAL — rata kanan, bold (sudah .col-num + .kas-nominal) */
+#tableKasLaci th:nth-child(5),
+#tableKasLaci td:nth-child(5) {
+  width: 130px;
+  min-width: 130px;
+}
+
+/* Scrollbar dark + hilangkan horizontal scrollbar — modal Riwayat Kas Laci */
+#modalKasLaci .modal-table-wrap {
+  overflow-x: hidden;
+}
+#modalKasLaci .modal-table-wrap::-webkit-scrollbar,
+#modalKasLaci .modal-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+#modalKasLaci .modal-table-wrap::-webkit-scrollbar-track,
+#modalKasLaci .modal-body::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+#modalKasLaci .modal-table-wrap::-webkit-scrollbar-thumb,
+#modalKasLaci .modal-body::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+#modalKasLaci .modal-table-wrap::-webkit-scrollbar-thumb:hover,
+#modalKasLaci .modal-body::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Badge tipe kas — chip rapi (inline-flex, center, radius pil);
+   hilangkan artefak latar dobel dari .badge base bila perlu */
+.badge-kas--masuk,
+.badge-kas--keluar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: none; /* hapus latar dobel dari .badge base bila ada */
+  box-shadow: none;
+}
+
+.badge-kas--masuk {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.badge-kas--keluar {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--error);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+/* ── Stat-card accent color (tab panel) ───────────────────── */
+.tab-panel .stat-card--kas .stat-card__value { color: #34d399; }

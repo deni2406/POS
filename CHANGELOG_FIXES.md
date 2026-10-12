@@ -27,19 +27,6 @@ sesi berikutnya tak mengulang kesalahan yang sama. Entri terbaru di ATAS.
 | **Verifikasi** | `node --check` 2 file ✓. `pm2 restart pbms-admin` → online ✓. `GET /api/admin/stock-opname/losses?month=2026-10` → 4 item, semua stok_fisik < stok_sistem (0 invalid). Summary: totalJenisBarangMinus=4, totalUnitMinus=167, totalNominalKerugian=667.450. Hitung manual (72×6037 + 34×2800 + 59×1654 + 2×20000 = 167 unit, 667.450) → konsisten YA ✓. |
 | **Pelajaran** | (1) Jangan andalkan kolom selisih yang tersimpan — bandingkan sumber langsung (stok sistem vs fisik) agar revisi SO otomatis terkoreksi. (2) Untuk agregasi produk yang sama di SO revisi: REPLACE nilai stok (last-write-wins), bukan ACCUMULATE. (3) Nominal kerugian = selisih unit × HPP SAAT INI (master_barang.hpp), bukan akumulasi historis `kerugian_hpp` — sumber kebenaran harga = master, bukan snapshot lama. |
 
-### Fix #77 — Pembelian & Operasional via Saldo Bank di Admin Panel PBMS
-
-| | |
-|---|---|
-| **Tanggal** | 2026-10-12 |
-| **File** | `admin-server.js`, `admin/dashboard.html`, `admin/js/dashboard.js`, `admin/css/dashboard.css` |
-| **Masalah** | Belum ada jalur pencatatan **pengeluaran bank** (beli token listrik, perlengkapan billiard, maintenance) di panel admin — saldo bank hanya punya alur setoran MASUK (`shift_kasir` → `DISETOR`). |
-| **Akar** | Saldo bank HOTSUNGAN, bukan kolom tersimpan: rumus `SUM(shift_kasir.nominal_aktual WHERE status_bank='DISETOR' AND kode_tutup!='' AND status IN ('CLOSED','PENDING_CLOSE'))`. Tak ada tabel ledger pengeluaran bank, tak ada endpoint, tak ada UI. |
-| **Fix** | (1) **DB**: tabel `pengeluaran_bank` (id, tanggal, kategori, nama_barang, nominal INTEGER, keterangan, created_by) — `CREATE TABLE IF NOT EXISTS` di blok `db.serialize` admin-server.js. (2) **Helper `getSaldoBankNeto`**: hitung saldo neto = setoran DISETOR − `SUM(pengeluaran_bank.nominal)`; dipakai GET (tampil saldo) & POST (validasi over-draw). (3) **POST `/api/admin/pengeluaran-bank`**: validasi kategori (enum 4), nama_barang, nominal>0; jika nominal > saldo neto → `400 SALDO_BANK_TIDAK_CUKUP` + `saldo_bank_saat_ini`; else insert & balikan `id` + saldo baru. (4) **GET `/api/admin/pengeluaran-bank`**: riwayat `ORDER BY tanggal DESC LIMIT 500`, filter opsional `?kategori=` & `?q=` (LIKE nama/keterangan), balikan `count`, `total_pengeluaran`, `saldo_bank_saat_ini`, `data`. (5) **Frontend**: tab baru "Pembelian Bank" (`tab-pembelian-bank`/`panel-pembelian-bank`), form (dropdown kategori + nama + nominal + keterangan), indikator saldo, tabel riwayat 6 kolom (No/Tgl&Waktu/Kategori/Nama/Keterangan/Nominal/Admin), filter search+kategori debounce 250ms, alert sukses/gagal inline. CSS baru `pb-keterangan`, `bank-alert-box.is-success`, `.pembelian-bank-*`. |
-| **Verifikasi** | `node --check` admin-server.js & dashboard.js ✓. `pm2 restart pbms-admin` → online PID 10504 ✓. `GET` kosong → `count:0, saldo_bank_saat_ini:237000` ✓. `POST` nominal 150.000 → commit (saldo 237.000→87.000), over-draw `POST` 150.000 saat saldo 87.000 → `400 SALDO_BANK_TIDAK_CUKUP saldo_bank_saat_ini:87000` ✓. `POST` valid 50.000 → saldo 87.000→37.000, `id:2` ✓. Filter `?kategori=PERLENGKAPAN_BILLIARD` & `?q=Lem` → 1 baris benar ✓. Kategori invalid `XYZ` → `400 KATEGORI_INVALID` ✓. Data test dihapus (0 baris, saldo kembali 237.000) ✓. |
-| **Pelajaran** | (1) **Saldo bank = hitung, bukan kolom**: jangan coba `UPDATE` `shift_kasir` — buat ledger tabel terpisah (`pengeluaran_bank`) dan hitung neto = setoran − pengeluaran. Sama pola `kas_laci_config + kas_laci_transaksi`. (2) **Konsistensi tanpa auth**: endpoint admin tak pakai guard server-side (token login unused; asumsi LAN), fitur baru mengikuti gaya yang sama. (3) **`curl` exit 56 di Windows = artefak client**: POST sebenarnya commit di server (dibuktikan GET berikutnya) — jangan anggap sebagai gagal. |
-| **Update 2026-10-12** | (a) Perbaiki badge saldo "Rp --" — `loadPengeluaranBank()` kini render `saldo_bank_saat_ini` ke `#pbBankSaldoDisplay` (fallback `#pbSaldoBank`/`#sumberDanaBadge`) dan dipanggil ulang saat tab "Pembelian Bank" aktif (hook di tab-switch Fix #58). (b) Tab nav tak terpotong — `.tab-nav` `overflow-x:auto` + `flex-wrap:nowrap` + scrollbar. (c) Kategori diperluas 4→8: `LISTRIK_DAPUR/BAR/KASIR`, `PERLENGKAPAN_DAPUR/BAR/KASIR`, `PERLENGKAPAN_BILLIARD`, `LAINNYA` (enum backend + `<select>` form & filter + label map JS). Kategori lama ditolak (`KATEGORI_INVALID`). |
-
 ### Fix #76 — Modul Dapur (Bahan Mentah Dapur) di Admin Panel PBMS
 
 | | |
@@ -268,6 +255,29 @@ Format tiap entri:
 ```
 
 <!-- ENTRI BARU DI BAWAH BARIS INI -->
+
+### Fix #80 — Z-index Modal Saldo Bank & Drawer Detail Bank di Atas Burger Menu
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-13 |
+| **File** | `admin/css/dashboard.css` |
+| **Masalah** | Setelah Fix #79 (burger menu z-996/997) ditambahkan, modal `#modalSaldoBank` (z-800) dan drawer detail bank `.drawer-overlay` (z-850) tersembunyi di bawah `.burger-drawer` (z-997) & `.burger-overlay` (z-996) — keduanya tetap di atas secara stack-ordering, sehingga saat burger drawer/overlay aktif, modal & drawer bank tak bisa tampil di atas. |
+| **Akar** | Fix #79 mengangkat z-index burger ke level 996/997 tanpa merevisi z-index modal bank (800) & drawer bank (850) yang sudah ada sebelumnya. Akibatnya hierarki terbalik: burger seharusnya di bawah konten modal bank. |
+| **Fix** | (1) `#modalSaldoBank`: z-index 800 → **1000** (di atas burger 997, di bawah modal edit member 10050). (2) `.drawer-overlay` (drawer detail bank): z-index 850 → **1050** (di atas modal bank 1000, di bawah modal edit member 10050). (3) Komentar CSS diperbarui agar mencatat hierarki lengkap. |
+| **Verifikasi** | Hierarki z-index akhir: `.burger-overlay` (996) < `.burger-drawer` (997) < `#modalSaldoBank` (1000) < `.drawer-overlay` (1050) < modal edit member (10050/10051). Brace CSS dashboard.css seimbang (741 pasang). Tidak ada perubahan JS — ESC handler bank (baris 3391-3402) tetap menutup drawer bank dulu baru modal bank, dan ESC handler burger (baris 4631-4635) berdiri terpisah tanpa konflik. |
+| **Pelajaran** | (1) Saat menambah layer baru di atas semua layer (seperi burger menu di topbar), **wajib audit semua z-index yang ada** dan merevisi layer di bawahnya bila perlu — Fix #79 menambah z-996/997 tapi tak menyentuh z-800/850 yang sudah ada. (2) Z-index adalah sistem bertingkat: setiap layer baru harus dicek terhadap SEMUA layer existing, bukan hanya yang paling dekat. (3) Komentar z-index di CSS harus menunjukkan hierarki lengkap, bukan hanya "di atas X" — memudahkan audit saat layer baru ditambahkan. |
+
+### Fix #79 — Burger Menu / Drawer Navigation di Top Bar Admin
+| | |
+|---|---|
+| **Tanggal** | 2026-10-12 |
+| **File** | `admin/dashboard.html` (tombol `#btnToggleBurger` di `.topbar__inner` dibungkus `.topbar__right` + struktur `#burgerOverlay` / `#burgerDrawer` / `#burgerMenuList` / `#btnCloseBurger` setelah `</header>`), `admin/css/dashboard.css` (blok akhir file: `.burger-drawer` z-997 slide-in kiri, `.burger-overlay` z-996 `pointer-events:none` default + `.active`, `.btn-burger`, `.btn-close`, `.burger-menu-list`, `.topbar__right`), `admin/js/dashboard.js` (blok "BURGER MENU / DRAWER NAVIGATION" setelah setup Dapur: `openBurgerDrawer()` / `closeBurgerDrawer()` + 3 listener `safeAddEventListener` + ESC listener terpisah). |
+| **Masalah** | Dashboard admin tak punya menu navigasi off-canvas — list menu tab harus diulang manual tiap sesi, dan top bar hanya memuat badge sync + Logout. |
+| **Akar** | Fitur belum ada. Meniru pola drawer bank (Fix #36/#41): overlay fixed `inset:0` wajib `pointer-events:none` saat tertutup (bukan hanya `opacity:0`) agar layer z-tinggi tak intercept seluruh klik dashboard — jebakan yang sudah tercatat di Fix #41. |
+| **Fix** | (1) HTML: tombol burger di top bar (`aria-controls="burgerDrawer"`, `aria-expanded`), drawer + overlay di luar `<main>` setelah header, `#burgerMenuList` kosong menunggu item dipindah satu per satu. (2) CSS: drawer `translateX(-100%)` default → `.active` slide-in kiri, overlay fade `opacity 0→1` + `pointer-events none→auto` saat `.active`; z-index 997/996 di atas modal bank (800), drawer bank (850), modal pembelian (900), di bawah modal edit member (10050, Fix #63). (3) JS: semua listener via `safeAddEventListener` (null guard), tutup TANPA `setTimeout` — CSS transition saja, layer langsung hilang dari hit-test; ESC handler burger terpisah (tak menyentuh ESC handler drawer bank/modal bank di baris 3391). |
+| **Verifikasi** | `node --check admin/js/dashboard.js` → exit 0. Cek brace CSS `dashboard.css`: 735 pasang seimbang. Kelima id (`btnToggleBurger`, `btnCloseBurger`, `burgerOverlay`, `burgerDrawer`, `burgerMenuList`) ada di `dashboard.html`. Blok burger di dashboard.js berdiri sendiri — tak ada modifikasi fungsi/chart/listener yang ada. |
+| **Pelajaran** | (1) Layer overlay di atas konten wajib pasang `pointer-events:none` default + toggle `.active` — jangan andalkan `opacity:0` saja (Fix #41). (2) Drawer baru pakai **class berbeda** (`.burger-drawer`/`.burger-overlay`) dari `.drawer-overlay`/`.drawer-content` drawer bank agar tak saling menimpa transition; ESC handler-nya pun terpisah karena handler lama di baris 3391 hanya mengecek drawer bank. |
 
 ### Fix #55 — Form Penerimaan Barang: Qty PO vs Real & Auto Kasir Penerima
 | | |
