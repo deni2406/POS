@@ -1,3 +1,26 @@
+// Helper format tanggal YYYY-MM-DD lokal
+const toYMD = (d = new Date()) => {
+  const date = d instanceof Date ? d : new Date(d);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+// Helper format jam HH:mm lokal
+const formatJam = (d) => {
+  if (!d) return '-';
+  const date = d instanceof Date ? d : new Date(d);
+  if (isNaN(date.getTime())) return String(d);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
+// Helper format rupiah (reused by kas module)
+const formatRupiah = (num) =>
+  'Rp ' + (num || 0).toLocaleString('id-ID');
+
 // ── MODAL: Riwayat Kas Laci (Uang Masuk & Keluar) ──────────────
 const kasModal = document.getElementById('modalKasLaci');
 const kasBtnClose = document.getElementById('btnCloseModalKas');

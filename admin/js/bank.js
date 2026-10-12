@@ -2,9 +2,8 @@
    SALDO BANK — Modul Terpisah (Fix #34, #36, #41, #77, #80)
    ============================================================ */
 
-// Top-level helpers — shared with dashboard.js
-const formatRupiah = (num) =>
-  'Rp ' + (num || 0).toLocaleString('id-ID');
+// Format rupiah tersedia dari kas.js (dimuat lebih dulu di dashboard.html)
+// const formatRupiah = ...  — gunakan yang sudah didefinisikan
 
 // ── SALDO BANK & VERIFIKASI SETORAN KODE UNIK (Fix #34) ─────
 const SALDO_BANK_CACHE_KEY = 'pbms_cached_saldo_bank';
