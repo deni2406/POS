@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/setoran.css">
   <link rel="stylesheet" href="css/penjualan.css">
   <link rel="stylesheet" href="css/selisih.css">
+  <link rel="stylesheet" href="css/barang.css">
 </head>
 <body>
   <!-- Topbar -->
@@ -74,6 +75,18 @@
         <button type="button" class="burger-menu-item" id="burgerBtnSelisih">
           <span class="burger-menu-icon">&#128200;</span>
           <span class="burger-menu-label">Selisih Kasir</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnBarang">
+          <span class="burger-menu-icon">&#128230;</span>
+          <span class="burger-menu-label">Master Barang</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnKasir">
+          <span class="burger-menu-icon">&#129534;</span>
+          <span class="burger-menu-label">Barang Kasir</span>
         </button>
       </li>
       <!-- Tempat list menu akan dipindah satu per satu -->
@@ -382,11 +395,21 @@
           <div class="stat-card__label">Kelebihan SO Bulan Ini</div>
           <div class="stat-card__value" id="statKelebihanSO">Rp 0</div>
         </article>
-        <article class="stat-card stat-card--clickable" id="cardTotalMasterBarang">
+        <!-- Kartu MASTER BARANG disembunyikan (pola Fix #83/#84/#87) —
+             aksesnya pindah ke burger menu (#burgerBtnBarang) yang
+             membuka #modalMasterBarang. Elemen tak dihapus agar DOM
+             & writer nilai tetap aman. -->
+        <article class="stat-card stat-card--clickable is-hidden"
+                 id="cardTotalMasterBarang" style="display:none" aria-hidden="true">
           <div class="stat-card__label">Total Master Barang</div>
           <div class="stat-card__value" id="statTotalBarang">0</div>
         </article>
-        <article class="stat-card stat-card--clickable stat-card--kasir" id="cardKategoriKasir">
+        <!-- Kartu KASIR disembunyikan (pola Fix #83/#84/#87) —
+             aksesnya pindah ke burger menu (#burgerBtnKasir) yang
+             membuka #modalKasir. Elemen tak dihapus agar DOM &
+             writer nilai tetap aman. -->
+        <article class="stat-card stat-card--clickable stat-card--kasir is-hidden"
+                 id="cardKategoriKasir" style="display:none" aria-hidden="true">
           <div class="stat-card__label">Barang Kategori Kasir</div>
           <div class="stat-card__value" id="statKasirJenis">0</div>
           <div class="stat-card__kasir-metrics" aria-hidden="true">
@@ -811,7 +834,7 @@
 
   <!-- Modal: Edit HPP & Harga Jual Barang -->
   <div class="modal-overlay" id="modalEditBarangHarga" role="dialog"
-       aria-modal="true" aria-labelledby="modalEditBarangHargaTitle" hidden style="z-index: 650;">
+       aria-modal="true" aria-labelledby="modalEditBarangHargaTitle" hidden>
     <div class="modal-content" style="max-width: 420px;">
       <header class="modal-header">
         <h2 class="modal-title" id="modalEditBarangHargaTitle">Edit HPP &amp; Harga Jual</h2>
@@ -1843,6 +1866,7 @@
   <script src="js/setoran.js" defer></script>
   <script src="js/penjualan.js" defer></script>
   <script src="js/selisih.js" defer></script>
+  <script src="js/barang.js" defer></script>
   <script src="js/dashboard.js" defer></script>
   <script src="js/kas.js" defer></script>
   <script src="js/bank.js" defer></script>

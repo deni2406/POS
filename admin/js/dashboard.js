@@ -334,388 +334,67 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === modal) closeModal();
   });
 
-  // ── MODAL: Daftar Master Barang & Stok Terkini ─────────────────
-  const barangModal = document.getElementById('modalMasterBarang');
-  const barangBtnClose = document.getElementById('btnCloseModalBarang');
-  const inputSearchBarang = document.getElementById('inputSearchBarang');
-  const selectFilterKategoriBarang = document.getElementById('selectFilterKategoriBarang');
-  const countJenisBarang = document.getElementById('countJenisBarang');
-  const sumStokBarang = document.getElementById('sumStokBarang');
-  const sumNilaiAsetBarang = document.getElementById('sumNilaiAsetBarang');
-  const barangBody = document.getElementById('barangTableBody');
+  // ── MODAL BARANG & KASIR — dipisah ke barang.js (Fix #87) ─────
+  // Semua fungsi master barang, edit harga, dan modal kasir kini
+  // di-eksport ke window oleh admin/js/barang.js. Di dashboard.js
+  // cukup null-guard saat merujuk pemicu card yang sudah disembunyikan.
+
+  // Pemicu klik card Master Barang & Kasir — card disembunyikan
+  // (is-hidden di dashboard.html), tapi guard null tetap dipasang
+  // agar tak ada error bila card masih ada di DOM.
   const cardTotalMasterBarang = document.getElementById('cardTotalMasterBarang');
-  let barangLoaded = false;
-
-  // ── MODAL: Edit HPP & Harga Jual Barang (Fix BAR/DAPUR) ────────
-  const modalEditBarangHarga = document.getElementById('modalEditBarangHarga');
-  const btnCloseEditBarangHarga = document.getElementById('btnCloseEditBarangHarga');
-  const btnBatalEditBarangHarga = document.getElementById('btnBatalEditBarangHarga');
-  const btnSimpanEditBarangHarga = document.getElementById('btnSimpanEditBarangHarga');
-  const editBarangNama = document.getElementById('editBarangNama');
-  const editBarangKategori = document.getElementById('editBarangKategori');
-  const editBarangHpp = document.getElementById('editBarangHpp');
-  const editBarangHj = document.getElementById('editBarangHj');
-  const editBarangAlert = document.getElementById('editBarangAlert');
-  let _editBarangId = null; // id master_barang barang yang sedang di-edit
-
-  const _showEditBarangAlert = (type, msg) => {
-    if (!editBarangAlert) return;
-    editBarangAlert.hidden = false;
-    editBarangAlert.style.color = type === 'danger' ? '#ef4444' : '#16a34a';
-    editBarangAlert.style.fontSize = '0.85rem';
-    editBarangAlert.textContent = msg;
-  };
-
-  const openEditBarangHarga = (barang) => {
-    if (!modalEditBarangHarga || !barang) return;
-    _editBarangId = barang.id;
-    if (editBarangNama) editBarangNama.value = barang.nama_barang || '';
-    if (editBarangKategori) editBarangKategori.value = barang.kategori || '';
-    // HPP & Harga JUAL selalu editable — termasuk kategori BAR & DAPUR
-    if (editBarangHpp) editBarangHpp.value = String(barang.harga_modal ?? barang.hpp ?? 0);
-    if (editBarangHj) editBarangHj.value = String(barang.harga_jual ?? 0);
-    if (editBarangAlert) editBarangAlert.hidden = true;
-    modalEditBarangHarga.classList.add('is-open');
-    modalEditBarangHarga.removeAttribute('hidden');
-    setTimeout(() => { if (editBarangHpp) editBarangHpp.focus(); }, 80);
-  };
-
-  const closeEditBarangHarga = () => {
-    if (!modalEditBarangHarga) return;
-    modalEditBarangHarga.classList.remove('is-open');
-    modalEditBarangHarga.setAttribute('hidden', '');
-    _editBarangId = null;
-  };
-
-  if (btnCloseEditBarangHarga) btnCloseEditBarangHarga.addEventListener('click', closeEditBarangHarga);
-  if (btnBatalEditBarangHarga) btnBatalEditBarangHarga.addEventListener('click', closeEditBarangHarga);
-  if (modalEditBarangHarga) modalEditBarangHarga.addEventListener('click', (e) => {
-    if (e.target === modalEditBarangHarga) closeEditBarangHarga();
-  });
-
-  if (btnSimpanEditBarangHarga) btnSimpanEditBarangHarga.addEventListener('click', async () => {
-    if (!_editBarangId) return;
-    const newHpp = Number(editBarangHpp?.value) || 0;
-    const newHj  = Number(editBarangHj?.value) || 0;
-    if (newHpp < 0 || newHj < 0) { _showEditBarangAlert('danger', 'Harga tidak boleh negatif.'); return; }
-    btnSimpanEditBarangHarga.disabled = true;
-    btnSimpanEditBarangHarga.textContent = 'Menyimpan…';
-    try {
-      const resp = await fetch('/api/admin/inventory/price', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ barang_id: _editBarangId, hpp: newHpp, harga_jual: newHj })
-      });
-      const data = await resp.json();
-      if (!resp.ok || !data.success) throw new Error(data.message || 'Gagal menyimpan');
-      _showEditBarangAlert('success', 'HPP & Harga Jual berhasil diperbarui.');
-      // Update cache lokal agar tabel langsung tampil nilai baru
-      if (Array.isArray(masterBarangCache)) {
-        const item = masterBarangCache.find(b => b.id === _editBarangId);
-        if (item) {
-          item.harga_modal = newHpp;
-          item.hpp = newHpp;
-          item.harga_jual = newHj;
-          window.masterBarangCache = masterBarangCache;
-        }
-      }
-      setTimeout(() => {
-        closeEditBarangHarga();
-        // Re-render tabel barang bila modal master barang masih terbuka
-        if (barangModal && barangModal.classList.contains('is-open')) {
-          reRenderBarangTable();
-        }
-      }, 600);
-    } catch (err) {
-      _showEditBarangAlert('danger', 'Gagal simpan: ' + err.message);
-    } finally {
-      btnSimpanEditBarangHarga.disabled = false;
-      btnSimpanEditBarangHarga.textContent = 'Simpan Perubahan';
-    }
-  });
-
-  const openBarangModal = () => {
-    barangModal.classList.add('is-open');
-    barangModal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    if (!barangLoaded) loadMasterBarang();
-  };
-
-  const closeBarangModal = () => {
-    barangModal.classList.remove('is-open');
-    barangModal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  };
-
-  // Cache level modul — sinkron dengan window.masterBarangCache (expose ke
-  // window agar bisa dicek via browser console & dipakai modul lain).
-  let masterBarangCache = Array.isArray(window.masterBarangCache)
-    ? window.masterBarangCache
-    : [];
-  let loadMasterBarangPromise = null;
-
-  let loadMasterBarang = async () => {
-    // Dedupe: bila sudah ada fetch sedang berjalan, tunggu hasilnya —
-    // mencegah double-fetch saat modal kasir dibuka cepat berulang kali.
-    if (loadMasterBarangPromise) return loadMasterBarangPromise;
-
-    loadMasterBarangPromise = (async () => {
-      barangBody.innerHTML =
-        '<tr class="tx-table__empty"><td colspan="7">Memuat data…</td></tr>';
-      try {
-        const resp = await fetch('/api/admin/inventory/master');
-        const data = await resp.json();
-        if (!resp.ok || !data.success) {
-          throw new Error(data.message || 'Gagal memuat master barang');
-        }
-
-        const items = Array.isArray(data.data) ? data.data : [];
-
-        // Simpan response ke cache — variabel modul (source of truth)
-        // sekaligus window (untuk inspeksi console / modul lain).
-        masterBarangCache = items;
-        window.masterBarangCache = items;
-
-        const categories = data.categories || [];
-        selectFilterKategoriBarang.innerHTML =
-          '<option value="">Semua Kategori</option>' +
-          categories.map(k =>
-            `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`
-          ).join('');
-
-        barangLoaded = true;
-        reRenderBarangTable();
-        updateKasirCardMetrics();
-      } catch (err) {
-        barangBody.innerHTML =
-          `<tr class="tx-table__empty">
-             <td colspan="7">Gagal memuat master barang: ${escapeHtml(err.message)}</td>
-           </tr>`;
-      } finally {
-        loadMasterBarangPromise = null;
-      }
-    })();
-
-    return loadMasterBarangPromise;
-  };
-
-  const getMasterBarangCache = () =>
-    Array.isArray(masterBarangCache) && masterBarangCache.length
-      ? masterBarangCache
-      : (Array.isArray(window.masterBarangCache) ? window.masterBarangCache : []);
-
-  const reRenderBarangTable = () => {
-    const rows = getMasterBarangCache();
-    const q = String(inputSearchBarang.value || '').trim().toLowerCase();
-    const kategori = selectFilterKategoriBarang.value; // '' = semua
-
-    const filtered = rows.filter(r => {
-      const matchKategori = !kategori || String(r.kategori || '') === kategori;
-      const matchCari = !q
-        || String(r.nama_barang || '').toLowerCase().includes(q)
-        || String(r.kode_barang || '').toLowerCase().includes(q);
-      return matchKategori && matchCari;
+  const cardKategoriKasir    = document.getElementById('cardKategoriKasir');
+  if (cardTotalMasterBarang) {
+    cardTotalMasterBarang.addEventListener('click', () => {
+      if (typeof window.openBarangModal === 'function') window.openBarangModal();
     });
+  }
+  if (cardKategoriKasir) {
+    cardKategoriKasir.addEventListener('click', () => {
+      if (typeof window.openKasirModal === 'function') window.openKasirModal();
+    });
+  }
 
-    // Update stat chips ringkasan (mengikuti filter)
-    countJenisBarang.textContent = formatNumber(filtered.length);
-    sumStokBarang.textContent = formatNumber(
-      filtered.reduce((s, r) => s + (Number(r.stok) || 0), 0)
-    );
-    sumNilaiAsetBarang.textContent = formatRupiah(
-      filtered.reduce((s, r) => {
-        const kat = String(r.kategori || '').toUpperCase();
-        if (kat === 'BAR' || kat === 'DAPUR') return s;
-        return s + (Number(r.stok) || 0) * (Number(r.harga_modal) || 0);
-      }, 0)
-    );
+  // ── MODAL LAPIS 2
 
-    const stokBadge = (stok) =>
-      Number(stok) <= 5
-        ? '<span class="badge badge-stok--nipis">Peringatan</span>'
-        : '<span class="badge badge-stok--aman">Aman</span>';
+  // ── MODAL BARANG & KASIR — dipisah ke barang.js (Fix #87) ─────
+  // Semua fungsi openBarangModal, loadMasterBarang, getMasterBarangCache,
+  // openKasirModal, updateKasirCardMetrics kini di-eksport ke window
+  // oleh admin/js/barang.js. Di dashboard.js cukup akses via window.
 
-    // Render baris tabel
-    barangBody.innerHTML = filtered.length
-      ? filtered.map(r => {
-          const isTrackedStock = ['ROKOK', 'KASIR'].includes(String(r.kategori || '').toUpperCase().trim());
-          const displayStok = isTrackedStock ? formatNumber(r.stok) : '--';
-          const displayBadge = isTrackedStock ? stokBadge(r.stok) : '<span class="badge badge-neutral">-</span>';
-          return `
-             <tr>
-               <td class="col-nama" style="color:#ffffff!important;opacity:1!important;">${escapeHtml(r.nama_barang) || '—'}</td>
-               <td>${escapeHtml(r.kategori) || '—'}</td>
-               <td class="col-num">${formatRupiah(r.harga_modal)}</td>
-               <td class="col-num">${formatRupiah(r.harga_jual)}</td>
-               <td class="col-num col-center">${displayStok}</td>
-               <td class="col-center">${displayBadge}</td>
-               <td class="col-center">
-                 <button type="button" class="btn btn-sm btn-edit-harga"
-                         data-barang-id="${r.id}" title="Edit HPP &amp; Harga Jual">Edit</button>
-               </td>
-             </tr>`;
-        }).join('')
-      : '<tr class="tx-table__empty"><td colspan="7">Tidak ada barang yang cocok dengan filter</td></tr>';
-
-    // Bind tombol Edit HPP/HJ per baris
-    if (barangBody) {
-      barangBody.querySelectorAll('button[data-barang-id]').forEach(btn => {
-        btn.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          const id = Number(btn.dataset.barangId);
-          const barang = masterBarangCache.find(b => b.id === id);
-          if (!barang) {
-            const fallback = filtered.find(b => b.id === id);
-            openEditBarangHarga(fallback || { id, nama_barang: '', kategori: '', harga_modal: 0, harga_jual: 0 });
-            return;
-          }
-          openEditBarangHarga(barang);
-        });
-      });
-    }
-  };
-
-  inputSearchBarang.addEventListener('input', reRenderBarangTable);
-  selectFilterKategoriBarang.addEventListener('change', reRenderBarangTable);
-  cardTotalMasterBarang.addEventListener('click', openBarangModal);
-  barangBtnClose.addEventListener('click', closeBarangModal);
-  barangModal.addEventListener('click', (e) => {
-    if (e.target === barangModal) closeBarangModal();
-  });
-
-  // ── KARTU KATEGORI KASIR + MODAL DAFTAR BARANG KASIR ──────────
-  // Hitung agregat kategori KASIR dari masterBarangCache, tampilkan
-  // di stat card. Klik card → buka modal tabel barang kasir.
-  const cardKategoriKasir  = document.getElementById('cardKategoriKasir');
-  const statKasirJenis     = document.getElementById('statKasirJenis');
-  const statKasirStok      = document.getElementById('statKasirStok');
-  const statKasirModal     = document.getElementById('statKasirModal');
-  const statKasirJual      = document.getElementById('statKasirJual');
-
-  const modalKasir       = document.getElementById('modalKasir');
-  const btnCloseModalKasir = document.getElementById('btnCloseModalKasir');
-  const kasirTableBody   = document.getElementById('kasirTableBody');
-  const kasirCountJenis  = document.getElementById('kasirCountJenis');
-  const kasirSumStok     = document.getElementById('kasirSumStok');
-  const kasirSumModal    = document.getElementById('kasirSumModal');
-  const kasirSumJual     = document.getElementById('kasirSumJual');
-
-  // Kategori yang dianggap "Kasir" di level POS:
-  //  - KASIR  : item counter (minuman, korek, snack, dsb.)
-  //  - ROKOK  : rokok dijual di counter kasir
-  //  - BONUS  : bonus/cashback item dicatat di kasir
-  // Pembanding flexible: trim + case-insensitive, toleransi spasi ganda.
-  const KASIR_KATEGORI = ['kasir', 'rokok'];
-  const isKasir = (r) => {
-    const k = String(r.kategori || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    return KASIR_KATEGORI.includes(k);
-  };
-
-  // (Fix #52) updateKasirCardMetrics & loadKasirTable sekarang ASYNC —
-  // bila cache kosong, auto-fetch via loadMasterBarang() dulu sebelum
-  // me-render. Ini menghilangkan "0 item / Belum ada barang" saat
-  // dashboard dibuka sebelum master barang ter-load.
-  const updateKasirCardMetrics = async () => {
-    let rows = getMasterBarangCache();
-    if (!rows.length) {
-      await loadMasterBarang();
-      rows = getMasterBarangCache();
-    }
-
-    const kasirItems = rows.filter(isKasir);
-    const totalJenis = kasirItems.length;
-    const totalStok = kasirItems.reduce((s, r) => s + (Number(r.stok) || 0), 0);
-    const totalModal = kasirItems.reduce((s, r) =>
-      s + (Number(r.stok) || 0) * (Number(r.harga_modal) || 0), 0);
-    const totalJual = kasirItems.reduce((s, r) =>
-      s + (Number(r.stok) || 0) * (Number(r.harga_jual) || 0), 0);
-
-    if (statKasirJenis) statKasirJenis.textContent = formatNumber(totalJenis);
-    if (statKasirStok)  statKasirStok.textContent  = formatNumber(totalStok);
-    if (statKasirModal) statKasirModal.textContent = formatRupiah(totalModal);
-    if (statKasirJual)  statKasirJual.textContent  = formatRupiah(totalJual);
-
-    // Simpan ke chip di modal (siap tampil tanpa reload)
-    if (kasirCountJenis) kasirCountJenis.textContent = formatNumber(totalJenis);
-    if (kasirSumStok)    kasirSumStok.textContent    = formatNumber(totalStok);
-    if (kasirSumModal)   kasirSumModal.textContent   = formatRupiah(totalModal);
-    if (kasirSumJual)    kasirSumJual.textContent    = formatRupiah(totalJual);
-  };
-
-  // (Fix #52) loadKasirTable async — auto-fetch bila cache kosong
-  const loadKasirTable = async () => {
-    let rows = getMasterBarangCache().filter(isKasir);
-    if (!rows.length) {
-      await loadMasterBarang();
-      rows = getMasterBarangCache().filter(isKasir);
-      // Perbarui chip metrik juga agar konsisten
-      await updateKasirCardMetrics();
-    }
-
-    if (!rows.length) {
-      if (kasirTableBody) kasirTableBody.innerHTML =
-        '<tr class="tx-table__empty"><td colspan="4">Belum ada barang kategori Kasir.</td></tr>';
-      return;
-    }
-
-    if (kasirTableBody) kasirTableBody.innerHTML = rows.map(r =>
-      `<tr>
-         <td class="col-nama">${escapeHtml(r.nama_barang) || '—'}</td>
-         <td class="col-num col-center">${formatNumber(r.stok)}</td>
-         <td class="col-num">${formatRupiah(r.harga_modal)}</td>
-         <td class="col-num">${formatRupiah(r.harga_jual)}</td>
-       </tr>`
-    ).join('');
-  };
-
-  const openKasirModal = async () => {
-    if (kasirTableBody) kasirTableBody.innerHTML =
-      '<tr class="tx-table__empty"><td colspan="4">Memuat data…</td></tr>';
-    modalKasir.classList.add('is-open');
-    modalKasir.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    await loadKasirTable(); // auto-fetch bila perlu; render tabel
-  };
-  const closeKasirModal = () => {
-    modalKasir.classList.remove('is-open');
-    modalKasir.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  };
-
-  // Inisialisasi — cache bisa sudah terisi (halaman dibuka ulang /
-  // fetch lain sudah jalan) atau masih kosong; updateKasirCardMetrics
-  // akan auto-fetch bila perlu.
-  updateKasirCardMetrics();
-
-  // (Fix #53) TOMBOL "Cek Stok Kritis (< 2) & Buat PO"
-  // Baca cache → filter kategori Kasir & stok riil < 2 → bila kosong:
-  // alert sukses; bila ada: kosongkan pemCart, is ulang qty=10, buka
-  // modal Pembelian (tab KASIR aktif).
+  // (Fix #53) TOMBOL "Cek Stok Kritis (< 2) & Buat PO" — TETAP di
+  // dashboard.js karena bergantung pada pemCart & openPembelianModal
+  // (modul Pembelian). Akses cache & isKasir via window exports barang.js.
   const btnKasirCekStokKritis = document.getElementById('btnKasirCekStokKritis');
 
   const cekStokKritisKasir = async () => {
+    // Akses via window exports dari barang.js
+    const wCache  = window.getMasterBarangCache || (() => []);
+    const wLoad   = window.loadMasterBarang   || (async () => {});
+    const wIsKasir = window.isKasir           || (() => false);
+
     // Ambil data (auto-fetch bila cache kosong)
-    let rows = getMasterBarangCache();
+    let rows = wCache();
     if (!rows.length) {
-      await loadMasterBarang();
-      rows = getMasterBarangCache();
+      await wLoad();
+      rows = wCache();
     }
 
     // Filter: kategori Kasir & stok aktual < 2
-    // (stok riil = `stok` di cache, sesuai field `inventory/master`)
     const critical = rows
-      .filter(isKasir)
+      .filter(wIsKasir)
       .filter(r => (Number(r.stok) || 0) < 2);
 
     if (!critical.length) {
       // Tidak ada barang kritis — hentikan, tampilkan notifikasi sukses
+      const kasirTableBody = document.getElementById('kasirTableBody');
       if (kasirTableBody) {
         const okRow = kasirTableBody.querySelector('[data-kasir-ok]');
         if (!okRow) {
           kasirTableBody.insertAdjacentHTML('beforeend',
-            '<tr class="kasir-stock-ok" data-kasir-ok>' +
-            '<td colspan="4">' +
-            '✅ Semua stok barang kategori Kasir aman (stok ≥ 2 unit).' +
+            '<tr class="kasir-stock-ok" data-kasir-ok>'+
+            '<td colspan="4">'+
+            '✅ Semua stok barang kategori Kasir aman (stok ≥ 2 unit).'+
             '</td></tr>');
         }
       }
@@ -723,6 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Bersihkan baris sukses lama (bila pernah tampil)
+    const kasirTableBody = document.getElementById('kasirTableBody');
     const oldOk = kasirTableBody && kasirTableBody.querySelector('[data-kasir-ok]');
     if (oldOk) oldOk.remove();
 
@@ -749,12 +429,8 @@ document.addEventListener('DOMContentLoaded', () => {
     openPembelianModal();
   };
 
-  if (cardKategoriKasir) cardKategoriKasir.addEventListener('click', openKasirModal);
-  if (btnCloseModalKasir) btnCloseModalKasir.addEventListener('click', closeKasirModal);
-  if (modalKasir) modalKasir.addEventListener('click', (e) => {
-    if (e.target === modalKasir) closeKasirModal();
-  });
   safeAddEventListener(btnKasirCekStokKritis, 'click', cekStokKritisKasir);
+
 
   // ── MODAL LAPIS 2: Detail Item Transaksi ──────────────────────
   const itemModal = document.getElementById('modalItemTransaksi');
@@ -1378,10 +1054,6 @@ const reRenderMemberTable = () => {
       closeMemberModal();
       return;
     }
-    if (e.key === 'Escape' && barangModal.classList.contains('is-open')) {
-      closeBarangModal();
-      return;
-    }
     if (e.key === 'Escape' && mejaModal.classList.contains('is-open')) {
       closeMejaModal();
       return;
@@ -1392,10 +1064,6 @@ const reRenderMemberTable = () => {
     }
     if (e.key === 'Escape' && modal.classList.contains('is-open')) {
       closeModal();
-      return;
-    }
-    if (e.key === 'Escape' && modalKasir && modalKasir.classList.contains('is-open')) {
-      closeKasirModal();
       return;
     }
     if (e.key === 'Escape' && modalPembelian && modalPembelian.classList.contains('is-open')) {
@@ -1660,7 +1328,8 @@ const reRenderMemberTable = () => {
   // Init: cache instant + fetch
   (function initHppChart() {
     // Populate kategori dari master barang yang sudah di-load
-    const categories = getMasterBarangCache().map(r => r.kategori).filter(Boolean);
+    const wCache = typeof window.getMasterBarangCache === 'function' ? window.getMasterBarangCache : () => [];
+    const categories = wCache().map(r => r.kategori).filter(Boolean);
     const uniqueCats = [...new Set(categories)].sort();
     if (selectHppKategori) {
       selectHppKategori.innerHTML =
@@ -2094,7 +1763,7 @@ const reRenderMemberTable = () => {
       );
       renderPemCart();
       // Refresh master barang & daftar PO (stok tidak berubah, tapi PO list perlu update)
-      loadMasterBarang();
+      if (typeof window.loadMasterBarang === 'function') window.loadMasterBarang();
       loadPoList();
     } catch (err) {
       showPemAlert('danger', err.message || 'Gagal proses restok. Coba lagi.');
@@ -2980,4 +2649,20 @@ const reRenderMemberTable = () => {
     } else if (typeof openTxModal === 'function') {
       openTxModal();
     }
+  });
+
+  // Item burger "Master Barang": tutup drawer → buka #modalMasterBarang
+  // (fungsi openBarangModal di-eksport ke window oleh barang.js,
+  //  pola Fix #87).
+  safeAddEventListener('burgerBtnBarang', 'click', () => {
+    closeBurgerDrawer();
+    if (typeof window.openBarangModal === 'function') window.openBarangModal();
+  });
+
+  // Item burger "Barang Kasir": tutup drawer → buka #modalKasir
+  // (fungsi openKasirModal di-eksport ke window oleh barang.js,
+  //  pola Fix #87).
+  safeAddEventListener('burgerBtnKasir', 'click', () => {
+    closeBurgerDrawer();
+    if (typeof window.openKasirModal === 'function') window.openKasirModal();
   });
