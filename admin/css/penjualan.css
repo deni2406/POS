@@ -1,0 +1,47 @@
+/* ============================================================
+   PBMS ADMIN — MODUL GRAFIK TREN PENJUALAN (dipisahkan dari
+   dashboard.css). Salinan style `.panel-card--sales-chart` &
+   hero card `.stat-card--hero.stat-card--penjualan`.
+   CSS shared (chart-tooltip / panel-card__header-row / HPP
+   chart) tetap di dashboard.css karena dipakai 2 modul.
+   ============================================================ */
+
+/* ── Panel Grafik Tren Penjualan ───────────────────────────── */
+.panel-card--sales-chart {
+  overflow: hidden;
+}
+
+/* ── Kanvas Grafik Penjualan ───────────────────────────────── */
+#salesBarChart {
+  display: block;
+  width: 100%;
+  height: 280px;
+  background: transparent;
+}
+
+/* ── Stat-card accent (hero card penjualan) ────────────────── */
+.stat-card--hero.stat-card--penjualan::before {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.stat-card--hero.stat-card--penjualan .stat-card__value {
+  color: #34d399;
+}
+
+/* ── Chart canvas wrapper (penjualan) — posisi relatif ───── */
+.panel-card--sales-chart .chart-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  margin-bottom: 16px;
+  clear: both;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* ── Panel card di dalam tab: pastikan tidak absout ─────── */
+.panel-card--sales-chart {
+  position: relative;
+  display: block;
+  clear: both;
+}

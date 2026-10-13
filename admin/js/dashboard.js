@@ -179,10 +179,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ── HERO SELISIH CLICK (Fix #58) ────────────────────────
+  // ── HERO SELISIH CLICK (Fix #58) — modul selisih kini di selisih.js ──
+  // cardHeroSelisih kini is-hidden (Fix #83/#84). Klik pemicu tetap
+  // diformalkan ke window.openSelisihModal dengan guard null-check &
+  // typeof (aman bila selisih.js gagal load atau elemen tak ada).
   const cardHeroSelisih = document.getElementById('cardHeroSelisih');
   if (cardHeroSelisih) {
-    cardHeroSelisih.addEventListener('click', openSelisihModal);
+    cardHeroSelisih.addEventListener('click', () => {
+      if (typeof window.openSelisihModal === 'function') window.openSelisihModal();
+    });
   }
 
   // Cache transaksi harian — isian diisi loadTransactions, dipakai renderTxTable
@@ -318,6 +323,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   cardHeroTx.addEventListener('click', openModal);
   btnClose.addEventListener('click', closeModal);
+
+  // Ekspos openModal ke scope window sebagai openTxModal — agar bisa
+  // dipanggil dari item burger menu "Total Penjualan" (pola Fix #81/#84
+  // untuk modul terpisah; di sini openModal masih dalam scope DCL).
+  window.openTxModal = openModal;
 
   // Klik di luar dialog (overlay) menutup modal
   modal.addEventListener('click', (e) => {
@@ -824,256 +834,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === itemModal) closeItemModal();
   });
 
-  // ── MODAL: Detail Kerugian Stock Opname (Barang Minus) ──────────
-  const soModal = document.getElementById('modalKerugianSO');
-  const soBtnClose = document.getElementById('btnCloseModalKerugianSO');
-  const inputBulanKerugianSO = document.getElementById('inputBulanKerugianSO');
-  const inputSearchKerugianSO = document.getElementById('inputSearchKerugianSO');
-  const countProdukMinus = document.getElementById('countProdukMinus');
-  const sumUnitMinus = document.getElementById('sumUnitMinus');
-  const sumNominalKerugian = document.getElementById('sumNominalKerugian');
-  const kerugianBody = document.getElementById('kerugianSOTableBody');
+  // ── MODAL: Detail Kerugian & Kelebihan SO + Selisih Kasir
+  //    (Fix #56/#56c) — modul dipindah ke selisih.js (pola Fix #81).
+  //    Di sini tinggal pemicu klik card dengan null-check + typeof
+  //    (fungsi open*Modal di-eksport ke window oleh selisih.js).
   const cardKerugianSO = document.getElementById('cardKerugianSO');
-  let soLoaded = false;
-
-  const toYM = (d) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    return `${y}-${m}`;
-  };
-
-  const initSoMonthInput = () => {
-    if (!inputBulanKerugianSO.value) {
-      inputBulanKerugianSO.value = toYM(new Date());
-    }
-  };
-
-  const openSoModal = () => {
-    initSoMonthInput();
-    soModal.classList.add('is-open');
-    soModal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    if (!soLoaded) loadSoLosses(inputBulanKerugianSO.value);
-  };
-
-  const closeSoModal = () => {
-    soModal.classList.remove('is-open');
-    soModal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  };
-
-  const loadSoLosses = async (monthYM) => {
-    kerugianBody.innerHTML =
-      '<tr class="tx-table__empty"><td colspan="8">Memuat data…</td></tr>';
-    try {
-      const m = monthYM || inputBulanKerugianSO.value;
-      const query = m ? '?month=' + encodeURIComponent(m) : '';
-      const resp = await fetch('/api/admin/stock-opname/losses' + query);
-      const data = await resp.json();
-      if (!resp.ok || !data.success) {
-        throw new Error(data.message || 'Gagal memuat kerugian SO');
-      }
-
-      window.kerugianSOCache = data.data || [];
-
-      // Chip ringkasan mengikuti data bulan yang diambil dari API
-      countProdukMinus.textContent = formatNumber(data.summary ? data.summary.totalJenisBarangMinus : 0);
-      sumUnitMinus.textContent = formatNumber(data.summary ? data.summary.totalUnitMinus : 0);
-      sumNominalKerugian.textContent = formatRupiah(data.summary ? data.summary.totalNominalKerugian : 0);
-
-      reRenderSoLossTable();
-      soLoaded = true;
-    } catch (err) {
-      kerugianBody.innerHTML =
-        `<tr class="tx-table__empty">
-           <td colspan="8">Gagal memuat kerugian SO: ${escapeHtml(err.message)}</td>
-         </tr>`;
-    }
-  };
-
-  const reRenderSoLossTable = () => {
-    const rows = Array.isArray(window.kerugianSOCache)
-      ? window.kerugianSOCache
-      : [];
-    const q = String(inputSearchKerugianSO.value || '').trim().toLowerCase();
-
-    // PERBAIKAN: Filter hanya barang MINUS (stok_fisik < stok_sistem)
-    // Kalkulasi badge dari item minus yang valid saja
-    const minusItems = rows.filter(r => {
-      const isMinus = Number(r.stok_fisik || 0) < Number(r.stok_sistem || 0);
-      return isMinus && (!q
-        || String(r.nama_barang || '').toLowerCase().includes(q)
-        || String(r.kode_barang || '').toLowerCase().includes(q));
-    });
-
-    // Update stat chips ringkasan (mengikuti filter)
-    countProdukMinus.textContent = formatNumber(minusItems.length);
-    sumUnitMinus.textContent = formatNumber(
-      minusItems.reduce((s, r) => s + Math.max(0, Number(r.stok_sistem) - Number(r.stok_fisik)), 0)
-    );
-    sumNominalKerugian.textContent = formatRupiah(
-      minusItems.reduce((s, r) => {
-        const selisih = Math.max(0, Number(r.stok_sistem) - Number(r.stok_fisik));
-        return s + (selisih * (Number(r.hpp) || 0));
-      }, 0)
-    );
-
-    kerugianBody.innerHTML = minusItems.length
-      ? minusItems.map(r => {
-          // PERBAIKAN: Selisih Minus Unit = STOK_SISTEM - STOK_FISIK (murni, >0)
-          // Nominal Kerugian = Selisih Minus Unit × HPP (harga modal)
-          const hpp = Number(r.hpp) || 0;
-          const selisihMinus = Math.max(0, Number(r.stok_sistem) - Number(r.stok_fisik));
-          const totalKerugian = selisihMinus * hpp;
-          return `<tr>
-             <td class="col-no">${escapeHtml(r.kode_barang) || String(r.id_barang) || '—'}</td>
-             <td>${escapeHtml(r.nama_barang) || '—'}</td>
-             <td>${escapeHtml(r.kategori) || '—'}</td>
-             <td class="col-num col-center">${formatNumber(r.stok_sistem)}</td>
-             <td class="col-num col-center">${formatNumber(r.stok_fisik)}</td>
-             <td class="col-num selisih-minus">${selisihMinus}</td>
-             <td class="col-num">${formatRupiah(hpp)}</td>
-             <td class="col-num total-kerugian">${formatRupiah(totalKerugian)}</td>
-           </tr>`;
-        }).join('')
-      : '<tr class="tx-table__empty"><td colspan="8">Tidak ada barang minus untuk bulan ini</td></tr>';
-  };
-
-  inputSearchKerugianSO.addEventListener('input', reRenderSoLossTable);
-  cardKerugianSO.addEventListener('click', openSoModal);
-  soBtnClose.addEventListener('click', closeSoModal);
-  soModal.addEventListener('click', (e) => {
-    if (e.target === soModal) closeSoModal();
+  if (cardKerugianSO) cardKerugianSO.addEventListener('click', () => {
+    if (typeof window.openSoModal === 'function') window.openSoModal();
   });
 
-  // Ganti bulan → fetch ulang data untuk bulan terpilih.
-  // soLoaded di-set false dulu supaya openSoModal tak skip load saat
-  // fetch-nya berjalan (loadSoLosses menyet flag-nya balik saat sukses).
-  inputBulanKerugianSO.addEventListener('change', () => {
-    const selected = inputBulanKerugianSO.value;
-    if (!selected) return;
-    soLoaded = false;
-    loadSoLosses(selected);
+  const cardKelebihanSO = document.getElementById('cardKelebihanSO');
+  if (cardKelebihanSO) cardKelebihanSO.addEventListener('click', () => {
+    if (typeof window.openPlusModal === 'function') window.openPlusModal();
   });
 
-  // ── MODAL: Detail Kelebihan Stock Opname (Barang Plus) ──────────
-  const plusModal = document.getElementById('modalKelebihanSO');
-  const plusBtnClose = document.getElementById('btnCloseModalKelebihanSO');
-  const inputBulanKelebihanSO = document.getElementById('inputBulanKelebihanSO');
-  const inputSearchKelebihanSO = document.getElementById('inputSearchKelebihanSO');
-  const countProdukPlus = document.getElementById('countProdukPlus');
-  const sumUnitPlus = document.getElementById('sumUnitPlus');
-  const sumNominalPlus = document.getElementById('sumNominalPlus');
-  const kelebihanBody = document.getElementById('kelebihanSOTableBody');
-  let plusLoaded = false;
-
-  const initPlusMonthInput = () => {
-    if (!inputBulanKelebihanSO.value) {
-      inputBulanKelebihanSO.value = toYM(new Date());
-    }
-  };
-
-  const openPlusModal = () => {
-    initPlusMonthInput();
-    plusModal.classList.add('is-open');
-    plusModal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    if (!plusLoaded) loadSoSurplus(inputBulanKelebihanSO.value);
-  };
-
-  const closePlusModal = () => {
-    plusModal.classList.remove('is-open');
-    plusModal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  };
-
-  const loadSoSurplus = async (monthYM) => {
-    kelebihanBody.innerHTML =
-      '<tr class="tx-table__empty"><td colspan="8">Memuat data…</td></tr>';
-    try {
-      const m = monthYM || inputBulanKelebihanSO.value;
-      const query = m ? '?month=' + encodeURIComponent(m) : '';
-      const resp = await fetch('/api/admin/stock-opname/surplus' + query);
-      const data = await resp.json();
-      if (!resp.ok || !data.success) {
-        throw new Error(data.message || 'Gagal memuat kelebihan SO');
-      }
-
-      window.kelebihanSOCache = data.data || [];
-
-      reRenderSoSurplusTable();
-      plusLoaded = true;
-    } catch (err) {
-      kelebihanBody.innerHTML =
-        `<tr class="tx-table__empty">
-           <td colspan="8">Gagal memuat kelebihan SO: ${escapeHtml(err.message)}</td>
-         </tr>`;
-    }
-  };
-
-  const reRenderSoSurplusTable = () => {
-    const rows = Array.isArray(window.kelebihanSOCache)
-      ? window.kelebihanSOCache
-      : [];
-    const q = String(inputSearchKelebihanSO.value || '').trim().toLowerCase();
-
-    const filtered = rows.filter(r => {
-      return !q
-        || String(r.nama_barang || '').toLowerCase().includes(q)
-        || String(r.kode_barang || '').toLowerCase().includes(q);
-    });
-
-    // Update stat chips ringkasan (mengikuti filter pencarian)
-    countProdukPlus.textContent = formatNumber(filtered.length);
-    sumUnitPlus.textContent = formatNumber(
-      filtered.reduce((s, r) => s + (Number(r.qty_plus) || 0), 0)
-    );
-    sumNominalPlus.textContent = formatRupiah(
-      filtered.reduce((s, r) => s + (Number(r.total_nilai_plus) || 0), 0)
-    );
-
-    kelebihanBody.innerHTML = filtered.length
-      ? filtered.map(r => {
-          // (UI) Kolom TOTAL KELEBIHAN: prioritas nilai backend r.total_nilai_plus
-          // (sumber kebenaran, sudah konsisten dengan chip ringkasan). Fallback
-          // selisih_plus * hpp bila backend tak mengirimkannya.
-          const selisihPlus = Math.max(0, Number(r.qty_plus) || 0);
-          const hpp = Number(r.hpp) || 0;
-          const totalPlus = (Number(r.total_nilai_plus) || 0) || (selisihPlus * hpp);
-          return `<tr>
-             <td class="col-no">${escapeHtml(r.kode_barang) || String(r.id_barang) || '—'}</td>
-             <td>${escapeHtml(r.nama_barang) || '—'}</td>
-             <td>${escapeHtml(r.kategori) || '—'}</td>
-             <td class="col-num col-center">${formatNumber(r.stok_sistem)}</td>
-             <td class="col-num col-center">${formatNumber(r.stok_fisik)}</td>
-             <td class="col-num selisih-plus">${selisihPlus}</td>
-             <td class="col-num">${formatRupiah(hpp)}</td>
-             <td class="col-num total-nilai-plus">${formatRupiah(totalPlus)}</td>
-           </tr>`;
-        }).join('')
-      : '<tr class="tx-table__empty"><td colspan="8">Tidak ada barang plus untuk bulan ini</td></tr>';
-  };
-
-  // Stat card "Kelebihan SO Bulan Ini" — buka modal kelebihan secara
-  // langsung, tanpa perlu lewat modal kerugian
-  document.getElementById('cardKelebihanSO').addEventListener('click', openPlusModal);
-
-  inputSearchKelebihanSO.addEventListener('input', reRenderSoSurplusTable);
-  plusBtnClose.addEventListener('click', closePlusModal);
-  plusModal.addEventListener('click', (e) => {
-    if (e.target === plusModal) closePlusModal();
+  const cardSelisihKasir = document.getElementById('cardSelisihKasir');
+  if (cardSelisihKasir) cardSelisihKasir.addEventListener('click', () => {
+    if (typeof window.openSelisihModal === 'function') window.openSelisihModal();
   });
-
-  // Ganti bulan → fetch ulang data untuk bulan terpilih
-  inputBulanKelebihanSO.addEventListener('change', () => {
-    const selected = inputBulanKelebihanSO.value;
-    if (!selected) return;
-    plusLoaded = false;
-    loadSoSurplus(selected);
-  });
-
-
-
 
   // ── MODAL: Rekap Setoran & Rincian Kasir (Fix #21) — modul dipindah
   //    ke setoran.js (pola Fix #81): open/close/load/reRender/initDate,
@@ -1084,139 +862,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.openSetoranModal === 'function') window.openSetoranModal();
   });
 
-  // ── SELISIH KASIR CARD (Fix #56) ───────────────────────────────
-  const cardSelisihKasir    = document.getElementById('cardSelisihKasir');
-  const statSelisihKasir    = document.getElementById('statSelisihKasir');
-  const modalSelisihKasir   = document.getElementById('modalSelisihKasir');
-  const btnCloseModalSelisih= document.getElementById('btnCloseModalSelisih');
-  const sumSelisihTotal     = document.getElementById('sumSelisihTotal');
-  const sumSelisihPlus      = document.getElementById('sumSelisihPlus');
-  const sumSelisihMinus     = document.getElementById('sumSelisihMinus');
-  const selisihTableBody    = document.getElementById('selisihTableBody');
-  const chipSelisihPlus     = document.getElementById('chipSelisihPlus');
-  const chipSelisihMinus    = document.getElementById('chipSelisihMinus');
-  let   selisihAllRows      = [];  // cached full dataset for re-filtering
-  let   currentSelisihFilter = 'ALL';
-  const SELISIH_CACHE_KEY   = 'pbms_cached_selisih_kasir';
-
-  const persistSelisihCache = (val) => {
-    try { localStorage.setItem(SELISIH_CACHE_KEY, val); } catch (e) { /* private mode */ }
-  };
-  (function initSelisihInstant() {
-    try {
-      const c = localStorage.getItem(SELISIH_CACHE_KEY);
-      if (c !== null && c !== '') {
-        statSelisihKasir.textContent = c;
-        const heroSelisih = document.getElementById('heroSelisihValue');
-        if (heroSelisih) heroSelisih.textContent = c;
-      }
-    } catch (e) { /* abaikan */ }
-  })();
-
-  function openSelisihModal() {
-    modalSelisihKasir.classList.add('is-open');
-    modalSelisihKasir.removeAttribute('hidden');
-    modalSelisihKasir.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    loadSelisihKasir();
-  }
-  function closeSelisihModal() {
-    modalSelisihKasir.classList.remove('is-open');
-    modalSelisihKasir.setAttribute('hidden', '');
-    modalSelisihKasir.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  }
-
-  const loadSelisihKasir = async () => {
-    selisihTableBody.innerHTML = '<tr class="tx-table__empty"><td colspan="6">Memuat data…</td></tr>';
-    try {
-      const resp = await fetch('/api/admin/selisih-kasir');
-      const data = await resp.json();
-      if (!resp.ok || !data.success) throw new Error(data.message || 'Gagal memuat');
-      selisihAllRows   = data.data || [];
-      currentSelisihFilter = 'ALL';
-      chipSelisihPlus.classList.remove('chip--filter-active');
-      chipSelisihMinus.classList.remove('chip--filter-active');
-      chipSelisihPlus.setAttribute('aria-pressed', 'false');
-      chipSelisihMinus.setAttribute('aria-pressed', 'false');
-      renderSelisihTable(selisihAllRows, data.total || 0);
-    } catch (err) {
-      selisihTableBody.innerHTML =
-        `<tr class="tx-table__empty"><td colspan="6">Gagal memuat: ${escapeHtml(err.message)}</td></tr>`;
-    }
-  };
-
-  const renderSelisihTable = (rows, total) => {
-    // Update summary chips — hitung dari data FULL, bukan dari filtered
-    const plusCount  = selisihAllRows.filter(r => r.selisih > 0).length;
-    const minusCount = selisihAllRows.filter(r => r.selisih < 0).length;
-    sumSelisihTotal.textContent = formatRupiah(total);
-    sumSelisihTotal.className = 'tx-chip__value' + (total < 0 ? ' tx-chip__value--minus' : total > 0 ? ' tx-chip__value--plus' : '');
-    sumSelisihPlus.textContent  = String(plusCount);
-    sumSelisihMinus.textContent = String(minusCount);
-
-    if (!rows.length) {
-      selisihTableBody.innerHTML = '<tr class="tx-table__empty"><td colspan="6">Tidak ada data selisih kasir untuk bulan ini</td></tr>';
-      return;
-    }
-    selisihTableBody.innerHTML = rows.map(r => {
-      const selClass = r.selisih < 0
-        ? 'col-num selisih-minus'
-        : r.selisih > 0 ? 'col-num selisih-plus' : 'col-num';
-      const selSign  = r.selisih < 0 ? '' : '+';
-      return `<tr>
-        <td><code class="kode-tutup">${escapeHtml(r.kode_tutup || '—')}</code></td>
-        <td>${escapeHtml(r.tgl_jam || '—')}</td>
-        <td>${escapeHtml(r.kasir || '—')}</td>
-        <td class="col-num">${formatRupiah(r.nominal_aktual)}</td>
-        <td class="col-num">${formatRupiah(r.uang_sistem)}</td>
-        <td class="${selClass}">${selSign}${formatRupiah(r.selisih)}</td>
-      </tr>`;
-    }).join('');
-
-    // Toggle card color class based on total
-    cardSelisihKasir.classList.remove('selisih-positive', 'selisih-negative');
-    if (total > 0)      cardSelisihKasir.classList.add('selisih-positive');
-    else if (total < 0) cardSelisihKasir.classList.add('selisih-negative');
-
-    // Persist instant cache for dashboard card
-    const formatted = formatRupiah(total);
-    statSelisihKasir.textContent = formatted;
-    const heroSelisih = document.getElementById('heroSelisihValue');
-    if (heroSelisih) heroSelisih.textContent = formatted;
-    persistSelisihCache(formatted);
-  };
-
-  // Filter toggle: chip Plus ↔ Minus ↔ All
-  const applySelisihFilter = (filter) => {
-    currentSelisihFilter = filter;
-    // Update aria-pressed visual state
-    chipSelisihPlus.classList.toggle('chip--filter-active', filter === 'PLUS');
-    chipSelisihMinus.classList.toggle('chip--filter-active', filter === 'MINUS');
-    chipSelisihPlus.setAttribute('aria-pressed', filter === 'PLUS');
-    chipSelisihMinus.setAttribute('aria-pressed', filter === 'MINUS');
-    // Re-render table with filtered rows
-    const filtered = filter === 'ALL'
-      ? selisihAllRows
-      : filter === 'PLUS'
-        ? selisihAllRows.filter(r => r.selisih > 0)
-        : selisihAllRows.filter(r => r.selisih < 0);
-    const totalFiltered = filtered.reduce((s, r) => s + r.selisih, 0);
-    renderSelisihTable(filtered, totalFiltered);
-  };
-
-  chipSelisihPlus.addEventListener('click', () => {
-    applySelisihFilter(currentSelisihFilter === 'PLUS' ? 'ALL' : 'PLUS');
-  });
-  chipSelisihMinus.addEventListener('click', () => {
-    applySelisihFilter(currentSelisihFilter === 'MINUS' ? 'ALL' : 'MINUS');
-  });
-
-  cardSelisihKasir.addEventListener('click', openSelisihModal);
-  btnCloseModalSelisih.addEventListener('click', closeSelisihModal);
-  modalSelisihKasir.addEventListener('click', (e) => {
-    if (e.target === modalSelisihKasir) closeSelisihModal();
-  });
+  // ── SELISIH KASIR CARD (Fix #56) — modul dipindah ke selisih.js ──
+  // open/close/load/render/filter/chip/instant-cache/ESC kini di
+  // selisih.js (pola Fix #81). Pemicu klik card + null-check di atas.
   // ── MODAL: Meja Aktif & Total Belanja Berjalan (Fix #22 revisi) ──
   // Menampilkan HANYA sesi AKTIF (meja sedang berjalan) beserta total
   // belanja F&B berjalan per meja (SUM dari `pesanan_meja.subtotal`).
@@ -1722,20 +1370,12 @@ const reRenderMemberTable = () => {
   });
 
   // ESC: tutup modal yang paling atas dulu (z-index tertinggi → terendah):
-  // qrisHistory (1000, handled by qris.js) / setoranKasir (1000, handled
-  // by setoran.js) → listMember (700) → kelebihanSO (550) → kerugianSO (500)
-  // → barang (400) → meja (300) → item (200) → utama
+  // qrisHistory (1000, qris.js) / setoranKasir (1000, setoran.js) /
+  // selisihKasir & kerugianSO & kelebihanSO (1000, selisih.js) →
+  // listMember (700) → barang (400) → meja (300) → item (200) → utama
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && memberModal.classList.contains('is-open')) {
       closeMemberModal();
-      return;
-    }
-    if (e.key === 'Escape' && plusModal.classList.contains('is-open')) {
-      closePlusModal();
-      return;
-    }
-    if (e.key === 'Escape' && soModal.classList.contains('is-open')) {
-      closeSoModal();
       return;
     }
     if (e.key === 'Escape' && barangModal.classList.contains('is-open')) {
@@ -1766,260 +1406,10 @@ const reRenderMemberTable = () => {
   fetchStats();
   // (Populate card QRIS kini dilakukan qris.js saat file dimuat — Fix #32)
 
-  // ── GRAFIK TREN PENJUALAN (Fix #33) ──────────────────────────
-  // Grafik batang omzet harian via Canvas API (tanpa library eksternal).
-  // Cache display di localStorage agar refresh = instant (pola Fix #29/#32).
-  const SALES_CHART_CACHE_KEY = 'pbms_cached_sales_chart_data';
-  const salesBarChart    = document.getElementById('salesBarChart');
-  const chartCanvasWrap  = document.getElementById('chartCanvasWrap');
-  const chartTooltip     = document.getElementById('chartTooltip');
-  const chartTooltipDate = document.getElementById('chartTooltipDate');
-  const chartTooltipValue= document.getElementById('chartTooltipValue');
-  const chartTooltipCount= document.getElementById('chartTooltipCount');
-  const chartMaxOmzet    = document.getElementById('chartMaxOmzet');
-  const chartAvgOmzet    = document.getElementById('chartAvgOmzet');
-  const chartTotalOmzet  = document.getElementById('chartTotalOmzet');
-  const btnPeriodMonthly  = document.getElementById('btnPeriodMonthly');
-  const btnPeriod30Days   = document.getElementById('btnPeriod30Days');
-  let activeChartPeriod = 'monthly_daily';
-  let chartDataCache = null; // { labels, data, counts, summary, period }
-  // (Fix #40) Variabel modul untuk bar positions agar handler mousemove
-  // bisa membaca posisi terbaru TANPA perlu re-register listener tiap
-  // render. Listener di-bind SATU KALI di init (bukan di dalam
-  // renderSalesBarChart) untuk mencegah stacking.
-  let _barPositions = [];
-  let _chartMeta    = { labels: [], data: [], counts: [], wrapW: 800, H: 300 };
-
-  const persistSalesChartCache = (payload) => {
-    try { localStorage.setItem(SALES_CHART_CACHE_KEY, JSON.stringify(payload)); }
-    catch (e) { /* private mode — abaikan */ }
-  };
-  const loadSalesChartCache = () => {
-    try {
-      const raw = localStorage.getItem(SALES_CHART_CACHE_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.labels)) return null;
-      return parsed;
-    } catch (e) { return null; }
-  };
-
-  // ── Render Grafik Canvas ─────────────────────────────────────
-  const renderSalesBarChart = (chart) => {
-    if (!salesBarChart) return;
-    const canvas = salesBarChart;
-    const dpr = window.devicePixelRatio || 1;
-    const wrapW = canvas.parentElement ? canvas.parentElement.clientWidth : 800;
-    const H = 300;
-    canvas.width  = wrapW * dpr;
-    canvas.height = H * dpr;
-    canvas.style.width  = wrapW + 'px';
-    canvas.style.height = H + 'px';
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, wrapW, H);
-
-    const labels = chart.labels || [];
-    const data   = chart.data   || [];
-    const n = labels.length;
-    if (!n) return;
-
-    const padL = 60, padR = 20, padT = 16, padB = 40;
-    const chartW = wrapW - padL - padR;
-    const chartH = H - padT - padB;
-    const maxVal = Math.max(1, ...(chart.summary ? [chart.summary.max_omzet] : [0, ...data]));
-
-    // ── Grid lines horizontal ──
-    const gridLines = 4;
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= gridLines; i++) {
-      const y = padT + (chartH / gridLines) * i;
-      ctx.beginPath();
-      ctx.moveTo(padL, y);
-      ctx.lineTo(wrapW - padR, y);
-      ctx.stroke();
-    }
-
-    // ── Barata ──
-    const gapRatio = 0.25;
-    const barW = Math.max(4, (chartW / n) * (1 - gapRatio));
-    const barGap = (chartW / n - barW);
-
-    // Kumpulkan posisi bar untuk tooltip
-    _barPositions = [];
-    // Simpan meta untuk handler mousemove satu-kali (Fix #40)
-    _chartMeta = { labels, data, counts: chart.counts || [], wrapW, H, padL, padT, chartH, barGap, barW };
-
-    for (let i = 0; i < n; i++) {
-      const val = data[i] || 0;
-      const x  = padL + barGap / 2 + i * (chartW / n);
-      const barH = val > 0 ? Math.max(3, (val / maxVal) * chartH) : 0;
-      const y = padT + chartH - barH;
-
-      // Gradient batang: cyan terang di atas → biru gelap di bawah
-      const grad = ctx.createLinearGradient(0, y, 0, padT + chartH);
-      grad.addColorStop(0, 'rgba(0, 210, 255, 0.9)');
-      grad.addColorStop(1, 'rgba(2, 132, 199, 0.5)');
-      ctx.fillStyle = grad;
-
-      // Batang dengan radius atas
-      const r = Math.min(4, barW / 2, barH);
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.lineTo(x + barW - r, y);
-      ctx.arcTo(x + barW, y, x + barW, y + r, r);
-      ctx.lineTo(x + barW, padT + chartH);
-      ctx.lineTo(x, padT + chartH);
-      ctx.lineTo(x, y + r);
-      ctx.arcTo(x, y, x + r, y, r);
-      ctx.closePath();
-      ctx.fill();
-
-      _barPositions.push({ x, y, w: barW, h: barH, i });
-    }
-
-    // ── Label X (tanggal) — tampilkan tiap N bar agar tak tumpang ──
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '10px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    const labelStep = Math.max(1, Math.ceil(n / Math.floor(chartW / 60)));
-    for (let i = 0; i < n; i += labelStep) {
-      const x = padL + i * (chartW / n) + (chartW / n) / 2;
-      ctx.fillText(labels[i] || '', x, padT + chartH + 8);
-    }
-
-    // ── Label Y (omzet) ──
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    for (let i = 0; i <= gridLines; i++) {
-      const y = padT + (chartH / gridLines) * i;
-      const val = maxVal - (maxVal / gridLines) * i;
-      const label = val >= 1000000
-        ? (val / 1000000).toFixed(1).replace(/\.0$/, '') + 'jt'
-        : val >= 1000
-          ? Math.round(val / 1000) + 'rb'
-          : String(Math.round(val));
-      ctx.fillStyle = '#64748b';
-      ctx.font = '10px system-ui, sans-serif';
-      ctx.fillText(label, padL - 8, y);
-    }
-
-  };
-
-  // ── Tooltip via hover (Fix #40 — listener di-bind SATU KALI di sini) ──
-  // Di Fix #33 listener mousemove di-register di dalam renderSalesBarChart
-  // → tiap resize/reload stack 1 listener baru → N listener berjalan serentak
-  // → mousemove handler O(N) per event → freeze di browser.
-  // Perbaikan: _barPositions & _chartMeta dimodul-scope; handler baca
-  // value terbaru tanpa perlu re-register.
-  safeAddEventListener(salesBarChart, 'mousemove', (e) => {
-    if (!chartTooltip || !_barPositions.length) return;
-    const { labels, data, counts, wrapW, padT, chartH, barGap } = _chartMeta;
-    const rect = salesBarChart.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    let hit = null;
-    for (const bp of _barPositions) {
-      if (mx >= bp.x && mx <= bp.x + bp.w + barGap) {
-        hit = bp; break;
-      }
-    }
-    if (hit) {
-      if (chartTooltipDate)  chartTooltipDate.textContent  = labels[hit.i] || '';
-      if (chartTooltipValue) chartTooltipValue.textContent = formatRupiah(data[hit.i] || 0);
-      if (chartTooltipCount) chartTooltipCount.textContent = ((counts || [])[hit.i] || 0) + ' transaksi';
-      const tipW = 120;
-      const tx = Math.max(0, Math.min(wrapW - tipW, hit.x + hit.w / 2 - tipW / 2));
-      const ty = Math.max(0, (hit.h > 0 ? hit.y : padT + chartH) - 56);
-      chartTooltip.style.left = tx + 'px';
-      chartTooltip.style.top  = ty + 'px';
-      chartTooltip.classList.add('is-visible');
-    } else {
-      chartTooltip.classList.remove('is-visible');
-    }
-  });
-
-  safeAddEventListener(salesBarChart, 'mouseleave', () => {
-    if (chartTooltip) chartTooltip.classList.remove('is-visible');
-  });
-
-  const updateChartSummary = (chart) => {
-    const s = chart.summary || {};
-    chartMaxOmzet.textContent  = formatRupiah(s.max_omzet);
-    chartAvgOmzet.textContent  = formatRupiah(s.avg_omzet);
-    chartTotalOmzet.textContent= formatRupiah(s.total_omzet_period);
-  };
-
-  const loadSalesChart = async (period) => {
-    activeChartPeriod = period;
-    // Update tombol toggle
-    if (btnPeriodMonthly)  btnPeriodMonthly.classList.toggle('is-active', period === 'monthly_daily');
-    if (btnPeriod30Days)   btnPeriod30Days.classList.toggle('is-active', period === 'last_30_days');
-    try {
-      const resp = await fetch('/api/admin/reports/sales-chart?period=' + encodeURIComponent(period));
-      const data = await resp.json();
-      if (!resp.ok || !data.success) throw new Error(data.message || 'Gagal memuat grafik');
-      const chart = {
-        labels:   data.labels   || [],
-        data:     data.data     || [],
-        counts:   data.counts   || [],
-        summary:  data.summary  || {},
-        period,
-      };
-      chartDataCache = chart;
-      renderSalesBarChart(chart);
-      updateChartSummary(chart);
-      persistSalesChartCache(chart);
-    } catch (err) {
-      console.warn('Gagal memuat grafik penjualan:', err.message);
-    }
-  };
-
-  // Event listeners tombol periode
-  if (btnPeriodMonthly) btnPeriodMonthly.addEventListener('click', () => loadSalesChart('monthly_daily'));
-  if (btnPeriod30Days)  btnPeriod30Days.addEventListener('click',  () => loadSalesChart('last_30_days'));
-
-  // Resize handler (debounce ringan)
-  let resizeTimer = null;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      if (chartDataCache) renderSalesBarChart(chartDataCache);
-      if (typeof hppDataCache !== 'undefined' && hppDataCache) renderHppTrendChart(hppDataCache);
-    }, 150);
-  });
-
-  // Init: cache instant → fetch refresh
-  (function initSalesChart() {
-    const cached = loadSalesChartCache();
-    if (cached && Array.isArray(cached.labels) && cached.labels.length) {
-      chartDataCache = cached;
-      renderSalesBarChart(cached);
-      updateChartSummary(cached);
-      // Tetap fetch untuk refresh ke data terbaru
-      loadSalesChart(cached.period || activeChartPeriod);
-    } else {
-      loadSalesChart('monthly_daily');
-    }
-  })();
-
-  // Re-render grafik saat tab Keuangan ditampilkan kembali (Fix #58)
-  // — Canvas di tab non-aktif punya layout 0px, sehingga hasil render
-  // pertama bisa "hilang" / terpotong. Saat tab diaktifkan, paksa
-  // re-render dengan lebar container yang sudah benar.
-  const reRenderChartsOnTabActivate = () => {
-    requestAnimationFrame(() => {
-      if (chartDataCache) renderSalesBarChart(chartDataCache);
-      if (typeof hppDataCache !== 'undefined' && hppDataCache) renderHppTrendChart(hppDataCache);
-    });
-  };
-  // Bind ke tombol tab "Ringkasan Keuangan" — pakai querySelector karena
-  // ID tab-btn bisa berubah antar versi HTML (robust).
-  const tabBtnKeuangan = document.querySelector('[data-tab="tab-keuangan"]');
-  if (tabBtnKeuangan) {
-    tabBtnKeuangan.addEventListener('click', () => reRenderChartsOnTabActivate());
-  }
+  // ── GRAFIK TREN PENJUALAN (Fix #33) — modul dipindah ke penjualan.js ─
+  // Render/tooltip/fetch/cache instant kini di penjualan.js (pola Fix #81).
+  // HPP chart tetap di sini; bridge re-render tab-aktif & resize dari
+  // penjualan.js memanggil hook window di bawah.
 
   // ── GRAFIK FLUKTUASI HPP VS HARGA JUAL + MARGIN WARNING (Fix #47) ──
   const HPP_CHART_CACHE_KEY = 'pbms_cached_hpp_trend';
@@ -2284,6 +1674,27 @@ const reRenderMemberTable = () => {
     }
     loadHppChart('', '');
   })();
+
+  // ── Bridge hook untuk penjualan.js (modul grafik penjualan) ──
+  // Resize + re-render tab-aktif di penjualan.js memanggil hook ini
+  // untuk juga me-render ulang HPP chart (data cache-nya milik modul ini).
+  window.__renderHppChartOnResize = () => {
+    if (hppDataCache) renderHppTrendChart(hppDataCache);
+  };
+  window.__renderHppChartOnTabActivate = () => {
+    if (hppDataCache) renderHppTrendChart(hppDataCache);
+  };
+
+  // Re-render kedua grafik saat tab Keuangan ditampilkan kembali
+  // (Fix #58) — penjualan.js memanggil window.__salesReRenderChart;
+  // HPP chart turut di-re-render lewat hook di atas.
+  const tabBtnKeuangan = document.querySelector('[data-tab="tab-keuangan"]');
+  if (tabBtnKeuangan) {
+    tabBtnKeuangan.addEventListener('click', () => {
+      if (typeof window.__salesReRenderChart === 'function') window.__salesReRenderChart();
+      else if (hppDataCache) renderHppTrendChart(hppDataCache);
+    });
+  }
 
 
   // ── PURCHASE CART / RESTOK BARANG (Fix #45) ─────────────────
@@ -3547,4 +2958,26 @@ const reRenderMemberTable = () => {
   safeAddEventListener('burgerBtnSetoran', 'click', () => {
     closeBurgerDrawer();
     if (typeof window.openSetoranModal === 'function') window.openSetoranModal();
+  });
+
+  // Item burger "Selisih Kasir": tutup drawer → buka #modalSelisihKasir
+  // (fungsi openSelisihModal di-eksport ke window oleh selisih.js,
+  //  pola Fix #81; cekaman typeof aman bila selisih.js gagal load).
+  safeAddEventListener('burgerBtnSelisih', 'click', () => {
+    closeBurgerDrawer();
+    if (typeof window.openSelisihModal === 'function') window.openSelisihModal();
+  });
+
+  // Item burger "Total Penjualan": tutup drawer → buka modal rincian
+  // transaksi hari ini (#modalDetailTransaksi) — openTxModal = alias
+  // openModal yang di-eksport ke window oleh blok modal transaksi di
+  // atas (cekaman typeof ganda: window dulu, lalu scope lokal sebagai
+  // fallback bila eksport belum terpasang).
+  safeAddEventListener('burgerBtnPenjualan', 'click', () => {
+    closeBurgerDrawer();
+    if (typeof window.openTxModal === 'function') {
+      window.openTxModal();
+    } else if (typeof openTxModal === 'function') {
+      openTxModal();
+    }
   });

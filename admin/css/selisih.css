@@ -1,0 +1,377 @@
+/* ============================================================
+   PBMS ADMIN — MODUL SELISIH KASIR & STOCK OPNAME (SO)
+   (dipisahkan dari dashboard.css). Seluruh style selisih/SO
+   di sini; z-index 3 modal SO/selisih dinaikkan 500/550/(600)
+   → 1000 mengikuti standar Fix #80 (di atas burger drawer 997).
+   ============================================================ */
+
+/* ── Card kelebihan SO — aksen hijau/sukses ─────────────────── */
+.stat-card--surplus {
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.stat-card--surplus .stat-card__value {
+  color: var(--success);
+}
+
+.stat-card--surplus.stat-card--clickable:hover {
+  border-color: var(--success);
+}
+
+/* ── Modal: Detail Kerugian Stock Opname ─────────────────────── */
+
+/* Modal kerugian SO — z-index 1000 (Fix #80: di atas burger drawer
+   997). Sebelumnya 500. */
+#modalKerugianSO {
+  z-index: 1000;
+}
+
+/* Wrapper ringkasan kerugian — memuat .tx-chip yang sudah ada */
+.so-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Chip nominal kerugian — aksen merah bata */
+.tx-chip--kerugian {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.tx-chip--kerugian .tx-chip__value {
+  color: var(--error);
+}
+
+/* Aksen merah bata: selisih minus & total kerugian per produk */
+#tableKerugianSO .selisih-minus,
+#tableKerugianSO .total-kerugian {
+  color: var(--error);
+  font-weight: 700;
+}
+
+/* Modal kerugian SO — FIX: 85vw/900px agar kolom presisi tanpa scroll tebal */
+#modalKerugianSO .modal-content {
+  width: 90vw;
+  max-width: 900px;
+}
+
+/* Kontainer tabel kerugian — scroll horizontal dengan scrollbar tipis */
+#modalKerugianSO .modal-table-wrap {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+#modalKerugianSO .modal-table-wrap::-webkit-scrollbar {
+  height: 6px;
+}
+#modalKerugianSO .modal-table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+#modalKerugianSO .modal-table-wrap::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+#modalKerugianSO .modal-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+@media (max-width: 900px) {
+  #modalKerugianSO .modal-content {
+    width: 95vw;
+    max-width: 900px;
+  }
+}
+
+/* Alokasi lebar kolom #tableKerugianSO — proporsional & kompak */
+#tableKerugianSO th:nth-child(1),
+#tableKerugianSO td:nth-child(1) { width: 70px; min-width: 70px; }
+
+#tableKerugianSO th:nth-child(2),
+#tableKerugianSO td:nth-child(2) { width: 160px; min-width: 140px; }
+
+#tableKerugianSO th:nth-child(3),
+#tableKerugianSO td:nth-child(3) { width: 75px; min-width: 75px; }
+
+#tableKerugianSO th:nth-child(4),
+#tableKerugianSO td:nth-child(4) { width: 70px; text-align: center; }
+
+#tableKerugianSO th:nth-child(5),
+#tableKerugianSO td:nth-child(5) { width: 70px; text-align: center; }
+
+#tableKerugianSO th:nth-child(6),
+#tableKerugianSO td:nth-child(6) { width: 75px; }
+
+#tableKerugianSO th:nth-child(7),
+#tableKerugianSO td:nth-child(7) { width: 95px; }
+
+#tableKerugianSO th:nth-child(8),
+#tableKerugianSO td:nth-child(8) { width: 110px; min-width: 110px; }
+
+/* Header TOTAL KERUGIAN — pastikan teks utuh terbaca */
+#tableKerugianSO th:nth-child(8) {
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Sel tengah (stok sistem / stok fisik) — rata tengah */
+#tableKerugianSO .col-center,
+#tableKerugianSO .col-num.col-center {
+  text-align: center;
+}
+
+/* Selisih minus kolom — merah, rata tengah */
+#tableKerugianSO .selisih-minus {
+  text-align: center;
+}
+
+/* Kode/ID kolom paling kiri — warna muted */
+#tableKerugianSO td:nth-child(1) {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+/* Input bulan — konsisten dengan input tanggal di filter bar */
+.tx-filter-bar input[type="month"] {
+  position: relative;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+  border-radius: var(--radius-sm);
+  padding: 8px 36px 8px 12px;
+  min-width: 160px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+  color-scheme: dark;
+}
+
+.tx-filter-bar input[type="month"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+.tx-filter-bar input[type="month"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.tx-filter-bar input[type="month"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── Modal: Detail Kelebihan Stock Opname (Barang Plus) ──────── */
+
+/* Modal kelebihan SO — z-index 1000 (Fix #80). Sebelumnya 550. */
+#modalKelebihanSO {
+  z-index: 1000;
+}
+
+/* Chip nominal nilai plus — aksen hijau (kebalikan dari kerugian) */
+.tx-chip--plus {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.tx-chip--plus .tx-chip__value {
+  color: var(--success);
+}
+
+/* Aksen hijau: selisih plus & total nilai plus per produk */
+#tableKelebihanSO .selisih-plus,
+#tableKelebihanSO .total-nilai-plus {
+  color: #10b981;
+  font-weight: 700;
+}
+
+/* Modal kelebihan SO — perluas agar 8 kolom muat tanpa horizontal scrollbar */
+#modalKelebihanSO .modal-content {
+  width: 92vw;
+  max-width: 1020px;
+}
+
+#modalKelebihanSO .modal-table-wrap {
+  overflow-x: hidden;
+}
+
+@media (max-width: 900px) {
+  #modalKelebihanSO .modal-table-wrap {
+    overflow-x: auto;
+  }
+}
+
+/* Alokasi lebar kolom #tableKelebihanSO — proporsional & kompak */
+#tableKelebihanSO th:nth-child(1),
+#tableKelebihanSO td:nth-child(1) { width: 80px; min-width: 80px; }
+
+#tableKelebihanSO th:nth-child(2),
+#tableKelebihanSO td:nth-child(2) { width: 160px; min-width: 140px; }
+
+#tableKelebihanSO th:nth-child(3),
+#tableKelebihanSO td:nth-child(3) { width: 75px; min-width: 75px; }
+
+#tableKelebihanSO th:nth-child(4),
+#tableKelebihanSO td:nth-child(4) { width: 70px; text-align: center; }
+
+#tableKelebihanSO th:nth-child(5),
+#tableKelebihanSO td:nth-child(5) { width: 70px; text-align: center; }
+
+#tableKelebihanSO th:nth-child(6),
+#tableKelebihanSO td:nth-child(6) { width: 75px; }
+
+#tableKelebihanSO th:nth-child(7),
+#tableKelebihanSO td:nth-child(7) { width: 95px; }
+
+#tableKelebihanSO th:nth-child(8),
+#tableKelebihanSO td:nth-child(8) { width: 120px; min-width: 120px; }
+
+/* Header TOTAL KELEBIHAN — teks utuh terbaca */
+#tableKelebihanSO th:nth-child(8) {
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Sel tengah (stok sistem/fisik) & selisih plus — rata tengah */
+#tableKelebihanSO .col-center,
+#tableKelebihanSO .col-num.col-center,
+#tableKelebihanSO .selisih-plus {
+  text-align: center;
+}
+
+/* Kode/ID kolom paling kiri — warna muted */
+#tableKelebihanSO td:nth-child(1) {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+/* ── Card Selisih Kasir (Fix #56) ─────────────────────────────── */
+/* #modalSelisihKasir z-index 1000 (Fix #80). Sebelumnya 600. */
+#modalSelisihKasir {
+  z-index: 1000;
+}
+
+.stat-card--selisih {
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+.stat-card--selisih .stat-card__value {
+  color: #818cf8; /* indigo-400 default netral */
+}
+.stat-card--selisih.stat-card--clickable:hover {
+  border-color: #818cf8;
+}
+
+/* Selisih warna dinamis — diterapkan via JS */
+.stat-card--selisih.selisih-positive .stat-card__value {
+  color: #10b981; /* hijau: total plus */
+}
+.stat-card--selisih.selisih-negative .stat-card__value {
+  color: #ef4444; /* merah: total minus */
+}
+
+/* Selisih row colors di tabel */
+.col-num.selisih-plus {
+  color: #10b981;
+  font-weight: 600;
+}
+.col-num.selisih-minus {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* Summary bar selisih */
+.selisih-summary-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.tx-chip__value--plus { color: #10b981; font-weight: 700; }
+.tx-chip__value--minus { color: #ef4444; font-weight: 700; }
+
+/* Scrollable table wrapper untuk data banyak */
+.selisih-table-wrap {
+  max-height: 380px;
+  overflow-y: auto;
+}
+.selisih-table-wrap::-webkit-scrollbar {
+  width: 5px;
+}
+.selisih-table-wrap::-webkit-scrollbar-track {
+  background: #0f172a;
+  border-radius: 3px;
+}
+.selisih-table-wrap::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+.selisih-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Code font untuk kode tutup */
+.code-tutup {
+  font-family: monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #a5b4fc;
+}
+
+/* ── Chip Filter Toggle: Plus / Minus (Fix #56c) ──────────────── */
+.chip--filter {
+  cursor: pointer;
+  transition: opacity 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+}
+.chip--filter:hover {
+  filter: brightness(1.15);
+}
+.chip--filter:active {
+  transform: scale(0.97);
+}
+.chip--filter-active {
+  border-width: 2px !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+.chip--filter-active.tx-chip--plus {
+  border-color: #22c55e !important;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35);
+}
+.chip--filter-active.tx-chip--minus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35);
+}
+/* Non-active filter chip sedikit redup */
+.selisih-summary-bar .chip--filter:not(.chip--filter-active) {
+  opacity: 0.55;
+}
+.selisih-summary-bar .chip--filter.chip--filter-active {
+  opacity: 1;
+}
+
+/* ── Stat-card accent (tab panel) ─────────────────────────────── */
+.tab-panel .stat-card--selisih .stat-card__value { color: #fbbf24; }
+.tab-panel .stat-card--loss .stat-card__value    { color: #ef4444; }
+.tab-panel .stat-card--surplus .stat-card__value  { color: #22c55e; }
+
+/* ── Hero card selisih (di atas dashboard utama, Fix #58) ───── */
+.stat-card--hero.stat-card--selisih::before {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+.stat-card--hero.stat-card--selisih .stat-card__value {
+  color: #fbbf24;
+}
+
+/* ── Accent loss/surplus/loss-card (grid utama, bukan tab panel) ── */
+.stat-card--loss .stat-card__value {
+  color: var(--error);
+}

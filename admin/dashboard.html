@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="css/kas.css">
   <link rel="stylesheet" href="css/bank.css">
   <link rel="stylesheet" href="css/setoran.css">
+  <link rel="stylesheet" href="css/penjualan.css">
+  <link rel="stylesheet" href="css/selisih.css">
 </head>
 <body>
   <!-- Topbar -->
@@ -62,6 +64,18 @@
           <span class="burger-menu-label">Rekap Setoran</span>
         </button>
       </li>
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnPenjualan">
+          <span class="burger-menu-icon">&#128200;</span>
+          <span class="burger-menu-label">Total Penjualan</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnSelisih">
+          <span class="burger-menu-icon">&#128200;</span>
+          <span class="burger-menu-label">Selisih Kasir</span>
+        </button>
+      </li>
       <!-- Tempat list menu akan dipindah satu per satu -->
     </ul>
   </aside>
@@ -71,7 +85,12 @@
 
     <!-- Hero KPI Cards (4 metrik vital) -->
     <section class="hero-row" aria-label="Ringkasan Eksekutif">
-      <article class="stat-card stat-card--hero stat-card--penjualan" id="cardHeroPenjualan">
+      <!-- Kartu TOTAL PENJUALAN disembunyikan (pola Fix #83/#84) — aksesnya
+           pindah ke burger menu (#burgerBtnPenjualan) yang membuka
+           Grafik Tren Penjualan. Elemen tak dihapus agar DOM &
+           writer nilai (fetchStats) tetap aman. -->
+      <article class="stat-card stat-card--hero stat-card--penjualan is-hidden"
+               id="cardHeroPenjualan" style="display:none" aria-hidden="true">
         <div class="stat-card__label">Total Penjualan Hari Ini</div>
         <div class="stat-card__value" id="statTotalPenjualan">Rp 0</div>
         <div class="stat-card__trend up" aria-label="Tren naik">&uarr;</div>
@@ -89,7 +108,12 @@
         <div class="stat-card__sublabel">struk hari ini</div>
       </article>
 
-      <article class="stat-card stat-card--hero stat-card--selisih stat-card--clickable" id="cardHeroSelisih">
+      <!-- Kartu SELISIH KASIR (hero) disembunyikan (pola Fix #83/#84) —
+           aksesnya pindah ke burger menu (#burgerBtnSelisih) yang
+           membuka #modalSelisihKasir. Elemen tak dihapus agar DOM &
+           writer nilai (selisih.js) tetap aman. -->
+      <article class="stat-card stat-card--hero stat-card--selisih stat-card--clickable is-hidden"
+               id="cardHeroSelisih" style="display:none" aria-hidden="true">
         <div class="stat-card__label">
           Selisih Kasir
           <span class="stat-card__sublabel">(Tgl 1 - Hari Ini)</span>
@@ -158,7 +182,10 @@
           <div class="stat-card__value" id="statSetoranKasir">Rp 0</div>
         </article>
 
-        <article class="stat-card stat-card--selisih stat-card--clickable" id="cardSelisihKasir">
+        <!-- Kartu SELISIH KASIR disembunyikan (pola Fix #83/#84) —
+             aksesnya pindah ke burger menu (#burgerBtnSelisih). -->
+        <article class="stat-card stat-card--selisih stat-card--clickable is-hidden"
+                 id="cardSelisihKasir" style="display:none" aria-hidden="true">
           <div class="stat-card__label">
             Selisih Kasir
             <span class="stat-card__sublabel">(Tgl 1 - Hari Ini)</span>
@@ -1814,6 +1841,8 @@
 
   <script src="js/qris.js" defer></script>
   <script src="js/setoran.js" defer></script>
+  <script src="js/penjualan.js" defer></script>
+  <script src="js/selisih.js" defer></script>
   <script src="js/dashboard.js" defer></script>
   <script src="js/kas.js" defer></script>
   <script src="js/bank.js" defer></script>
