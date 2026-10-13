@@ -92,7 +92,13 @@
       <li>
         <button type="button" class="burger-menu-item" id="burgerBtnKerugianSO">
           <span class="burger-menu-icon">&#128201;</span>
-          <span class="burger-menu-label">Kerugian SO</span>
+          <span class="burger-menu-label">Mines SO</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnKelebihanSO">
+          <span class="burger-menu-icon">&#128200;</span>
+          <span class="burger-menu-label">Plus SO</span>
         </button>
       </li>
       <!-- Tempat list menu akan dipindah satu per satu -->
@@ -402,7 +408,12 @@
           <div class="stat-card__label">Kerugian SO Bulan Ini</div>
           <div class="stat-card__value" id="statKerugianSO">Rp 0</div>
         </article>
-        <article class="stat-card stat-card--surplus stat-card--clickable" id="cardKelebihanSO">
+        <!-- Kartu KELEBIHAN SO disembunyikan (pola Fix #83/#84/#87) —
+             aksesnya pindah ke burger menu (#burgerBtnKelebihanSO) yang
+             membuka #modalKelebihanSO. Elemen tak dihapus agar DOM &
+             writer nilai (selisih.js) tetap aman. -->
+        <article class="stat-card stat-card--surplus stat-card--clickable is-hidden"
+                 id="cardKelebihanSO" style="display:none" aria-hidden="true">
           <div class="stat-card__label">Kelebihan SO Bulan Ini</div>
           <div class="stat-card__value" id="statKelebihanSO">Rp 0</div>
         </article>

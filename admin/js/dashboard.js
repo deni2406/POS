@@ -2667,10 +2667,18 @@ const reRenderMemberTable = () => {
     if (typeof window.openKasirModal === 'function') window.openKasirModal();
   });
 
-  // Item burger "Kerugian SO": tutup drawer → buka #modalKerugianSO
+  // Item burger "Mines SO": tutup drawer → buka #modalKerugianSO
   // (fungsi openSoModal di-eksport ke window oleh selisih.js,
   //  pola Fix #86).
   safeAddEventListener('burgerBtnKerugianSO', 'click', () => {
     closeBurgerDrawer();
     if (typeof window.openSoModal === 'function') window.openSoModal();
+  });
+
+  // Item burger "Plus SO": tutup drawer → buka #modalKelebihanSO
+  // (fungsi openPlusModal di-eksport ke window oleh selisih.js,
+  //  pola Fix #86).
+  safeAddEventListener('burgerBtnKelebihanSO', 'click', () => {
+    closeBurgerDrawer();
+    if (typeof window.openPlusModal === 'function') window.openPlusModal();
   });
