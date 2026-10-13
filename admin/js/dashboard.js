@@ -2666,3 +2666,11 @@ const reRenderMemberTable = () => {
     closeBurgerDrawer();
     if (typeof window.openKasirModal === 'function') window.openKasirModal();
   });
+
+  // Item burger "Kerugian SO": tutup drawer → buka #modalKerugianSO
+  // (fungsi openSoModal di-eksport ke window oleh selisih.js,
+  //  pola Fix #86).
+  safeAddEventListener('burgerBtnKerugianSO', 'click', () => {
+    closeBurgerDrawer();
+    if (typeof window.openSoModal === 'function') window.openSoModal();
+  });

@@ -89,6 +89,12 @@
           <span class="burger-menu-label">Barang Kasir</span>
         </button>
       </li>
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnKerugianSO">
+          <span class="burger-menu-icon">&#128201;</span>
+          <span class="burger-menu-label">Kerugian SO</span>
+        </button>
+      </li>
       <!-- Tempat list menu akan dipindah satu per satu -->
     </ul>
   </aside>
@@ -387,7 +393,12 @@
     <div class="tab-panel" id="panel-inventori" role="tabpanel" aria-labelledby="tab-inventori">
     <div class="dashboard-section" aria-label="Metrik Inventori">
       <section class="stat-grid" aria-label="Metrik Inventori">
-        <article class="stat-card stat-card--loss stat-card--clickable" id="cardKerugianSO">
+        <!-- Kartu KERUGIAN SO disembunyikan (pola Fix #83/#84/#87) —
+             aksesnya pindah ke burger menu (#burgerBtnKerugianSO) yang
+             membuka #modalKerugianSO. Elemen tak dihapus agar DOM &
+             writer nilai (selisih.js) tetap aman. -->
+        <article class="stat-card stat-card--loss stat-card--clickable is-hidden"
+                 id="cardKerugianSO" style="display:none" aria-hidden="true">
           <div class="stat-card__label">Kerugian SO Bulan Ini</div>
           <div class="stat-card__value" id="statKerugianSO">Rp 0</div>
         </article>
