@@ -1,0 +1,78 @@
+/* ============================================================
+   PBMS ADMIN — MODUL SETORAN KASIR (dipisahkan dari dashboard.css)
+   Salinan blok Setoran Kasir (Fix #21) dari dashboard.css;
+   z-index #modalSetoranKasir 650 → 1000 mengikuti standar Fix #80
+   (di atas burger drawer 997, di bawah modal edit member).
+   ============================================================ */
+
+/* ── Card Total Setoran Kasir (Fix #21) — aksen emerald/hijau ───── */
+.stat-card--setoran {
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.stat-card--setoran .stat-card__value {
+  color: #10b981; /* emerald-500 */
+}
+
+.stat-card--setoran.stat-card--clickable:hover {
+  border-color: #10b981;
+}
+
+/* ── Modal: Rekap Setoran & Rincian Kasir ────────────────────────── */
+
+/* Modal rekap setoran — z-index 1000 (Fix #80: di atas burger drawer
+   997, di bawah modal edit member 10050). Sebelumnya 650. */
+#modalSetoranKasir {
+  z-index: 1000;
+}
+
+/* Wrapper ringkasan rekap setoran — memuat .tx-chip yang sudah ada */
+.setoran-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Chip setoran tunai — aksen emas/hijau (uang tunai wajib) */
+.tx-chip--setoran-tunai {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.tx-chip--setoran-tunai .tx-chip__value {
+  color: #10b981;
+}
+
+/* Chip non-tunai / QRIS — aksen biru */
+.tx-chip--setoran-non-tunai {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.tx-chip--setoran-non-tunai .tx-chip__value {
+  color: #3b82f6;
+}
+
+/* Chip total omzet — aksen ungu/aksent */
+.tx-chip--setoran-omzet {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: rgba(168, 85, 247, 0.35);
+}
+
+.tx-chip--setoran-omzet .tx-chip__value {
+  color: #a855f7;
+}
+
+/* Highlight kolom Omzet Tunai (Setoran Wajib) — aksen emerald agar
+   mudah dibedakan dengan pembayaran digital */
+#tableSetoranKasir td:nth-child(3),
+#tableSetoranKasir th:nth-child(3) {
+  color: #10b981;
+}
+
+#tableSetoranKasir th:nth-child(3) {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+/* ── Stat-card accent color (tab panel) ─────────────────────────── */
+.tab-panel .stat-card--setoran .stat-card__value { color: #60a5fa; }

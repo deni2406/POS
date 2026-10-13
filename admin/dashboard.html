@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Admin</title>
   <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/qris.css">
   <link rel="stylesheet" href="css/kas.css">
   <link rel="stylesheet" href="css/bank.css">
+  <link rel="stylesheet" href="css/setoran.css">
 </head>
 <body>
   <!-- Topbar -->
@@ -46,6 +48,18 @@
         <button type="button" class="burger-menu-item" id="burgerBtnSaldoKas">
           <span class="burger-menu-icon">&#128176;</span>
           <span class="burger-menu-label">Saldo Kas Laci</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnQris">
+          <span class="burger-menu-icon">&#128241;</span>
+          <span class="burger-menu-label">Pencatatan QRIS</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnSetoran">
+          <span class="burger-menu-icon">&#128176;</span>
+          <span class="burger-menu-label">Rekap Setoran</span>
         </button>
       </li>
       <!-- Tempat list menu akan dipindah satu per satu -->
@@ -122,12 +136,21 @@
           <div class="stat-card__value" id="statTotalModal">Rp 0</div>
         </article>
 
-        <article class="stat-card stat-card--kas stat-card--clickable" id="cardSaldoKas">
+        <!-- Kartu SALDO KAS LACI disembunyikan (Fix #83) — aksesnya pindah ke
+             burger menu (#burgerBtnSaldoKas) yang membuka #modalKasLaci.
+             Elemen tak dihapus agar DOM & listener lama tak rusak. -->
+        <article class="stat-card stat-card--kas stat-card--clickable is-hidden"
+                 id="cardSaldoKas" style="display:none" aria-hidden="true">
           <div class="stat-card__label">Saldo Kas Laci</div>
           <div class="stat-card__value" id="statSaldoKas">Rp 0</div>
         </article>
 
-        <article class="stat-card stat-card--setoran stat-card--clickable" id="cardSetoranKasir">
+        <!-- Kartu REKAP SETORAN KASIR disembunyikan — aksesnya pindah ke
+             burger menu (#burgerBtnSetoran) yang membuka #modalSetoranKasir.
+             Elemen tak dihapus agar DOM & listener lama tak rusak (pola
+             Fix #83). -->
+        <article class="stat-card stat-card--setoran stat-card--clickable is-hidden"
+                 id="cardSetoranKasir" style="display:none" aria-hidden="true">
           <div class="stat-card__label">
             Total Setoran Kasir
             <span class="stat-card__sublabel">(Tgl 1 - Hari Ini)</span>
@@ -144,7 +167,11 @@
           <div class="stat-card__sublabel">Akumulasi selisih tutup shift</div>
         </article>
 
-        <article class="stat-card stat-card--qris stat-card--clickable" id="cardQrisHistory">
+        <!-- Kartu QRIS disembunyikan dari grid dashboard utama — aksesnya pindah ke
+             burger menu (#burgerBtnQris) yang membuka #modalQrisHistory.
+             Elemen tak dihapus agar DOM & listener lama tak rusak. -->
+        <article class="stat-card stat-card--qris stat-card--clickable is-hidden"
+                 id="cardQrisHistory" style="display:none" aria-hidden="true">
           <div class="stat-card__label">QRIS</div>
           <div class="stat-card__value" id="statQrisHariIni">Rp --</div>
           <div class="stat-card__sublabel">Akumulasi bulan berjalan</div>
@@ -1785,6 +1812,8 @@
     </div>
   </div>
 
+  <script src="js/qris.js" defer></script>
+  <script src="js/setoran.js" defer></script>
   <script src="js/dashboard.js" defer></script>
   <script src="js/kas.js" defer></script>
   <script src="js/bank.js" defer></script>

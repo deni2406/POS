@@ -132,7 +132,10 @@ const reRenderKasTable = () => {
 
 inputSearchKas.addEventListener('input', reRenderKasTable);
 selectTipeKas.addEventListener('change', reRenderKasTable);
-cardSaldoKas.addEventListener('click', openKasModal);
+// Card cardSaldoKas disembunyikan (Fix #83) — akses pindah ke burger menu
+// (#burgerBtnSaldoKas di dashboard.js). Elemen tetap ada di DOM sehingga
+// listener ini tetap valid; tak perlu dihapus.
+if (cardSaldoKas) cardSaldoKas.addEventListener('click', openKasModal);
 kasBtnClose.addEventListener('click', closeKasModal);
 kasModal.addEventListener('click', (e) => {
   if (e.target === kasModal) closeKasModal();

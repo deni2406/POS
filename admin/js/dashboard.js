@@ -1075,102 +1075,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // ── MODAL: Rekap Setoran & Rincian Kasir (Fix #21) ───────────────
-  const setoranModal = document.getElementById('modalSetoranKasir');
-  const setoranBtnClose = document.getElementById('btnCloseModalSetoran');
-  const inputTanggalSetoran = document.getElementById('inputTanggalSetoran');
-  const inputSearchSetoran = document.getElementById('inputSearchSetoran');
-  const sumSetoranTunai = document.getElementById('sumSetoranTunai');
-  const sumNonTunai = document.getElementById('sumNonTunai');
-  const sumTotalOmzet = document.getElementById('sumTotalOmzet');
-  const setoranBody = document.getElementById('setoranTableBody');
+  // ── MODAL: Rekap Setoran & Rincian Kasir (Fix #21) — modul dipindah
+  //    ke setoran.js (pola Fix #81): open/close/load/reRender/initDate,
+  //    filter tanggal & search, ESC, overlay click. Di sini tinggal
+  //    pemicu klik card dengan null-check (card kini is-hidden di grid).
   const cardSetoranKasir = document.getElementById('cardSetoranKasir');
-  let setoranLoaded = false;
-
-  const initSetoranDateInput = () => {
-    if (!inputTanggalSetoran.value) {
-      inputTanggalSetoran.value = toYMD(new Date());
-    }
-  };
-
-  const openSetoranModal = () => {
-    initSetoranDateInput();
-    setoranModal.classList.add('is-open');
-    setoranModal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    if (!setoranLoaded) loadSetoranKasir(inputTanggalSetoran.value);
-  };
-
-  const closeSetoranModal = () => {
-    setoranModal.classList.remove('is-open');
-    setoranModal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  };
-
-  const loadSetoranKasir = async (dateYMD) => {
-    setoranBody.innerHTML =
-      '<tr class="tx-table__empty"><td colspan="6">Memuat data…</td></tr>';
-    try {
-      const d = dateYMD || inputTanggalSetoran.value;
-      const query = d ? '?date=' + encodeURIComponent(d) : '';
-      const resp = await fetch('/api/admin/cashier-deposits' + query);
-      const data = await resp.json();
-      if (!resp.ok || !data.success) {
-        throw new Error(data.message || 'Gagal memuat rekap setoran');
-      }
-
-      // Simpan ke cache global (sedia untuk konsumsi lain di dashboard)
-      window.setoranKasirCache = data.data || [];
-
-      reRenderSetoranTable();
-      setoranLoaded = true;
-    } catch (err) {
-      setoranBody.innerHTML =
-        `<tr class="tx-table__empty">
-           <td colspan="6">Gagal memuat rekap setoran: ${escapeHtml(err.message)}</td>
-         </tr>`;
-    }
-  };
-
-  const reRenderSetoranTable = () => {
-    const rows = Array.isArray(window.setoranKasirCache)
-      ? window.setoranKasirCache
-      : [];
-    const q = String(inputSearchSetoran.value || '').trim().toLowerCase();
-
-    const filtered = rows.filter(r =>
-      !q || String(r.kasir || '').toLowerCase().includes(q)
-    );
-
-    // Update stat chips ringkasan (mengikuti filter pencarian)
-    sumSetoranTunai.textContent = formatRupiah(
-      filtered.reduce((s, r) => s + (Number(r.omzet_tunai) || 0), 0)
-    );
-    sumNonTunai.textContent = formatRupiah(
-      filtered.reduce((s, r) =>
-        s + (Number(r.omzet_qris) || 0) + (Number(r.omzet_transfer) || 0), 0)
-    );
-    sumTotalOmzet.textContent = formatRupiah(
-      filtered.reduce((s, r) => s + (Number(r.total_omzet) || 0), 0)
-    );
-
-    setoranBody.innerHTML = filtered.length
-      ? filtered.map(r =>
-          `<tr>
-             <td>${escapeHtml(r.kasir) || '—'}</td>
-             <td class="col-num">${Number(r.total_transaksi) || 0}</td>
-             <td class="col-num">${formatRupiah(r.omzet_tunai)}</td>
-             <td class="col-num">${formatRupiah(r.omzet_qris)}</td>
-             <td class="col-num">${formatRupiah(r.omzet_transfer)}</td>
-             <td class="col-num">${formatRupiah(r.total_omzet)}</td>
-           </tr>`
-        ).join('')
-      : '<tr class="tx-table__empty"><td colspan="6">Tidak ada transaksi kasir untuk tanggal ini</td></tr>';
-  };
-
-  inputSearchSetoran.addEventListener('input', reRenderSetoranTable);
-  cardSetoranKasir.addEventListener('click', openSetoranModal);
-  setoranBtnClose.addEventListener('click', closeSetoranModal);
+  if (cardSetoranKasir) cardSetoranKasir.addEventListener('click', () => {
+    if (typeof window.openSetoranModal === 'function') window.openSetoranModal();
+  });
 
   // ── SELISIH KASIR CARD (Fix #56) ───────────────────────────────
   const cardSelisihKasir    = document.getElementById('cardSelisihKasir');
@@ -1305,18 +1217,6 @@ document.addEventListener('DOMContentLoaded', () => {
   modalSelisihKasir.addEventListener('click', (e) => {
     if (e.target === modalSelisihKasir) closeSelisihModal();
   });
-  setoranModal.addEventListener('click', (e) => {
-    if (e.target === setoranModal) closeSetoranModal();
-  });
-
-  // Ganti tanggal → fetch ulang data rekap setoran untuk tanggal terpilih
-  inputTanggalSetoran.addEventListener('change', () => {
-    const selected = inputTanggalSetoran.value;
-    if (!selected) return;
-    setoranLoaded = false;
-    loadSetoranKasir(selected);
-  });
-
   // ── MODAL: Meja Aktif & Total Belanja Berjalan (Fix #22 revisi) ──
   // Menampilkan HANYA sesi AKTIF (meja sedang berjalan) beserta total
   // belanja F&B berjalan per meja (SUM dari `pesanan_meja.subtotal`).
@@ -1814,237 +1714,20 @@ const reRenderMemberTable = () => {
     if (e.target === memberModal) closeMemberModal();
   });
 
-  // ── MODAL: Pencatatan & Riwayat QRIS (Fix #25) ─────────────────
-  const qrisModal = document.getElementById('modalQrisHistory');
-  const qrisBtnClose = document.getElementById('btnCloseModalQris');
-  const inputStartDateQris = document.getElementById('inputStartDateQris');
-  const inputEndDateQris = document.getElementById('inputEndDateQris');
-  const selectFilterStatusQris = document.getElementById('selectFilterStatusQris');
-  const inputSearchQris = document.getElementById('inputSearchQris');
-  const sumQrisHariIni = document.getElementById('sumQrisHariIni');
-  const sumQrisCountHariIni = document.getElementById('sumQrisCountHariIni');
-  const sumQrisBulanIni = document.getElementById('sumQrisBulanIni');
-  const sumQrisPending = document.getElementById('sumQrisPending');
-  const statQrisHariIni = document.getElementById('statQrisHariIni');
-  const qrisBody = document.getElementById('qrisTableBody');
+  // ── MODAL QRIS: pemicu card (modul penuh di qris.js) ─────────
+  // Pemeriksaan aman: hanya panggil bila qris.js berhasil load & export.
   const cardQrisHistory = document.getElementById('cardQrisHistory');
-  let qrisLoaded = false;
-
-  // ── INSTANT RENDER QRIS akumulasi bulan (Fix #32) ─────────────
-  // Card QRIS di dashboard utama menampilkan akumulasi bulan berjalan
-  // (bukan hari ini). Cache format-Rp di localStorage agar refresh
-  // berikutnya angka muncul instan tanpa berkedip "Rp --".
-  const QRIS_MONTH_CACHE_KEY = 'pbms_cached_total_qris_month';
-  const persistQrisMonthCache = (value) => {
-    try {
-      localStorage.setItem(QRIS_MONTH_CACHE_KEY, value);
-    } catch (e) { /* private mode — abaikan */ }
-  };
-  (function initQrisInstantCache() {
-    try {
-      const cached = localStorage.getItem(QRIS_MONTH_CACHE_KEY);
-      if (cached !== null && cached !== '') {
-        statQrisHariIni.textContent = cached;
-      }
-    } catch (e) { /* abaikan */ }
-  })();
-
-  const qrisStatusBadge = (status) => {
-    switch (String(status || '').toUpperCase()) {
-      case 'PENDING':
-        return '<span class="badge badge-qris--pending">Pending</span>';
-      case 'BATAL':
-        return '<span class="badge badge-qris--batal">Batal</span>';
-      case 'TERVERIFIKASI':
-      default:
-        return '<span class="badge badge-qris--terverifikasi">Terverifikasi</span>';
-    }
-  };
-
-  const openQrisModal = () => {
-    if (!inputStartDateQris.value) inputStartDateQris.value = kasMonthStartYMD();
-    if (!inputEndDateQris.value) inputEndDateQris.value = toYMD(new Date());
-    qrisModal.classList.add('is-open');
-    qrisModal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    if (!qrisLoaded) loadQrisHistory();
-    loadQrisSummary();
-  };
-
-  const closeQrisModal = () => {
-    qrisModal.classList.remove('is-open');
-    qrisModal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  };
-
-  const loadQrisSummary = async () => {
-    try {
-      const resp = await fetch('/api/admin/qris/summary');
-      const data = await resp.json();
-      if (!resp.ok || !data.success) return;
-      sumQrisHariIni.textContent = formatRupiah(data.total_hari_ini);
-      sumQrisCountHariIni.textContent = String(data.count_hari_ini || 0);
-      sumQrisBulanIni.textContent = formatRupiah(data.total_bulan_ini);
-      sumQrisPending.textContent = String(data.total_pending || 0);
-      // Card dashboard utama: akumulasi bulan berjalan (Fix #32)
-      const formattedBulan = formatRupiah(data.total_bulan_ini);
-      statQrisHariIni.textContent = formattedBulan;
-      persistQrisMonthCache(formattedBulan);
-    } catch (err) {
-      // Ringkasan tak kritis — biarkan nilai default saat gagal
-      console.warn('Gagal memuat ringkasan QRIS:', err.message);
-    }
-  };
-
-  const loadQrisHistory = async () => {
-    qrisBody.innerHTML =
-      '<tr class="tx-table__empty"><td colspan="5">Memuat data…</td></tr>';
-    try {
-      const s = inputStartDateQris.value || kasMonthStartYMD();
-      const e = inputEndDateQris.value || toYMD(new Date());
-      const query = `?startDate=${encodeURIComponent(s)}` +
-        `&endDate=${encodeURIComponent(e)}` +
-        `&status=${encodeURIComponent(selectFilterStatusQris.value || 'ALL')}` +
-        `&search=${encodeURIComponent(inputSearchQris.value || '')}`;
-      const resp = await fetch('/api/admin/qris/history' + query);
-      const data = await resp.json();
-      if (!resp.ok || !data.success) {
-        throw new Error(data.message || 'Gagal memuat riwayat QRIS');
-      }
-      window.qrisHistoryCache = data.data || [];
-      reRenderQrisTable();
-      qrisLoaded = true;
-    } catch (err) {
-      qrisBody.innerHTML =
-        `<tr class="tx-table__empty">
-           <td colspan="5">Gagal memuat riwayat QRIS: ${escapeHtml(err.message)}</td>
-         </tr>`;
-    }
-  };
-
-  const reRenderQrisTable = () => {
-    const rows = Array.isArray(window.qrisHistoryCache)
-      ? window.qrisHistoryCache
-      : [];
-    const q = String(inputSearchQris.value || '').trim().toLowerCase();
-
-    const filtered = rows.filter(r => {
-      const matchSearch = !q
-        || String(r.kode_transaksi || '').toLowerCase().includes(q)
-        || String(r.kasir || '').toLowerCase().includes(q)
-        || String(r.no_ref_qris || '').toLowerCase().includes(q);
-      return matchSearch;
-    });
-
-    qrisBody.innerHTML = filtered.length
-      ? filtered.map(r => {
-          // Tombol "Verifikasi" HANYA untuk PENDING — transaksi yang sudah
-          // TERVERIFIKASI / BATAL tidak perlu tindakan manual (badge saja).
-          const status = String(r.status_qris || '').toUpperCase();
-          const tombolVerifikasi = status === 'PENDING'
-            ? `<button type="button" class="btn-qris-verify"
-                       data-id="${r.id}" aria-label="Verifikasi QRIS transaksi ${escapeHtml(r.kode_transaksi)}">
-                 Verifikasi
-               </button>`
-            : '';
-          return `<tr data-qris-id="${r.id}">
-             <td class="time col-qris-waktu">${escapeHtml(r.waktu)} - ${escapeHtml(r.tanggal)}</td>
-             <td class="col-qris-kode">${escapeHtml(r.kode_transaksi)}</td>
-             <td class="col-qris-kasir">${escapeHtml(r.kasir)}</td>
-             <td class="col-num col-qris-nominal">${formatRupiah(r.total_bayar)}</td>
-             <td class="col-qris-status">
-               ${qrisStatusBadge(r.status_qris)}${tombolVerifikasi}
-             </td>
-           </tr>`;
-        }).join('')
-      : '<tr class="tx-table__empty"><td colspan="5">Tidak ada riwayat QRIS untuk filter ini</td></tr>';
-  };
-
-  // Delegate event: tombol "Verifikasi" → prompt status + RRN → PATCH
-  qrisBody.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.btn-qris-verify');
-    if (!btn) return;
-    const txId = btn.dataset.id;
-    const row = (window.qrisHistoryCache || []).find(r => String(r.id) === txId);
-    if (!row) return;
-
-    const statusKasus = ['TERVERIFIKASI', 'PENDING', 'BATAL'];
-    const pilihan =
-      `Pilih status verifikasi QRIS:\n` +
-      `1 = Terverifikasi  (saat ini: ${row.status_qris})\n` +
-      `2 = Pending\n3 = Batal\n\n` +
-      `Masukkan nomor: (Enter = simpan status saja, ketik status & RRN) `;
-    const masuk = window.prompt(pilihan, '');
-    if (masuk === null) return;
-
-    let statusFinal = row.status_qris;
-    let refFinal = row.no_ref_qris;
-    const tokens = masuk.trim().split(/\s+/).filter(Boolean);
-    if (tokens.length) {
-      const kodeStatus = tokens[0].toUpperCase();
-      if (kodeStatus === '1' || kodeStatus === 'TERVERIFIKASI') statusFinal = 'TERVERIFIKASI';
-      else if (kodeStatus === '2' || kodeStatus === 'PENDING') statusFinal = 'PENDING';
-      else if (kodeStatus === '3' || kodeStatus === 'BATAL') statusFinal = 'BATAL';
-      else {
-        const upper = kodeStatus;
-        if (statusKasus.includes(upper)) statusFinal = upper;
-      }
-      if (tokens.length > 1) refFinal = tokens.slice(1).join(' ');
-    }
-
-    try {
-      const resp = await fetch('/api/admin/qris/verify/' + txId, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status_qris: statusFinal, no_ref_qris: refFinal }),
-      });
-      const data = await resp.json();
-      if (!resp.ok || !data.success) {
-        throw new Error(data.message || 'Gagal memperbarui status QRIS');
-      }
-      // Perbarui cache lokal agar tabel langsung menampilkan hasil baru
-      row.status_qris = data.status_qris;
-      row.no_ref_qris = data.no_ref_qris;
-      reRenderQrisTable();
-      loadQrisSummary(); // pending count bisa berubah
-    } catch (err) {
-      window.alert('Gagal memperbarui QRIS: ' + err.message);
-    }
-  });
-
-  inputSearchQris.addEventListener('input', reRenderQrisTable);
-  selectFilterStatusQris.addEventListener('change', loadQrisHistory);
-  inputStartDateQris.addEventListener('change', () => {
-    if (!inputStartDateQris.value) return;
-    qrisLoaded = false;
-    loadQrisHistory();
-  });
-  inputEndDateQris.addEventListener('change', () => {
-    if (!inputEndDateQris.value) return;
-    qrisLoaded = false;
-    loadQrisHistory();
-  });
-  cardQrisHistory.addEventListener('click', openQrisModal);
-  qrisBtnClose.addEventListener('click', closeQrisModal);
-  qrisModal.addEventListener('click', (e) => {
-    if (e.target === qrisModal) closeQrisModal();
+  if (cardQrisHistory) cardQrisHistory.addEventListener('click', () => {
+    if (typeof window.openQrisModal === 'function') window.openQrisModal();
   });
 
   // ESC: tutup modal yang paling atas dulu (z-index tertinggi → terendah):
-  // qrisHistory (750) → listMember (700) → setoranKasir (650)
-  // → kasLaci (1000, handled by kas.js) → kelebihanSO (550) → kerugianSO (500)
+  // qrisHistory (1000, handled by qris.js) / setoranKasir (1000, handled
+  // by setoran.js) → listMember (700) → kelebihanSO (550) → kerugianSO (500)
   // → barang (400) → meja (300) → item (200) → utama
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && qrisModal.classList.contains('is-open')) {
-      closeQrisModal();
-      return;
-    }
     if (e.key === 'Escape' && memberModal.classList.contains('is-open')) {
       closeMemberModal();
-      return;
-    }
-    if (e.key === 'Escape' && setoranModal.classList.contains('is-open')) {
-      closeSetoranModal();
       return;
     }
     if (e.key === 'Escape' && plusModal.classList.contains('is-open')) {
@@ -2081,8 +1764,7 @@ const reRenderMemberTable = () => {
   });
 
   fetchStats();
-  // Populate card QRIS (akumulasi bulan) saat halaman load — Fix #32
-  loadQrisSummary();
+  // (Populate card QRIS kini dilakukan qris.js saat file dimuat — Fix #32)
 
   // ── GRAFIK TREN PENJUALAN (Fix #33) ──────────────────────────
   // Grafik batang omzet harian via Canvas API (tanpa library eksternal).
@@ -3849,4 +3531,20 @@ const reRenderMemberTable = () => {
   safeAddEventListener(burgerBtnSaldoKas, 'click', () => {
     closeBurgerDrawer();
     if (typeof openKasModal === 'function') openKasModal();
+  });
+
+  // Item burger "Pencatatan QRIS": tutup drawer → buka #modalQrisHistory
+  // (fungsi openQrisModal di-eksport ke window oleh qris.js, Fix #81;
+  //  cekaman typeof aman bila qris.js gagal load).
+  safeAddEventListener('burgerBtnQris', 'click', () => {
+    closeBurgerDrawer();
+    if (typeof window.openQrisModal === 'function') window.openQrisModal();
+  });
+
+  // Item burger "Rekap Setoran": tutup drawer → buka #modalSetoranKasir
+  // (fungsi openSetoranModal di-eksport ke window oleh setoran.js,
+  //  pola Fix #81; cekaman typeof aman bila setoran.js gagal load).
+  safeAddEventListener('burgerBtnSetoran', 'click', () => {
+    closeBurgerDrawer();
+    if (typeof window.openSetoranModal === 'function') window.openSetoranModal();
   });
