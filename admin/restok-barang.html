@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restok Barang — Panel Admin</title>
+  <link rel="stylesheet" href="css/restok-barang.css">
+</head>
+<body>
+  <div class="page">
+
+    <!-- Header -->
+    <header class="page-header" role="banner">
+      <div class="page-header__left">
+        <a href="dashboard.html" class="page-header__back">
+          <span class="page-header__back-arrow">&#8592;</span>
+          Kembali ke Dashboard
+        </a>
+        <span class="page-header__title">&#128230; Restok Barang</span>
+      </div>
+      <div class="page-header__right">
+        <button type="button" id="btnLogout" class="btn-logout">Logout</button>
+      </div>
+    </header>
+
+    <!-- Body -->
+    <main class="page__body" role="main">
+
+      <!-- Aksi Restok -->
+      <section class="restok-aksi" aria-label="Aksi Restok">
+        <h2 class="section-title">Restok Barang</h2>
+        <p class="section-subtitle">
+          Buka keranjang untuk menambah barang, mengubah kuantitas, dan membuat Purchase Order.
+        </p>
+        <div class="restok-aksi-bar">
+          <button type="button" id="btnBukaRestok" class="restok-open-btn">
+            + Buka Cart Restok
+          </button>
+        </div>
+      </section>
+
+      <!-- Purchase Order -->
+      <section class="po-section" aria-label="Purchase Order">
+        <div class="po-section__header">
+          <h2 class="section-title">Purchase Order</h2>
+          <div class="po-filter-bar" role="group" aria-label="Filter status PO">
+            <select id="selectPoStatus" aria-label="Filter status PO">
+              <option value="">Semua</option>
+              <option value="PENDING">PENDING</option>
+              <option value="BATAL">BATAL</option>
+            </select>
+            <button type="button" id="btnPoRefresh" class="po-refresh-btn" aria-label="Refresh daftar PO">
+              Refresh
+            </button>
+          </div>
+        </div>
+        <p class="po-sublabel">
+          PO berstatus PENDING bisa dibatalkan. Stok barang HANYA bertambah saat PO DITERIMA.
+        </p>
+        <div class="po-table-wrapper">
+          <table class="po-table" id="tablePoList">
+            <thead>
+              <tr>
+                <th>Nomor PO</th>
+                <th>Kategori</th>
+                <th class="col-num">Item</th>
+                <th class="col-num">Qty</th>
+                <th class="col-num">Total Modal</th>
+                <th>Waktu</th>
+                <th>Status</th>
+                <th class="col-aksi">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="poListBody">
+              <tr class="po-table__empty"><td colspan="8">Memuat data…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ── Modal Pembelian / Purchase Cart (Fix #45/#46/#55) ──────────── -->
+  <div class="modal-overlay" id="modalPembelian" role="dialog"
+       aria-modal="true" aria-labelledby="modalPembelianTitle" hidden>
+    <div class="modal-content modal-content--wide">
+      <header class="modal-header">
+        <h2 class="modal-title" id="modalPembelianTitle">Restok Barang / Purchase Cart</h2>
+        <button type="button" id="btnCloseModalPembelian" class="modal-close"
+                aria-label="Tutup">&times;</button>
+      </header>
+      <div class="modal-body pembelian-body">
+
+        <!-- Tab Filter Kategori (Fix #46) -->
+        <nav class="pem-kategori-tab" id="pemKategoriTab" aria-label="Kategori Restok">
+          <button type="button" class="pem-kategori-tab__btn is-active" data-pem-kategori="KASIR" aria-pressed="true">&#128722; Kasir</button>
+          <button type="button" class="pem-kategori-tab__btn" data-pem-kategori="BAR" aria-pressed="false">&#127873; Bar</button>
+          <button type="button" class="pem-kategori-tab__btn" data-pem-kategori="DAPUR" aria-pressed="false">&#127843; Dapur</button>
+        </nav>
+
+        <!-- Form: Tambah Item ke Cart -->
+        <section class="pembelian-form">
+          <div class="pembelian-form__header">
+            <span class="pembelian-form__label">Tambah Item</span>
+          </div>
+          <div class="pembelian-form__grid">
+            <div class="pembelian-field">
+              <label for="pemSearchBarang">Barang</label>
+              <input type="text" id="pemSearchBarang"
+                     placeholder="Ketik nama / kode barang…"
+                     autocomplete="off">
+            </div>
+            <div class="pembelian-field">
+              <label for="pemQty">Qty Beli</label>
+              <input type="number" id="pemQty" min="1" step="1" value="1">
+            </div>
+            <div class="pembelian-field">
+              <label for="pemHppBaru">HPP Baru</label>
+              <input type="number" id="pemHppBaru" min="0" step="1" placeholder="Rp">
+            </div>
+            <div class="pembelian-field">
+              <label for="pemHjBaru">Harga Jual Baru</label>
+              <input type="number" id="pemHjBaru" min="0" step="1" placeholder="Rp">
+            </div>
+            <div class="pembelian-field pembelian-field--action">
+              <button type="button" id="btnPemAddItem" class="btn-pem-add">
+                + Tambah
+              </button>
+            </div>
+          </div>
+          <!-- Dropdown hasil pencarian -->
+          <div class="pembelian-search-results" id="pemSearchResults" hidden>
+            <div class="pembelian-search-empty">Memuat…</div>
+          </div>
+        </section>
+
+        <!-- Tabel Keranjang -->
+        <section class="pembelian-cart">
+          <div class="pembelian-cart__header">
+            <span class="pembelian-cart__title">Keranjang <span class="pem-kategori-badge" id="pemKategoriBadge">KASIR</span></span>
+            <span class="pembelian-cart__count" id="pemCartCount">0 item</span>
+          </div>
+          <div class="modal-table-wrap">
+            <table class="pembelian-table" id="pemCartTable">
+              <thead>
+                <tr>
+                  <th>Barang</th>
+                  <th>Kategori</th>
+                  <th class="num">Stok</th>
+                  <th class="num">Qty</th>
+                  <th class="num">HPP Baru</th>
+                  <th class="num">Harga Jual</th>
+                  <th class="num">Subtotal Modal</th>
+                  <th class="col-aksi">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="pemCartBody">
+                <tr class="pembelian-table__empty"><td colspan="8">Belum ada item.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Ringkasan Cart -->
+        <section class="pembelian-summary">
+          <div class="pembelian-summary__row">
+            <span>Variasi Item</span>
+            <span class="pembelian-summary__val" id="pemSumVariasi">0</span>
+          </div>
+          <div class="pembelian-summary__row">
+            <span>Total Qty</span>
+            <span class="pembelian-summary__val" id="pemSumQty">0</span>
+          </div>
+          <div class="pembelian-summary__row">
+            <span>Total Modal Belanja</span>
+            <span class="pembelian-summary__val" id="pemSumModal">Rp 0</span>
+          </div>
+          <div class="pembelian-summary__row">
+            <span>Estimasi Margin</span>
+            <span class="pembelian-summary__val" id="pemSumMargin">—</span>
+          </div>
+        </section>
+
+        <!-- Opsi & Aksi -->
+        <footer class="pembelian-footer">
+          <label class="pembelian-checkbox">
+            <input type="checkbox" id="pemCatatKasKeluar">
+            <span>Catat pengeluaran ke Kas Laci</span>
+          </label>
+          <button type="button" id="btnPemCheckout" class="btn-pem-checkout" disabled>
+            Simpan &amp; Buat Nomor PO
+          </button>
+        </footer>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Auth check ─────────────────────────────────────────────── -->
+  <script>
+    if (!sessionStorage.getItem('pbms_admin_session')) {
+      window.location.replace('index.html');
+    }
+  </script>
+  <!-- Logout -->
+  <script>
+    document.getElementById('btnLogout').addEventListener('click', function () {
+      sessionStorage.removeItem('pbms_admin_session');
+      window.location.href = 'index.html';
+    });
+  </script>
+  <!-- Modul Pembelian (Cart Restok & PO) -->
+  <script src="js/pembelian.js" defer></script>
+</body>
+</html>

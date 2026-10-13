@@ -102,6 +102,18 @@
           <span class="burger-menu-label">Plus SO</span>
         </button>
       </li>
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnRestok">
+          <span class="burger-menu-icon">&#128230;</span>
+          <span class="burger-menu-label">Restok Barang</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnPembelianBank">
+          <span class="burger-menu-icon">&#128176;</span>
+          <span class="burger-menu-label">Pembelian Bank</span>
+        </button>
+      </li>
       <!-- Tempat list menu akan dipindah satu per satu -->
     </ul>
   </aside>
@@ -171,9 +183,9 @@
               aria-selected="false" aria-controls="panel-dapur">
         <span class="tab-btn__icon">&#127859;</span> Dapur — Bahan Mentah
       </button>
-      <button type="button" role="tab" class="tab-btn" data-tab="tab-pembelian-bank"
-              aria-selected="false" aria-controls="panel-pembelian-bank">
-        <span class="tab-btn__icon">&#128176;</span> Pembelian Bank
+      <button type="button" role="tab" class="tab-btn" data-tab="tab-restok"
+              aria-selected="false" aria-controls="panel-restok">
+        <span class="tab-btn__icon">&#128230;</span> Restok Barang
       </button>
     </nav>
 
@@ -334,50 +346,8 @@
     </section>
     </div><!-- /dashboard-section: Fluktuasi HPP -->
 
-    <!-- (Fix #54) Panel daftar Purchase Order — block mandiri di bawah grafik HPP -->
-    <div class="dashboard-section" aria-label="Purchase Order">
-    <section class="panel-grid" aria-label="Daftar Purchase Order">
-      <article class="panel-card panel-card--full panel-card--po" aria-label="Daftar Purchase Order">
-        <div class="panel-card__header-row">
-          <h2 class="panel-card__title panel-card__title--no-mb">
-            Purchase Order
-          </h2>
-          <div class="po-filter-bar" role="group" aria-label="Filter status PO">
-            <select id="selectPoStatus" aria-label="Filter status PO">
-              <option value="">Semua</option>
-              <option value="PENDING">PENDING</option>
-              <option value="BATAL">BATAL</option>
-            </select>
-            <button type="button" id="btnPoRefresh" class="po-refresh-btn" aria-label="Refresh daftar PO">
-              Refresh
-            </button>
-          </div>
-        </div>
-        <p class="po-sublabel">
-          PO berstatus PENDING bisa dibatalkan. Stok barang HANYA bertambah saat PO DITERIMA.
-        </p>
-        <div class="modal-table-wrap">
-          <table class="tx-table" id="tablePoList">
-            <thead>
-              <tr>
-                <th>Nomor PO</th>
-                <th>Kategori</th>
-                <th class="col-num">Item</th>
-                <th class="col-num">Qty</th>
-                <th class="col-num">Total Modal</th>
-                <th>Waktu</th>
-                <th>Status</th>
-                <th class="col-aksi">Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="poListBody">
-              <tr class="tx-table__empty"><td colspan="8">Memuat data…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-    </div><!-- /dashboard-section: Purchase Order -->
+    <!-- (Fix #91) Panel PO dipindahkan ke #panel-restok —
+         lihat blok TAB RESTOK BARANG di bawah. -->
 
     <!-- System Status & Recent Activity -->
     <div class="dashboard-section" aria-label="Status Sistem">
@@ -442,7 +412,12 @@
           </div>
           <div class="stat-card__sublabel">Klik untuk lihat daftar barang Kasir</div>
         </article>
-        <article class="stat-card stat-card--clickable stat-card--pembelian" id="cardPembelian">
+        <!-- Kartu RESTOK BARANG disembunyikan (Fix #91) — aksesnya pindah ke
+             tab "Restok Barang" (#panel-restok) & burger menu
+             (#burgerBtnRestok). Elemen tak dihapus agar DOM & listener
+             di pembelian.js (guard null) tetap aman. -->
+        <article class="stat-card stat-card--clickable stat-card--pembelian is-hidden"
+                 id="cardPembelian" style="display:none" aria-hidden="true">
           <div class="stat-card__label">Restok Barang</div>
           <div class="stat-card__value stat-card__value--action">+ Cart</div>
         </article>
@@ -640,94 +615,83 @@
       </div><!-- /dashboard-section -->
     </div><!-- /panel-dapur -->
 
-    <!-- TAB 6: Pembelian & Operasional via Saldo Bank (Fix #77) -->
-    <div class="tab-panel" id="panel-pembelian-bank" role="tabpanel" aria-labelledby="tab-pembelian-bank">
-      <section class="panel-card panel-card--full" aria-label="Pembelian & Operasional via Saldo Bank">
-        <h2 class="panel-card__title">Pembelian &amp; Operasional via Saldo Bank</h2>
+    <!-- (Fix #95) Panel Pembelian Bank dipindah ke halaman khusus
+         admin/pembelian-bank.html — akses via burger menu #burgerBtnPembelianBank. -->
 
-        <!-- Indikator sumber dana -->
-        <div class="pembelian-bank-saldo tx-chip tx-chip--bank-saldo">
-          <span class="tx-chip__label">Sumber Dana</span>
-          <span class="tx-chip__value" id="pbBankSaldoDisplay">Saldo Bank: Rp --</span>
-        </div>
+    <!-- TAB RESTOK BARANG (Fix #91) — akses utama Cart Restok & PO,
+         pengganti kartu lama #cardPembelian di panel-inventori.
+         Cart Restok dibuka lewat tombol di bawah (modal #modalPembelian
+         tetap di body, dikelola pembelian.js). Panel PO dipindah dari
+         panel-keuangan ke sini — semua ID elemen dipertahankan. -->
+    <div class="tab-panel" id="panel-restok" role="tabpanel" aria-labelledby="tab-restok">
+      <div class="dashboard-section" aria-label="Restok Barang &amp; Purchase Order">
+        <h2 class="section-title">Restok Barang</h2>
+      </div><!-- /dashboard-section: header -->
 
-        <!-- Form input -->
-        <form id="formPengeluaranBank" class="pembelian-bank-form">
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label" for="pbKategori">Kategori</label>
-              <select id="pbKategori" class="form-select" required>
-                <option value="LISTRIK_LUAR">Listrik Luar</option>
-                <option value="LISTRIK_DALAM">Listrik Dalam</option>
-                <option value="PERLENGKAPAN_DAPUR">Perlengkapan / Operasional Dapur</option>
-                <option value="PERLENGKAPAN_BAR">Perlengkapan / Operasional Bar</option>
-                <option value="PERLENGKAPAN_KASIR">Perlengkapan / Operasional Kasir</option>
-                <option value="PERLENGKAPAN_BILLIARD">Perlengkapan Billiard</option>
-                <option value="LAINNYA">Lainnya</option>
-              </select>
+      <div class="dashboard-section" aria-label="Aksi Restok">
+        <section class="panel-grid">
+          <article class="panel-card panel-card--full" aria-label="Aksi Restok">
+            <div class="panel-card__header-row">
+              <h2 class="panel-card__title panel-card__title--no-mb">Keranjang Restok</h2>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="pbNama">Nama Barang / Item</label>
-              <input type="text" id="pbNama" class="form-input"
-                     placeholder="cth: Token Listrik 100k" autocomplete="off" required>
+            <p class="po-sublabel">
+              Buka keranjang untuk menambah barang, mengubah kuantitas, dan membuat Purchase Order.
+              Gunakan tombol "Cek Stok Kritis Kasir" di panel Barang Kasir untuk mengisi otomatis
+              barang dengan stok &lt; 2 unit.
+            </p>
+            <div class="restok-aksi-bar">
+              <button type="button" id="btnBukaRestok" class="btn-pem-checkout restok-open-btn">
+                + Buka Cart Restok
+              </button>
             </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label" for="pbNominal">Nominal (Rp)</label>
-              <input type="number" id="pbNominal" class="form-input" placeholder="0" step="1" min="1" required>
-            </div>
-            <div class="form-group form-group--wide">
-              <label class="form-label" for="pbKeterangan">Keterangan (opsional)</label>
-              <input type="text" id="pbKeterangan" class="form-input"
-                     placeholder="cth: beli bulan Okt" autocomplete="off">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group form-group--action">
-              <button type="submit" class="btn btn-primary" id="btnSimpanPengeluaranBank">SIMPAN PEMBELIAN</button>
-            </div>
-          </div>
-        </form>
-        <div id="pbAlert" class="bank-alert-box" aria-live="polite" hidden></div>
+          </article>
+        </section>
+      </div><!-- /dashboard-section: aksi restok -->
 
-        <!-- Filter -->
-        <div class="tx-filter-bar" style="margin-top: 16px;">
-          <div class="tx-filter-search">
-            <input type="search" id="pbFilterQ" placeholder="Cari nama / keterangan…">
-          </div>
-          <select id="pbFilterKategori" class="form-select">
-            <option value="">Semua Kategori</option>
-            <option value="LISTRIK_LUAR">Listrik Luar</option>
-            <option value="LISTRIK_DALAM">Listrik Dalam</option>
-            <option value="PERLENGKAPAN_DAPUR">Perlengkapan / Operasional Dapur</option>
-            <option value="PERLENGKAPAN_BAR">Perlengkapan / Operasional Bar</option>
-            <option value="PERLENGKAPAN_KASIR">Perlengkapan / Operasional Kasir</option>
-            <option value="PERLENGKAPAN_BILLIARD">Perlengkapan Billiard</option>
-            <option value="LAINNYA">Lainnya</option>
-          </select>
-        </div>
-
-        <!-- Tabel riwayat -->
-        <div class="bar-table-wrapper" style="margin-top: 12px;">
-          <table class="tx-table" id="tablePengeluaranBank">
-            <thead>
-              <tr>
-                <th class="col-no">#</th>
-                <th class="time">Tgl &amp; Waktu</th>
-                <th>Kategori</th>
-                <th>Nama Barang / Keterangan</th>
-                <th class="col-num">Nominal (Rp)</th>
-                <th>Admin</th>
-              </tr>
-            </thead>
-            <tbody id="pbTableBody">
-              <tr><td colspan="6" class="tx-table__empty">Memuat data…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div><!-- /panel-pembelian-bank -->
+      <div class="dashboard-section" aria-label="Purchase Order">
+        <section class="panel-grid" aria-label="Daftar Purchase Order">
+          <article class="panel-card panel-card--full panel-card--po" aria-label="Daftar Purchase Order">
+            <div class="panel-card__header-row">
+              <h2 class="panel-card__title panel-card__title--no-mb">
+                Purchase Order
+              </h2>
+              <div class="po-filter-bar" role="group" aria-label="Filter status PO">
+                <select id="selectPoStatus" aria-label="Filter status PO">
+                  <option value="">Semua</option>
+                  <option value="PENDING">PENDING</option>
+                  <option value="BATAL">BATAL</option>
+                </select>
+                <button type="button" id="btnPoRefresh" class="po-refresh-btn" aria-label="Refresh daftar PO">
+                  Refresh
+                </button>
+              </div>
+            </div>
+            <p class="po-sublabel">
+              PO berstatus PENDING bisa dibatalkan. Stok barang HANYA bertambah saat PO DITERIMA.
+            </p>
+            <div class="modal-table-wrap">
+              <table class="tx-table" id="tablePoList">
+                <thead>
+                  <tr>
+                    <th>Nomor PO</th>
+                    <th>Kategori</th>
+                    <th class="col-num">Item</th>
+                    <th class="col-num">Qty</th>
+                    <th class="col-num">Total Modal</th>
+                    <th>Waktu</th>
+                    <th>Status</th>
+                    <th class="col-aksi">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="poListBody">
+                  <tr class="tx-table__empty"><td colspan="8">Memuat data…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </div><!-- /dashboard-section: Purchase Order -->
+    </div><!-- /panel-restok -->
 
   </main>
 
@@ -1891,6 +1855,7 @@
   <script src="js/selisih.js" defer></script>
   <script src="js/barang.js" defer></script>
   <script src="js/pembelian.js" defer></script>
+  <script src="js/pembelian-bank.js" defer></script>
   <script src="js/dashboard.js" defer></script>
   <script src="js/kas.js" defer></script>
   <script src="js/bank.js" defer></script>

@@ -166,18 +166,32 @@ document.addEventListener('DOMContentLoaded', () => {
       const target = btn.getAttribute('data-tab').replace(/^tab-/, 'panel-');
       const panel = document.getElementById(target);
       if (panel) panel.classList.add('is-active');
-      // Refresh Pembelian Bank saat tabnya aktif (Fix #77)
-      if (target === 'panel-pembelian-bank' && typeof loadPengeluaranBank === 'function') {
-        loadPengeluaranBank();
-      }
       // Refresh Bahan Mentah Bar saat tabnya aktif
       if (target === 'panel-bar' && typeof window.__loadBarMaterialsRef === 'function') {
         window.__loadBarMaterialsRef();
       } else if (target === 'panel-bar' && typeof loadBarMaterials === 'function') {
         loadBarMaterials();
       }
+      // (Fix #91) Refresh daftar PO saat tab Restok Barang aktif
+      if (target === 'panel-restok') {
+        const wLoadPo = window.__pembelianLoadPoList;
+        if (typeof wLoadPo === 'function') wLoadPo();
+      }
     });
   });
+
+  // (Fix #91) Helper: aktifkan tab tertentu dari luar (burger menu).
+  // Cari tombol tab yang data-tab-nya sesuai, lalu trigger click handler
+  // yang sama dengan navigasi manual — agar state is-active & refresh
+  // PO berjalan persis seperti saat user klik tab langsung.
+  window.__activateDashboardTab = (tabName) => {
+    const target = String(tabName || '').replace(/^tab-/, '');
+    if (!target) return;
+    const btn = document.querySelector(
+      '.tab-btn[data-tab="' + target + '"]'
+    );
+    if (btn) btn.click();
+  };
 
   // ── HERO SELISIH CLICK (Fix #58) — modul selisih kini di selisih.js ──
   // cardHeroSelisih kini is-hidden (Fix #83/#84). Klik pemicu tetap
@@ -362,9 +376,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // openKasirModal, updateKasirCardMetrics kini di-eksport ke window
   // oleh admin/js/barang.js. Di dashboard.js cukup akses via window.
 
-  // (Fix #53) TOMBOL "Cek Stok Kritis (< 2) & Buat PO" — TETAP di
-  // dashboard.js karena bergantung pada pemCart & openPembelianModal
-  // (modul Pembelian). Akses cache & isKasir via window exports barang.js.
+  // (Fix #53, #89) TOMBOL "Cek Stok Kritis (< 2) & Buat PO"
+  // Logika inti tetap di dashboard.js (akses cache barang via window exports),
+  // namun pengisian cart & pembukaan modal DELEGASIKAN sepenuhnya ke bridge
+  // publik window.openPembelianForCritical di pembelian.js.
+  // State internal pemCart, pembelianSetPemKategori, openPembelianModal
+  // TIDAK ADAK lagi di dashboard.js — jangan diakses langsung.
   const btnKasirCekStokKritis = document.getElementById('btnKasirCekStokKritis');
 
   const cekStokKritisKasir = async () => {
@@ -414,22 +431,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof wBridge === 'function') {
       wBridge(critical);
     } else {
-      // Fallback manual jika pembelian.js belum load
-      critical.forEach(item => {
-        pemCart.push({
-          barang_id: item.id,
-          nama: item.nama_barang || '',
-          stok: Number(item.stok) || 0,
-          kategori: 'KASIR',
-          hpp_lama: item.harga_modal || 0,
-          hj_lama:  item.harga_jual  || 0,
-          hpp_baru: item.harga_modal || 0,
-          hj_baru:  item.harga_jual  || 0,
-          qty: 10,
-        });
-      });
-      if (typeof window.pembelianSetPemKategori === 'function') window.pembelianSetPemKategori('KASIR');
-      if (typeof window.openPembelianModal === 'function') window.openPembelianModal();
+      // Bridge publik belum tersedia (pembelian.js gagal load).
+      // Jangan mengakses state internal pemCart — tampilkan error jelas.
+      console.error('[dashboard] openPembelianForCritical tidak tersedia; modul pembelian.js belum terinisialisasi.');
+      alert('Gagal membuka modal pembelian: modul pembelian belum siap. Silakan muat ulang halaman.');
     }
   };
 
@@ -1369,7 +1374,6 @@ const reRenderMemberTable = () => {
 
   // ── PURCHASE CART / RESTOK BARANG & PO MANAGEMENT — dipisah ke pembelian.js (Fix #89) ──
   // Semua fungsi pembelian kini di-eksport ke window oleh admin/js/pembelian.js.
-});
 
   // ── BAR Raw Materials (Fix #69) ─────────────────────────────────
   const formBarMaterial = document.getElementById('formBarMaterial');
@@ -1446,134 +1450,10 @@ const reRenderMemberTable = () => {
     });
   };
 
-  // ── Pembelian & Operasional via Saldo Bank (Fix #77) ────────────
-  const pbForm = document.getElementById('formPengeluaranBank');
-  const pbTableBody = document.getElementById('pbTableBody');
-  const pbBankSaldoDisplay = document.getElementById('pbBankSaldoDisplay');
-  const pbAlertBox = document.getElementById('pbAlert');
-  const pbKategori = document.getElementById('pbKategori');
-  const pbNama = document.getElementById('pbNama');
-  const pbNominal = document.getElementById('pbNominal');
-  const pbKeterangan = document.getElementById('pbKeterangan');
-  const pbFilterQ = document.getElementById('pbFilterQ');
-  const pbFilterKategori = document.getElementById('pbFilterKategori');
-  let pbSearchTimeout = null;
-
-  const PB_KATEGORI_LABEL = {
-    LISTRIK_LUAR: 'Listrik Luar',
-    LISTRIK_DALAM: 'Listrik Dalam',
-    PERLENGKAPAN_DAPUR: 'Perlengkapan / Operasional Dapur',
-    PERLENGKAPAN_BAR: 'Perlengkapan / Operasional Bar',
-    PERLENGKAPAN_KASIR: 'Perlengkapan / Operasional Kasir',
-    PERLENGKAPAN_BILLIARD: 'Perlengkapan Billiard',
-    LAINNYA: 'Lainnya',
-  };
-
-  const pbRupiah = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
-
-  const showPbAlert = (kind, msg) => {
-    if (!pbAlertBox) return;
-    pbAlertBox.className = 'bank-alert-box ' + (kind === 'success' ? 'is-success' : 'is-danger');
-    pbAlertBox.textContent = msg;
-    pbAlertBox.hidden = false;
-    clearTimeout(showPbAlert._t);
-    showPbAlert._t = setTimeout(() => { pbAlertBox.hidden = true; }, 5000);
-  };
-
-  const loadPengeluaranBank = async () => {
-    const kategori = pbFilterKategori ? pbFilterKategori.value : '';
-    const q = pbFilterQ ? pbFilterQ.value.trim() : '';
-    try {
-      const url = '/api/admin/pengeluaran-bank' +
-        (kategori ? ('?kategori=' + encodeURIComponent(kategori)) : '') +
-        (q ? ((kategori ? '&' : '?') + 'q=' + encodeURIComponent(q)) : '');
-      const resp = await fetch(url);
-      const data = await resp.json();
-      if (!data.success) throw new Error(data.message || 'Gagal memuat');
-      if (data.saldo_bank_saat_ini !== undefined) {
-        const elSaldo = pbBankSaldoDisplay ||
-          document.getElementById('pbSaldoBank') ||
-          document.querySelector('#sumberDanaBadge');
-        if (elSaldo) elSaldo.textContent = 'Saldo Bank: ' + pbRupiah(data.saldo_bank_saat_ini);
-      }
-      const rows = data.data || [];
-      if (!rows.length) {
-        pbTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Belum ada pengeluaran bank</td></tr>';
-        return;
-      }
-      pbTableBody.innerHTML = rows.map((r, i) => {
-        const ket = r.keterangan ? '<div class="pb-keterangan">' + escapeHtml(r.keterangan) + '</div>' : '';
-        return '<tr>' +
-          '<td class="col-no">' + (i + 1) + '</td>' +
-          '<td class="time">' + escapeHtml(fmtTglJam(r.tanggal)) + '</td>' +
-          '<td>' + escapeHtml(PB_KATEGORI_LABEL[r.kategori] || r.kategori || '') + '</td>' +
-          '<td><strong>' + escapeHtml(r.nama_barang) + '</strong>' + ket + '</td>' +
-          '<td class="col-num">' + pbRupiah(r.nominal) + '</td>' +
-          '<td>' + escapeHtml(r.created_by || 'admin') + '</td>' +
-          '</tr>';
-      }).join('');
-    } catch (err) {
-      pbTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Gagal memuat: ' + escapeHtml(err.message) + '</td></tr>';
-    }
-  };
-
-  const submitPengeluaranBank = async (e) => {
-    e.preventDefault();
-    const adminName = sessionStorage.getItem('pbms_admin_session') || 'admin';
-    const kategori = pbKategori.value;
-    const nama = pbNama.value.trim();
-    const nominal = Math.round(Number(pbNominal.value) || 0);
-    const keterangan = pbKeterangan.value.trim();
-
-    if (!nama) { showPbAlert('danger', 'Nama barang / item wajib diisi.'); return; }
-    if (!(nominal > 0)) { showPbAlert('danger', 'Nominal harus > 0.'); return; }
-
-    const btn = document.getElementById('btnSimpanPengeluaranBank');
-    if (btn) { btn.disabled = true; btn.textContent = 'Memproses…'; }
-    try {
-      const resp = await fetch('/api/admin/pengeluaran-bank', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kategori, nama_barang: nama, nominal, keterangan, admin_name: adminName,
-        }),
-      });
-      const data = await resp.json();
-      if (!resp.ok || !data.success) {
-        if (data.code === 'SALDO_BANK_TIDAK_CUKUP') {
-          showPbAlert('danger',
-            'Saldo bank tidak cukup (Saldo: Rp ' +
-            Number(data.saldo_bank_saat_ini || 0).toLocaleString('id-ID') + ').');
-        } else {
-          showPbAlert('danger', data.message || 'Gagal menyimpan.');
-        }
-        return;
-      }
-      showPbAlert('success',
-        'Pengeluaran bank tersimpan. Saldo kini: ' + pbRupiah(data.saldo_bank_saat_ini) + '.');
-      pbNama.value = ''; pbNominal.value = ''; pbKeterangan.value = '';
-      await loadPengeluaranBank();
-    } catch (err) {
-      showPbAlert('danger', 'Gagal menyimpan: ' + err.message);
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'SIMPAN PEMBELIAN'; }
-    }
-  };
-
-  if (pbForm) {
-    safeAddEventListener(pbForm, 'submit', submitPengeluaranBank);
-  }
-  if (pbFilterQ) {
-    safeAddEventListener(pbFilterQ, 'input', () => {
-      clearTimeout(pbSearchTimeout);
-      pbSearchTimeout = setTimeout(loadPengeluaranBank, 250);
-    });
-  }
-  if (pbFilterKategori) {
-    safeAddEventListener(pbFilterKategori, 'change', loadPengeluaranBank);
-  }
-  // Muat saat init
-  loadPengeluaranBank();
+  // (Fix #92) Modul Pembelian Bank dipisah ke admin/js/pembelian-bank.js.
+  // (Fix #95) Halaman Pembelian Bank kini di admin/pembelian-bank.html —
+  // handler burger membuka URL langsung; bridge __loadPengeluaranBank
+  // tak lagi dipakai dashboard.js. Jangan definisi ulang fungsi di sini.
 
   // ── Bar Form: Search & Auto-fill (Fix #71) ──────────────────────
   const barNamaInput = document.getElementById('barNama');
@@ -2099,3 +1979,25 @@ const reRenderMemberTable = () => {
     closeBurgerDrawer();
     if (typeof window.openPlusModal === 'function') window.openPlusModal();
   });
+
+  // Item burger "Restok Barang" (Fix #91): tutup drawer → aktifkan
+  // tab "Restok Barang" (panel-restok) + buka modal Cart Restok.
+  // Navigasi tab memakai helper window.__activateDashboardTab agar
+  // state is-active dan refresh daftar PO ikut berjalan.
+  safeAddEventListener('burgerBtnRestok', 'click', () => {
+    closeBurgerDrawer();
+    if (typeof window.__activateDashboardTab === 'function') {
+      window.__activateDashboardTab('tab-restok');
+    }
+    if (typeof window.openPembelianModal === 'function') {
+      window.openPembelianModal();
+    }
+  });
+
+  // Item burger "Pembelian Bank" (Fix #95): tutup drawer → buka halaman
+  // khusus pembelian-bank.html (panel lama dihapus dari dashboard).
+  safeAddEventListener('burgerBtnPembelianBank', 'click', () => {
+    closeBurgerDrawer();
+    window.location.href = 'pembelian-bank.html';
+  });
+});

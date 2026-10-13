@@ -1,3 +1,26 @@
+/* ── Purchase Cart / Restok Barang (Fix #45, Fix #91) ───────────────────── */
+/* Fix #91: tombol + Buka Cart Restok di #panel-restok */
+.restok-aksi-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.restok-open-btn {
+  background: var(--accent, #3b82f6);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.restok-open-btn:hover {
+  background: #2563eb;
+}
+
 /* ── Purchase Cart / Restok Barang (Fix #45) ──────────────────────────────── */
 #modalPembelian {
   z-index: 1000;

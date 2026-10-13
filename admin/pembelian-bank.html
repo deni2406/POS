@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pembelian Bank — Panel Admin</title>
+  <link rel="stylesheet" href="css/pembelian-bank.css">
+</head>
+<body>
+  <div class="page">
+
+    <!-- Header -->
+    <header class="page-header" role="banner">
+      <div class="page-header__left">
+        <a href="dashboard.html" class="page-header__back" id="btnBackDashboard">
+          <span class="page-header__back-arrow">&#8592;</span>
+          Kembali ke Dashboard
+        </a>
+        <span class="page-header__title">&#128176; Pembelian Bank</span>
+      </div>
+      <div class="page-header__right">
+        <button type="button" id="btnLogout" class="btn-logout">Logout</button>
+      </div>
+    </header>
+
+    <!-- Body -->
+    <main class="page__body" role="main">
+
+      <!-- Kartu utama -->
+      <div class="panel-card" aria-label="Pembelian &amp; Operasional via Saldo Bank">
+        <h2 class="panel-card__title">Pembelian &amp; Operasional via Saldo Bank</h2>
+
+        <!-- Indikator saldo bank -->
+        <div class="pembelian-bank-saldo tx-chip tx-chip--bank-saldo">
+          <span class="tx-chip__label">Sumber Dana</span>
+          <span class="tx-chip__value" id="pbBankSaldoDisplay">Saldo Bank: Rp --</span>
+        </div>
+
+        <!-- Form input -->
+        <form id="formPengeluaranBank" class="pembelian-bank-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="pbKategori">Kategori</label>
+              <select id="pbKategori" class="form-select" required>
+                <option value="LISTRIK_LUAR">Listrik Luar</option>
+                <option value="LISTRIK_DALAM">Listrik Dalam</option>
+                <option value="PERLENGKAPAN_DAPUR">Perlengkapan / Operasional Dapur</option>
+                <option value="PERLENGKAPAN_BAR">Perlengkapan / Operasional Bar</option>
+                <option value="PERLENGKAPAN_KASIR">Perlengkapan / Operasional Kasir</option>
+                <option value="PERLENGKAPAN_BILLIARD">Perlengkapan Billiard</option>
+                <option value="LAINNYA">Lainnya</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pbNama">Nama Barang / Item</label>
+              <input type="text" id="pbNama" class="form-input"
+                     placeholder="cth: Token Listrik 100k" autocomplete="off" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="pbNominal">Nominal (Rp)</label>
+              <input type="text" id="pbNominal" class="form-input" inputmode="numeric" placeholder="0" autocomplete="off">
+            </div>
+            <div class="form-group form-group--wide">
+              <label class="form-label" for="pbKeterangan">Keterangan (opsional)</label>
+              <input type="text" id="pbKeterangan" class="form-input"
+                     placeholder="cth: beli bulan Okt" autocomplete="off">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group--action">
+              <button type="submit" class="btn btn-primary" id="btnSimpanPengeluaranBank">SIMPAN PEMBELIAN</button>
+            </div>
+          </div>
+        </form>
+        <div id="pbAlert" class="bank-alert-box" aria-live="polite" hidden></div>
+
+        <!-- Filter -->
+        <div class="tx-filter-bar">
+          <div class="tx-filter-search">
+            <input type="search" id="pbFilterQ" placeholder="Cari nama / keterangan&#8230;">
+          </div>
+          <select id="pbFilterKategori" class="form-select">
+            <option value="">Semua Kategori</option>
+            <option value="LISTRIK_LUAR">Listrik Luar</option>
+            <option value="LISTRIK_DALAM">Listrik Dalam</option>
+            <option value="PERLENGKAPAN_DAPUR">Perlengkapan / Operasional Dapur</option>
+            <option value="PERLENGKAPAN_BAR">Perlengkapan / Operasional Bar</option>
+            <option value="PERLENGKAPAN_KASIR">Perlengkapan / Operasional Kasir</option>
+            <option value="PERLENGKAPAN_BILLIARD">Perlengkapan Billiard</option>
+            <option value="LAINNYA">Lainnya</option>
+          </select>
+        </div>
+
+        <!-- Tabel riwayat -->
+        <div class="bar-table-wrapper">
+          <table class="tx-table" id="tablePengeluaranBank">
+            <thead>
+              <tr>
+                <th class="col-no">#</th>
+                <th>Tgl &amp; Waktu</th>
+                <th>Kategori</th>
+                <th>Nama Barang / Keterangan</th>
+                <th class="col-num">Nominal (Rp)</th>
+                <th>Admin</th>
+              </tr>
+            </thead>
+            <tbody id="pbTableBody">
+              <tr><td colspan="6" class="tx-table__empty">Memuat data&hellip;</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div><!-- /.panel-card -->
+
+    </main>
+
+  </div>
+
+  <!-- Auth check: arahkan ke login bila sesi tidak tersedia -->
+  <script>
+    if (!sessionStorage.getItem('pbms_admin_session')) {
+      window.location.replace('index.html');
+    }
+  </script>
+  <!-- Logout handler -->
+  <script>
+    document.getElementById('btnLogout').addEventListener('click', function () {
+      sessionStorage.removeItem('pbms_admin_session');
+      window.location.href = 'index.html';
+    });
+  </script>
+  <!-- Modul Pembelian Bank -->
+  <script src="js/pembelian-bank.js" defer></script>
+</body>
+</html>

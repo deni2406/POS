@@ -592,11 +592,21 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Trigger: stat card "Restok Barang" buka modal pembelian
+// Trigger lama: stat card "Restok Barang" buka modal pembelian
+// (card disembunyikan di Fix #91 — listener tetap aman via guard null)
 const cardPembelian = document.getElementById('cardPembelian');
 if (cardPembelian) {
   cardPembelian.addEventListener('click', pembelianOpenModal);
 }
+
+// Trigger baru (Fix #91): tombol "+ Buka Cart Restok" di #panel-restok
+const btnBukaRestok = document.getElementById('btnBukaRestok');
+if (btnBukaRestok) {
+  btnBukaRestok.addEventListener('click', pembelianOpenModal);
+}
+
+// (Fix #91) Export refresher daftar PO untuk tab switching di dashboard.js
+window.__pembelianLoadPoList = pembelianLoadPoList;
 
 // PO panel listeners
 if (selectPoStatus) selectPoStatus.addEventListener('change', pembelianLoadPoList);
