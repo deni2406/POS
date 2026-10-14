@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bar — Bahan Mentah</title>
+  <link rel="stylesheet" href="css/bar-bahan-mentah.css">
+</head>
+<body>
+  <div class="page">
+
+    <!-- Header -->
+    <header class="page-header" role="banner">
+      <div class="page-header__left">
+        <a href="dashboard.html" class="page-header__back" id="btnBackDashboard">
+          <span class="page-header__back-arrow">&#8592;</span>
+          Kembali ke Dashboard
+        </a>
+        <span class="page-header__title">&#127873; Bar — Bahan Mentah</span>
+      </div>
+      <div class="page-header__right">
+        <button type="button" id="btnLogout" class="btn-logout">Logout</button>
+      </div>
+    </header>
+
+    <!-- Body -->
+    <main class="page__body" role="main">
+
+      <!-- Kartu utama -->
+      <div class="panel-card" aria-label="Manajemen Bahan Mentah Bar">
+        <h2 class="panel-card__title">Bahan Mentah Bar</h2>
+
+        <!-- Form Tambah / Restok Bahan -->
+        <section class="bar-form-section">
+          <h3 class="section-subtitle">Tambah Bahan Mentah</h3>
+          <form id="formBarMaterial" class="bar-form" onsubmit="return false;">
+            <input type="hidden" id="barItemId" value="">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="barKode">Kode Barang</label>
+                <input type="text" id="barKode" class="form-input bar-kode-readonly" placeholder="(Otomatis)" readonly title="Kode dibuat otomatis oleh sistem">
+              </div>
+              <div class="form-group form-group--search">
+                <label class="form-label" for="barNama">Cari / Tambah Bahan</label>
+                <div class="search-input-wrapper">
+                  <input type="text" id="barNama" class="form-input" placeholder="Ketik nama bahan..." autocomplete="off">
+                  <datalist id="barNamaList"></datalist>
+                  <div id="barNamaResult" class="bar-search-result"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="barSatuan">Satuan</label>
+                <select id="barSatuan" class="form-select" required>
+                  <option value="ml">Mililiter (ml)</option>
+                  <option value="g">Gram (g)</option>
+                  <option value="pcs">Pieces (pcs)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="barStok" id="barStokLabel">Stok Tambah</label>
+                <input type="number" id="barStok" class="form-input" placeholder="0" step="0.01" min="0" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="barHarga">Harga per Satuan (Rp)</label>
+                <input type="text" id="barHarga" class="form-input" inputmode="numeric"
+                       placeholder="0" autocomplete="off" required>
+              </div>
+              <div class="form-group form-group--action">
+                <button type="submit" class="btn btn-primary" id="btnBarSubmit">+ Tambah Bahan</button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <!-- Daftar Bahan -->
+        <section class="bar-inventory-section">
+          <h3 class="section-subtitle">Daftar Bahan Mentah</h3>
+          <div class="bar-summary-bar">
+            <div class="tx-chip">
+              <span class="tx-chip__label">Total Item</span>
+              <span class="tx-chip__value" id="barTotalItems">0</span>
+            </div>
+            <div class="tx-chip tx-chip--member-aktif">
+              <span class="tx-chip__label">Stok Rendah (&lt;10)</span>
+              <span class="tx-chip__value" id="barLowStock">0</span>
+            </div>
+          </div>
+          <div class="bar-table-wrapper">
+            <table id="tableBarMaterials" class="tx-table bar-table">
+              <thead>
+                <tr>
+                  <th>Kode</th>
+                  <th>Nama Barang</th>
+                  <th>Stok</th>
+                  <th>Satuan</th>
+                  <th>Harga/Satuan</th>
+                  <th>Nilai Stok</th>
+                  <th>Terakhir Update</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="barMaterialBody">
+                <tr><td colspan="8" class="text-center">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div><!-- /.panel-card -->
+
+    </main>
+
+  </div>
+
+  <!-- Auth check: arahkan ke login bila sesi tidak tersedia -->
+  <script>
+    if (!sessionStorage.getItem('pbms_admin_session')) {
+      window.location.replace('index.html');
+    }
+  </script>
+  <!-- Logout handler -->
+  <script>
+    document.getElementById('btnLogout').addEventListener('click', function () {
+      sessionStorage.removeItem('pbms_admin_session');
+      window.location.href = 'index.html';
+    });
+  </script>
+  <!-- Modul Bar Bahan Mentah -->
+  <script src="js/bar-bahan-mentah.js" defer></script>
+</body>
+</html>

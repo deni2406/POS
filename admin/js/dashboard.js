@@ -166,12 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const target = btn.getAttribute('data-tab').replace(/^tab-/, 'panel-');
       const panel = document.getElementById(target);
       if (panel) panel.classList.add('is-active');
-      // Refresh Bahan Mentah Bar saat tabnya aktif
-      if (target === 'panel-bar' && typeof window.__loadBarMaterialsRef === 'function') {
-        window.__loadBarMaterialsRef();
-      } else if (target === 'panel-bar' && typeof loadBarMaterials === 'function') {
-        loadBarMaterials();
-      }
       // (Fix #91) Refresh daftar PO saat tab Restok Barang aktif
       if (target === 'panel-restok') {
         const wLoadPo = window.__pembelianLoadPoList;
@@ -1375,273 +1369,11 @@ const reRenderMemberTable = () => {
   // ── PURCHASE CART / RESTOK BARANG & PO MANAGEMENT — dipisah ke pembelian.js (Fix #89) ──
   // Semua fungsi pembelian kini di-eksport ke window oleh admin/js/pembelian.js.
 
-  // ── BAR Raw Materials (Fix #69) ─────────────────────────────────
-  const formBarMaterial = document.getElementById('formBarMaterial');
-  const barMaterialBody = document.getElementById('barMaterialBody');
-  const barTotalItems = document.getElementById('barTotalItems');
-  const barLowStock = document.getElementById('barLowStock');
-  let barMaterialsCache = [];
-  let barSelectedId = null;
-  let barSearchTimeout = null;
-
-  const formatBarRupiah = (n) => {
-    if (!n && n !== 0) return 'Rp 0';
-    return 'Rp ' + Number(n).toLocaleString('id-ID');
-  };
-
-  const getBarMaterialBody = () => document.getElementById('barMaterialBody');
-
-  const loadBarMaterials = async () => {
-    const bodyEl = getBarMaterialBody();
-    barMaterialsCache = [];
-    try {
-      const resp = await fetch('/api/admin/bar/raw-materials');
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const data = await resp.json();
-      if (!data.success) throw new Error(data.message || 'Gagal memuat');
-
-      barMaterialsCache = (data.data || []).map(m => ({
-        ...m,
-        harga_per_satuan: Number(m.harga_per_satuan || m.harga_satuan) || 0,
-        updated_at: m.updated_at || m.terakhir_update || '—'
-      }));
-
-      renderBarMaterials();
-    } catch (err) {
-      console.error('Gagal memuat bar materials:', err);
-      if (bodyEl) {
-        bodyEl.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #f87171; padding: 20px;">Gagal memuat data: ' + escapeHtml(err.message) + '</td></tr>';
-      }
-    }
-  };
-
-  const renderBarMaterials = () => {
-    const bodyEl = getBarMaterialBody();
-    if (!bodyEl) return;
-
-    const items = barMaterialsCache;
-    if (barTotalItems) barTotalItems.textContent = String(items.length);
-    if (barLowStock) barLowStock.textContent = String(items.filter(m => (Number(m.stok) || 0) < 10).length);
-
-    if (!items.length) {
-      bodyEl.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #94a3b8; padding: 20px;">Belum ada data bahan mentah bar</td></tr>';
-      return;
-    }
-
-    bodyEl.innerHTML = items.map(m => {
-      const stok = Number(m.stok) || 0;
-      const hpp = Number(m.harga_per_satuan) || 0;
-      const nilaiStok = stok * hpp;
-      const isLow = stok < 10;
-      return '<tr>' +
-        '<td><code>' + escapeHtml(String(m.kode_barang || '')) + '</code></td>' +
-        '<td><strong>' + escapeHtml(String(m.nama_barang || '')) + '</strong></td>' +
-        '<td class="col-num' + (isLow ? ' bar-low-stock' : '') + '">' + stok.toLocaleString('id-ID') + '</td>' +
-        '<td>' + escapeHtml(String(m.satuan || '')) + '</td>' +
-        '<td class="col-num">' + formatBarRupiah(hpp) + '</td>' +
-        '<td class="col-num">' + formatBarRupiah(nilaiStok) + '</td>' +
-        '<td>' + escapeHtml(String(m.updated_at || '')) + '</td>' +
-        '<td><button type="button" class="btn btn-danger btn-sm" data-bar-delete="' + escapeHtml(String(m.kode_barang)) + '">Hapus</button></td>' +
-        '</tr>';
-    }).join('');
-
-    bodyEl.querySelectorAll('[data-bar-delete]').forEach(btn => {
-      btn.addEventListener('click', () => deleteBarMaterial(btn.dataset.barDelete));
-    });
-  };
-
-  // (Fix #92) Modul Pembelian Bank dipisah ke admin/js/pembelian-bank.js.
-  // (Fix #95) Halaman Pembelian Bank kini di admin/pembelian-bank.html —
-  // handler burger membuka URL langsung; bridge __loadPengeluaranBank
-  // tak lagi dipakai dashboard.js. Jangan definisi ulang fungsi di sini.
-
-  // ── Bar Form: Search & Auto-fill (Fix #71) ──────────────────────
-  const barNamaInput = document.getElementById('barNama');
-  const barNamaList = document.getElementById('barNamaList');
-  const barNamaResult = document.getElementById('barNamaResult');
-  const barKodeInput = document.getElementById('barKode');
-  const barSatuanSelect = document.getElementById('barSatuan');
-  const barStokLabel = document.getElementById('barStokLabel');
-  const barHargaInput = document.getElementById('barHarga');
-  const btnBarSubmit = document.getElementById('btnBarSubmit');
-
-  const setupBarForm = () => {
-    if (!barNamaInput || !barNamaList) return;
-    // Autocomplete datalist
-    barNamaList.innerHTML = barMaterialsCache.map(m =>
-      '<option value="' + escapeHtml(String(m.nama_barang)) + '">'
-    ).join('');
-
-    // ── Real-time thousands separator on Harga field (Fix #74) ─────────────
-    const formatBarHargaInput = (val) => {
-      const clean = String(val).replace(/[^\d]/g, '');
-      if (!clean) return '';
-      return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    };
-
-    barHargaInput.addEventListener('input', () => {
-      const raw = barHargaInput.value;
-      const formatted = formatBarHargaInput(raw);
-      if (formatted !== raw) barHargaInput.value = formatted;
-    });
-    // Also handle paste — format the pasted content
-    barHargaInput.addEventListener('paste', (e) => {
-      setTimeout(() => {
-        const formatted = formatBarHargaInput(barHargaInput.value);
-        if (formatted) barHargaInput.value = formatted;
-      }, 0);
-    });
-
-    // Live search on input — always re-enable satuan for new/typo inputs
-    barNamaInput.addEventListener('input', () => {
-      // User is typing — enable satuan dropdown (new material mode)
-      barSelectedId = null;
-      barSatuanSelect.disabled = false;
-      barKodeInput.value = '';
-      barKodeInput.style.opacity = '';
-      barStokLabel.textContent = 'Stok Tambah';
-      btnBarSubmit.textContent = '+ Tambah Bahan';
-
-      clearTimeout(barSearchTimeout);
-      barSearchTimeout = setTimeout(() => {
-        const query = String(barNamaInput.value).trim().toLowerCase();
-        if (!query) {
-          barNamaResult.innerHTML = '';
-          return;
-        }
-        const matches = barMaterialsCache.filter(m =>
-          String(m.nama_barang).toLowerCase().includes(query)
-        );
-        if (!matches.length) {
-          barNamaResult.innerHTML = '<div class="bar-search-none">Tidak ditemukan — ketik nama baru</div>';
-          return;
-        }
-        barNamaResult.innerHTML = matches.map(m =>
-          '<div class="bar-search-item" data-id="' + m.id + '" data-nama="' + escapeHtml(String(m.nama_barang)) + '" data-satuan="' + escapeHtml(String(m.satuan)) + '" data-harga="' + (m.harga_per_satuan || 0) + '">' +
-            '<strong>' + escapeHtml(String(m.nama_barang)) + '</strong>' +
-            ' — Stok: <b>' + Number(m.stok || 0).toFixed(2) + ' ' + escapeHtml(String(m.satuan)) + '</b>' +
-            ' | ' + formatBarRupiah(m.harga_per_satuan) + '/satuan' +
-          '</div>'
-        ).join('');
-        barNamaResult.querySelectorAll('.bar-search-item').forEach(el => {
-          el.addEventListener('click', () => {
-            barSelectedId = Number(el.dataset.id);
-            barNamaInput.value = el.dataset.nama;
-            barNamaResult.innerHTML = '';
-            // Auto-fill satuan & lock for restok mode
-            barSatuanSelect.value = el.dataset.satuan;
-            barSatuanSelect.disabled = true;
-            // Auto-fill harga with thousands separator
-            barHargaInput.value = formatBarHargaInput(el.dataset.harga);
-            // Update UI for restok mode
-            barKodeInput.value = '— Sudah ada';
-            barKodeInput.style.opacity = '0.6';
-            barStokLabel.textContent = 'Tambah Stok (Restok)';
-            btnBarSubmit.textContent = '✓ Restok';
-          });
-        });
-      }, 200);
-    });
-
-    // Blur: hide search results, don't reset form state
-    barNamaInput.addEventListener('blur', () => {
-      setTimeout(() => {
-        barNamaResult.innerHTML = '';
-      }, 200);
-    });
-  };
-
-  const resetBarForm = () => {
-    barSelectedId = null;
-    barKodeInput.value = '';
-    barKodeInput.style.opacity = '';
-    barSatuanSelect.value = 'ml';
-    barSatuanSelect.disabled = false;
-    barStokLabel.textContent = 'Stok Tambah';
-    btnBarSubmit.textContent = '+ Tambah Bahan';
-    barNamaInput.value = '';
-    barNamaResult.innerHTML = '';
-    document.getElementById('barStok').value = '0';
-    barHargaInput.value = '';
-  };
-
-  const addBarMaterial = async (e) => {
-    if (e && typeof e.preventDefault === 'function') e.preventDefault();
-    const nama = String(document.getElementById('barNama').value).trim();
-    const satuan = document.getElementById('barSatuan').value;
-    const stok = parseFloat(document.getElementById('barStok').value) || 0;
-    const hargaRaw = String(document.getElementById('barHarga').value).replace(/\./g, '');
-    const harga = parseFloat(hargaRaw) || 0;
-    if (!nama) { alert('Nama bahan wajib diisi.'); return; }
-    if (!satuan) { alert('Satuan wajib dipilih.'); return; }
-    if (stok < 0) { alert('Stok tidak boleh negatif.'); return; }
-    try {
-      const payload = { nama_barang: nama, satuan: satuan, stok: stok, harga_per_satuan: harga };
-      if (barSelectedId) payload.id = barSelectedId;
-      const resp = await fetch('/api/admin/bar/raw-materials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await resp.json();
-      if (!data.success) throw new Error(data.message || 'Gagal menambah');
-      // Show kode if new material
-      if (data.kode_barang) {
-        barKodeInput.value = data.kode_barang;
-        barKodeInput.style.opacity = '1';
-      }
-      resetBarForm();
-      await loadBarMaterials();
-      if (data.mode === 'restok') {
-        alert('Stok "' + nama + '" berhasil ditambahkan. Stok baru: ' + Number(data.data?.stok || 0).toFixed(2) + ' ' + satuan);
-      } else {
-        alert('Bahan baru "' + nama + '" berhasil ditambahkan dengan kode: ' + data.kode_barang);
-      }
-    } catch (err) { alert('Gagal tambah bahan: ' + err.message); }
-  };
-
-  async function deleteBarMaterial(kode) {
-    if (!confirm('Hapus bahan ' + kode + '?')) return;
-    try {
-      const resp = await fetch('/api/admin/bar/raw-materials', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kode_barang: kode })
-      });
-      const data = await resp.json();
-      if (!data.success) throw new Error(data.message || 'Gagal hapus');
-      await loadBarMaterials();
-    } catch (err) {
-      alert('Gagal hapus bahan: ' + err.message);
-    }
-  }
-
-  if (formBarMaterial) {
-    formBarMaterial.removeEventListener('submit', addBarMaterial);
-    formBarMaterial.addEventListener('submit', addBarMaterial);
-  }
-  if (loadBarMaterials) {
-    const origLoad = loadBarMaterials;
-    // Public wrapper: fetch + refresh datalist autocomplete (dipakai di-init)
-    window.__loadBarMaterialsRef = async () => {
-      await origLoad();
-      if (barNamaList) {
-        barNamaList.innerHTML = barMaterialsCache.map(m =>
-          '<option value="' + escapeHtml(String(m.nama_barang)) + '">'
-        ).join('');
-      }
-    };
-    // Ganti init call loadBarMaterials() dengan wrapper agar datalist terisi
-  }
-  if (setupBarForm) setupBarForm();
-
-  // ── Init: muat Bahan Mentah Bar saat halaman load ─────────────
-  // wrapper __loadBarMaterialsRef juga mengisi datalist autocomplete
-  if (window.__loadBarMaterialsRef) {
-    window.__loadBarMaterialsRef();
-  } else if (typeof loadBarMaterials === 'function') {
-    loadBarMaterials();
-  }
+  // ── Modul Bar Bahan Mentah dipisah ke
+  //     admin/js/bar-bahan-mentah.js dan halaman mandiri
+  //     admin/bar-bahan-mentah.html — akses via burger menu
+  //     #burgerBtnBarBahanMentah. Tab & panel lama dihapus.
+  //     Jangan definisi ulang fungsi Bar di sini.
 
   // ── DAPUR Raw Materials (Fix #75) ──────────────────────────────
   const formDapurMaterial = document.getElementById('formDapurMaterial');
@@ -1999,5 +1731,12 @@ const reRenderMemberTable = () => {
   safeAddEventListener('burgerBtnPembelianBank', 'click', () => {
     closeBurgerDrawer();
     window.location.href = 'pembelian-bank.html';
+  });
+
+  // Item burger "Bar — Bahan Mentah": tutup drawer → buka halaman
+  // khusus bar-bahan-mentah.html (panel lama dihapus dari dashboard).
+  safeAddEventListener('burgerBtnBarBahanMentah', 'click', () => {
+    closeBurgerDrawer();
+    window.location.href = 'bar-bahan-mentah.html';
   });
 });

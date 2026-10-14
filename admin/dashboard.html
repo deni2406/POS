@@ -114,6 +114,12 @@
           <span class="burger-menu-label">Pembelian Bank</span>
         </button>
       </li>
+      <li>
+        <button type="button" class="burger-menu-item" id="burgerBtnBarBahanMentah">
+          <span class="burger-menu-icon">&#127873;</span>
+          <span class="burger-menu-label">Bar — Bahan Mentah</span>
+        </button>
+      </li>
       <!-- Tempat list menu akan dipindah satu per satu -->
     </ul>
   </aside>
@@ -175,10 +181,8 @@
               aria-selected="false" aria-controls="panel-operasional">
         <span class="tab-btn__icon">&#127963;</span> Operasional &amp; Member
       </button>
-      <button type="button" role="tab" class="tab-btn" data-tab="tab-bar"
-              aria-selected="false" aria-controls="panel-bar">
-        <span class="tab-btn__icon">&#127873;</span> Bar — Bahan Mentah
-      </button>
+      <!-- Panel Bar — Bahan Mentah dipindah ke halaman khusus
+           admin/bar-bahan-mentah.html — akses via burger menu #burgerBtnBarBahanMentah. -->
       <button type="button" role="tab" class="tab-btn" data-tab="tab-dapur"
               aria-selected="false" aria-controls="panel-dapur">
         <span class="tab-btn__icon">&#127859;</span> Dapur — Bahan Mentah
@@ -442,90 +446,8 @@
     </div><!-- /dashboard-section: Operasional -->
     </div><!-- /panel-operasional -->
 
-    <!-- TAB 4: Bar — Bahan Mentah -->
-    <div class="tab-panel" id="panel-bar" role="tabpanel" aria-labelledby="tab-bar">
-      <div class="dashboard-section" aria-label="Manajemen Bahan Mentah Bar">
-        <h2 class="section-title">Bahan Mentah Bar</h2>
-
-        <!-- Form Tambah Bahan -->
-        <section class="bar-form-section">
-          <h3 class="section-subtitle">Tambah Bahan Mentah</h3>
-          <form id="formBarMaterial" class="bar-form" onsubmit="return false;">
-            <input type="hidden" id="barItemId" value="">
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="barKode">Kode Barang</label>
-                <input type="text" id="barKode" class="form-input bar-kode-readonly" placeholder="(Otomatis)" readonly title="Kode dibuat otomatis oleh sistem">
-              </div>
-              <div class="form-group form-group--search">
-                <label class="form-label" for="barNama">Cari / Tambah Bahan</label>
-                <div class="search-input-wrapper">
-                  <input type="text" id="barNama" class="form-input" placeholder="Ketik nama bahan..." autocomplete="off">
-                  <datalist id="barNamaList"></datalist>
-                  <div id="barNamaResult" class="bar-search-result"></div>
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="barSatuan">Satuan</label>
-                <select id="barSatuan" class="form-select" required>
-                  <option value="ml">Mililiter (ml)</option>
-                  <option value="g">Gram (g)</option>
-                  <option value="pcs">Pieces (pcs)</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="barStok" id="barStokLabel">Stok Tambah</label>
-                <input type="number" id="barStok" class="form-input" placeholder="0" step="0.01" min="0" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="barHarga">Harga per Satuan (Rp)</label>
-                <input type="number" id="barHarga" class="form-input" placeholder="0" step="0.01" min="0" required>
-              </div>
-              <div class="form-group form-group--action">
-                <button type="submit" class="btn btn-primary" id="btnBarSubmit">+ Tambah Bahan</button>
-              </div>
-            </div>
-          </form>
-        </section>
-
-        <!-- Daftar Bahan -->
-        <section class="bar-inventory-section">
-          <h3 class="section-subtitle">Daftar Bahan Mentah</h3>
-          <div class="bar-summary-bar">
-            <div class="tx-chip">
-              <span class="tx-chip__label">Total Item</span>
-              <span class="tx-chip__value" id="barTotalItems">0</span>
-            </div>
-            <div class="tx-chip tx-chip--member-aktif">
-              <span class="tx-chip__label">Stok Rendah (&lt;10)</span>
-              <span class="tx-chip__value" id="barLowStock">0</span>
-            </div>
-          </div>
-          <div class="bar-table-wrapper">
-            <table id="tableBarMaterials" class="tx-table bar-table">
-              <thead>
-                <tr>
-                  <th>Kode</th>
-                  <th>Nama Barang</th>
-                  <th>Stok</th>
-                  <th>Satuan</th>
-                  <th>Harga/Satuan</th>
-                  <th>Nilai Stok</th>
-                  <th>Terakhir Update</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody id="barMaterialBody">
-                <tr><td colspan="8" class="text-center">Memuat data...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-      </div><!-- /dashboard-section -->
-    </div><!-- /panel-bar -->
+    <!-- Panel Bar — Bahan Mentah dipindah ke halaman khusus
+         admin/bar-bahan-mentah.html — akses via burger menu #burgerBtnBarBahanMentah. -->
 
     <!-- TAB 5: Dapur — Bahan Mentah (Fix #75) -->
     <div class="tab-panel" id="panel-dapur" role="tabpanel" aria-labelledby="tab-dapur">
