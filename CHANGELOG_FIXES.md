@@ -256,6 +256,18 @@ Format tiap entri:
 
 <!-- ENTRI BARU DI BAWAH BARIS INI -->
 
+### Fix #110 — Drawer Navigasi Burger: Ikon Muncul Kembali, Overlay Terlalu Gelap, Item Terlalu Besar
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-15 |
+| **File** | `admin/css/dashboard.css` (section burger menu: lines 1944–2017) |
+| **Masalah** | Drawer navigasi burger tampil tidak konsisten: (1) ikon emoji (`burger-menu-icon`) muncul kembali di setiap item menu, padahal sebelumnya seharusnya disembunyikan; (2) item menu terlalu tinggi dan besar karena double-styling — rule `.burger-menu-list li` memberi background/border/padding, lalu `.burger-menu-item` juga memberi padding & styling sendiri; (3) overlay background `rgba(0,0,0,0.55)` terlalu gelap, menutupi dashboard di belakang secara berlebihan. |
+| **Akar** | CSS burger menu sejak perkenalan (Fix #84, commit `ec430e9`) sudah men-styling `.burger-menu-list li` dengan background & border, lalu saat mengekstrak modul ke CSS terpisah (Fix #86–#89), `.burger-menu-item` ditambahkan dengan styling tambahan yang bertumpuk. Ikon emoji tetap ada di HTML (bukan dibuat JS) dan tidak pernah di-hidden dengan CSS. |
+| **Fix** | (1) `.burger-menu-icon`: `display: none;` — ikon disembunyikan. (2) `.burger-menu-list li`: hapus semua styling dekoratif (background, border, padding, color, font-size, transition) — sisakan `margin-bottom: 2px;` saja. Styling kontrol pindah sepenuhnya ke `.burger-menu-item`. (3) `.burger-overlay`: `background` dari `rgba(0,0,0,0.55)` → `rgba(0,0,0,0.35)` agar dashboard belakang tetap terlihat redup. (4) `.burger-menu-item`: padding 12px 16px → 10px 14px, radius 8px → 6px, tambahkan `font-weight: 500`. (5) `.burger-menu-list`: padding 12px → 8px 12px. |
+| **Verifikasi** | `grep -n "burger-menu-icon" admin/css/dashboard.css` → `display: none;` ✓. `grep -n "burger-overlay"` → `rgba(0, 0, 0, 0.35)` ✓. `.burger-menu-list li` hanya tersisa `margin-bottom: 2px;` ✓. Tidak ada duplikat styling. All event handlers & ID di dashboard.html & dashboard.js tetap utuh. |
+| **Pelajaran** | Jika ada dua layer selector yang men-target elemen sama (`li` + `.burger-menu-item` di dalamnya), pastikan hanya satu yang punya styling visual. `.burger-menu-list li` adalah wrapper, styling visual harus di `.burger-menu-item`. Ikon dekoratif harus di-hide di CSS (bukan dihapus dari HTML) agar ID dan event handler JS tetap bekerja. |
+
 ### Fix #109 — Logo "ALVA" Header Admin Diperbesar 40% (40px → 56px)
 
 | | |
