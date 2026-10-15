@@ -1950,7 +1950,7 @@ select option,
 }
 
 .burger-menu-list li {
-  margin-bottom: 2px;
+  margin-bottom: 6px;
 }
 
 .burger-overlay {
@@ -1980,23 +1980,27 @@ select option,
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 10px 14px;
-  background: transparent;
-  border: none;
+  min-height: 44px;
+  padding: 12px 14px;
+  background: #1e293b;
+  border: 1px solid #334155;
   color: #f8fafc;
   cursor: pointer;
-  border-radius: 6px;
-  transition: background 0.15s ease;
+  border-radius: 8px;
+  transition: all 0.15s ease;
   text-align: left;
   font-size: 14px;
   font-family: inherit;
   font-weight: 500;
+  line-height: 1.4;
 }
 .burger-menu-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: #334155;
+  border-color: #475569;
 }
 .burger-menu-item:active {
-  background: rgba(255, 255, 255, 0.14);
+  background: #475569;
+  border-color: #64748b;
 }
 .burger-menu-icon {
   display: none;

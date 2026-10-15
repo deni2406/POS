@@ -256,6 +256,18 @@ Format tiap entri:
 
 <!-- ENTRI BARU DI BAWAH BARIS INI -->
 
+### Fix #111 — Drawer Navigasi Burger: Item Menu Tampil Polos Tanpa Bentuk (Double-Style Reset)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-15 |
+| **File** | `admin/css/dashboard.css` (section burger menu: lines 1944–2011) |
+| **Masalah** | Fix #110 berhasil menghilangkan ikon emoji, tetapi terlalu agresif menghapus styling dari `.burger-menu-list li` — background, border, dan padding dihapus semua. Akibatnya item menu hanya tampil sebagai teks polos tanpa bentuk kartu yang jelas. Padding item juga terlalu kecil (`10px 14px`), margin antar item hanya `2px`. |
+| **Akar** | Fix #110 mengasumsikan `.burger-menu-list li` hanya wrapper kosong dan memindahkan seluruh styling ke `.burger-menu-item`. Namun pengguna menginginkan item menu tetap memiliki bentuk kartu dengan background, border, dan padding yang proporsional. |
+| **Fix** | (1) `.burger-menu-list li`: `margin-bottom` dinaikkan dari 2px → 6px untuk jarak antar item lebih lega. (2) `.burger-menu-item`: kembalikan `background: #1e293b` (sedikit berbeda dari drawer #0f172a), tambahkan `border: 1px solid #334155`, padding `10px 14px` → `12px 14px`, `min-height: 44px` (tinggi ringkas), radius `6px` → `8px`, tambahkan `line-height: 1.4`. (3) Hover/active state: background berubah ke `#334155`/`#475569` dengan border lebih terang untuk feedback visual yang jelas. |
+| **Verifikasi** | `grep -n "burger-menu-item\|burger-menu-list li" admin/css/dashboard.css` → styling lengkap dengan background, border, padding, radius ✓. Item tinggi ~44px dengan padding 12px atas/bawah. Margin antar item 6px. Ikon tetap hidden (`display: none`). Tidak ada duplikat styling. JS syntax valid (`node --check`). |
+| **Pelajaran** | Saat cleanup double-styling, pastikan tidak menghapus styling yang diinginkan user. Prioritaskan konsistensi desain: background item berbeda dari container, border tipis untuk definisi bentuk, padding cukup untuk keterbacaan. Jarak antar item 6-8px cukup untuk visual separation tanpa terlalu renggang. |
+
 ### Fix #110 — Drawer Navigasi Burger: Ikon Muncul Kembali, Overlay Terlalu Gelap, Item Terlalu Besar
 
 | | |
