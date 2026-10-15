@@ -60,9 +60,9 @@ body {
 }
 
 .topbar__brand {
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  height: 26px;
+  width: auto;
+  display: block;
 }
 
 .btn-logout {
@@ -1219,16 +1219,6 @@ table.member-table td:last-child {
 }
 
 /* #salesBarChart — dipindah ke penjualan.css */
-.hpp-canvas-wrap {
-  height: 240px;
-  max-height: 280px;
-}
-#hppTrendChart {
-  display: block;
-  width: 100%;
-  height: 240px;
-  background: transparent;
-}
 
 /* ── Tooltip ─────────────────────────────────────────────────── */
 
@@ -1283,119 +1273,15 @@ table.member-table td:last-child {
 }
 
 /* ============================================================
-   Fix #47 — Fluktuasi HPP vs Harga Jual + Margin Warning
+   Fix #47 — Fluktuasi HPP vs Harga Jual — panel dihapus dari
+   dashboard (logika diarsip di admin/js/_archive/dashboard-hpp.bak.js).
+   CSS panel HPP ikut dihapus.
    ============================================================ */
-
-/* ── Filter bar grafik HPP ────────────────────────────────────── */
-.hpp-filter-bar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.hpp-filter-bar select {
-  background: #0f172a;
-  color: #e2e8f0;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  padding: 5px 10px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  max-width: 180px;
-}
-.hpp-filter-bar select:focus {
-  outline: 2px solid rgba(0, 210, 255, 0.4);
-  outline-offset: 1px;
-}
-.hpp-refresh-btn {
-  background: #1e293b;
-  color: #94a3b8;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-.hpp-refresh-btn:hover {
-  background: #334155;
-  color: #e2e8f0;
-}
-
-/* ── Ringkasan margin ─────────────────────────────────────────── */
-.hpp-summary-row {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin: 12px 0 8px;
-}
-.hpp-summary-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 90px;
-}
-.hpp-summary-label {
-  font-size: 0.72rem;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.hpp-summary-value {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #e2e8f0;
-}
-.hpp-summary-value--warn { color: #fbbf24; }
-.hpp-summary-value--bad  { color: #f87171; }
-
-/* ── Kanvas grafik HPP ────────────────────────────────────────── */
-.hpp-canvas-wrap {
-  min-height: 260px;
-}
-#hppTrendChart {
-  display: block;
-  width: 100%;
-  height: 260px;
-  background: transparent;
-}
-
-/* Legenda garis HPP */
-.hpp-legend {
-  position: absolute;
-  top: 4px;
-  right: 12px;
-  display: flex;
-  gap: 14px;
-  font-size: 0.72rem;
-  color: #94a3b8;
-}
-.hpp-legend__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.hpp-legend__swatch {
-  display: inline-block;
-  width: 10px;
-  height: 3px;
-  border-radius: 2px;
-}
-.hpp-legend__swatch--hpp    { background: #fbbf24; }
-.hpp-legend__swatch--hj     { background: #00d2ff; }
-.hpp-legend__swatch--margin { background: rgba(16, 185, 129, 0.5); }
-
-/* Tooltip grafik HPP */
-.hpp-chart-tooltip {
-  flex-direction: column;
-  align-items: flex-start;
-}
-.hpp-tooltip__hj { color: #00d2ff; }
-#hppTooltipHpp { color: #fbbf24; }
 
 /* Kartu Kategori Kasir & Modal Kasir — dipindah ke barang.css (modul Barang, Fix #87) */
 
 /* Panel Daftar Purchase Order CSS — dipindah ke pembelian.css (modul Pembelian, Fix #89) */
 
-}
 .po-action-group {
   display: flex;
   gap: 4px;
@@ -1534,7 +1420,7 @@ table.member-table td:last-child {
   clear: both;
 }
 
-/* ── PO section: beri jarak atas yang jelas dari HPP chart  */
+/* ── PO section: beri jarak atas  */
 .dashboard-section[aria-label="Purchase Order"] {
   margin-top: 4px;
 }
@@ -1544,21 +1430,8 @@ table.member-table td:last-child {
   margin-top: 4px;
 }
 
-/* ── Chart canvas wrapper — posisi relatif, tinggi tetap ─── */
-/* .panel-card--sales-chart .chart-canvas-wrap — dipindah ke penjualan.css */
-.panel-card--hpp-chart .chart-canvas-wrap {
-  position: relative;
-  width: 100%;
-  height: 260px;
-  margin-bottom: 16px;
-  clear: both;
-  overflow: hidden;
-  z-index: 1;
-}
-
 /* ── Panel card di dalam tab: pastikan tidak absout ─────── */
 /* .panel-card--sales-chart — dipindah ke penjualan.css */
-.panel-card--hpp-chart,
 .panel-card--po {
   position: relative;  /* reset: bukan absolute */
   display: block;
@@ -1568,9 +1441,6 @@ table.member-table td:last-child {
 
 /* ── Hapus float/absolute dari tooltip yang tidak perlu  ── */
 .chart-tooltip {
-  z-index: 2;
-}
-.hpp-chart-tooltip {
   z-index: 2;
 }
 
