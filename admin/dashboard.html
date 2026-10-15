@@ -19,11 +19,7 @@
   <header class="topbar" role="banner">
     <div class="topbar__inner">
       <div class="topbar__brand-group">
-        <h1 class="topbar__brand">PBMS Admin Workspace</h1>
-        <span class="topbar__sync-badge" aria-label="POS server status">
-          <span class="sync-dot" id="syncDot"></span>
-          POS Live Sync (Port 3100)
-        </span>
+        <span class="topbar__brand">ALVA</span>
       </div>
       <div class="topbar__right">
         <button type="button" id="btnToggleBurger" class="btn-burger" aria-label="Buka menu navigasi"
@@ -140,13 +136,15 @@
         <div class="stat-card__trend up" aria-label="Tren naik">&uarr;</div>
       </article>
 
-      <article class="stat-card stat-card--hero stat-card--laba" id="cardHeroLaba">
+      <article class="stat-card stat-card--hero stat-card--laba" id="cardHeroLaba"
+               style="display:none" aria-hidden="true">
         <div class="stat-card__label">Laba Kotor Hari Ini</div>
         <div class="stat-card__value" id="statLabaKotor">Rp 0</div>
         <div class="stat-card__trend up" aria-label="Tren naik">&uarr;</div>
       </article>
 
-      <article class="stat-card stat-card--hero stat-card--tx" id="cardHeroTx">
+      <article class="stat-card stat-card--hero stat-card--tx" id="cardHeroTx"
+               style="display:none" aria-hidden="true">
         <div class="stat-card__label">Total Transaksi Hari Ini</div>
         <div class="stat-card__value" id="statTotalTx">0</div>
         <div class="stat-card__sublabel">struk hari ini</div>
@@ -168,7 +166,9 @@
     </section>
 
     <!-- Segmented Tab Navigation -->
-    <nav class="tab-nav" role="tablist" aria-label="Navigasi modul dashboard">
+    <!-- SEMBUNYIKAN SEMENTARA: seluruh tab navigasi dashboard -->
+    <nav class="tab-nav" role="tablist" aria-label="Navigasi modul dashboard"
+         style="display:none" aria-hidden="true">
       <button type="button" role="tab" class="tab-btn is-active" data-tab="tab-keuangan"
               aria-selected="true" aria-controls="panel-keuangan">
         <span class="tab-btn__icon">&#128202;</span> Ringkasan Keuangan
@@ -197,7 +197,8 @@
     <div class="tab-panel is-active" id="panel-keuangan" role="tabpanel" aria-labelledby="tab-keuangan">
 
       <section class="stat-grid stat-grid--fin" aria-label="Metrik Keuangan">
-        <article class="stat-card stat-card--modal" id="cardModalHpp">
+        <article class="stat-card stat-card--modal" id="cardModalHpp"
+                 style="display:none" aria-hidden="true">
           <div class="stat-card__label">Total Modal (HPP) Hari Ini</div>
           <div class="stat-card__value" id="statTotalModal">Rp 0</div>
         </article>
@@ -300,61 +301,14 @@
     </section>
     </div><!-- /dashboard-section: Grafik Penjualan -->
 
-    <!-- Fluktuasi HPP vs Harga Jual & Margin Warning (Fix #47) — block mandiri -->
-    <div class="dashboard-section" aria-label="Fluktuasi HPP & Margin">
-    <section class="panel-grid" aria-label="Fluktuasi HPP & Margin">
-      <article class="panel-card panel-card--full panel-card--hpp-chart">
-        <div class="panel-card__header-row">
-          <h2 class="panel-card__title panel-card__title--no-mb">Fluktuasi HPP vs Harga Jual</h2>
-          <div class="hpp-filter-bar" role="group" aria-label="Filter grafik fluktuasi">
-            <select id="selectHppKategori" aria-label="Filter kategori">
-              <option value="">Semua Kategori</option>
-            </select>
-            <select id="selectHppBarang" aria-label="Pilih barang">
-              <option value="">Semua Barang</option>
-            </select>
-            <button type="button" id="btnRefreshHppChart" class="hpp-refresh-btn" aria-label="Muat ulang grafik">
-              &times;
-            </button>
-          </div>
-        </div>
-
-        <div class="hpp-summary-row" aria-label="Ringkasan margin">
-          <div class="hpp-summary-item">
-            <span class="hpp-summary-label">Rata-rata Margin</span>
-            <span class="hpp-summary-value" id="hppAvgMargin">--</span>
-          </div>
-          <div class="hpp-summary-item">
-            <span class="hpp-summary-label">Margin Terendah</span>
-            <span class="hpp-summary-value hpp-summary-value--warn" id="hppMinMargin">--</span>
-          </div>
-        </div>
-
-        <div class="chart-canvas-wrap hpp-canvas-wrap" id="hppCanvasWrap">
-          <canvas id="hppTrendChart" width="800" height="260"
-                  role="img" aria-label="Grafik garis fluktuasi HPP vs harga jual"></canvas>
-          <div class="chart-tooltip hpp-chart-tooltip" id="hppChartTooltip"
-               role="tooltip" aria-live="polite" hidden>
-            <span class="chart-tooltip__date" id="hppTooltipDate"></span>
-            <span class="chart-tooltip__value" id="hppTooltipHpp"></span>
-            <span class="chart-tooltip__value hpp-tooltip__hj" id="hppTooltipHj"></span>
-          </div>
-          <!-- Legenda garis -->
-          <div class="hpp-legend" aria-hidden="true">
-            <span class="hpp-legend__item"><i class="hpp-legend__swatch hpp-legend__swatch--hpp"></i> HPP (Modal)</span>
-            <span class="hpp-legend__item"><i class="hpp-legend__swatch hpp-legend__swatch--hj"></i> Harga Jual</span>
-            <span class="hpp-legend__item hpp-legend__item--margin"><i class="hpp-legend__swatch hpp-legend__swatch--margin"></i> Margin</span>
-          </div>
-        </div>
-      </article>
-    </section>
-    </div><!-- /dashboard-section: Fluktuasi HPP -->
 
     <!-- (Fix #91) Panel PO dipindahkan ke #panel-restok —
          lihat blok TAB RESTOK BARANG di bawah. -->
 
     <!-- System Status & Recent Activity -->
-    <div class="dashboard-section" aria-label="Status Sistem">
+    <!-- SEMBUNYIKAN SEMENTARA: Status Sistem -->
+    <div class="dashboard-section" aria-label="Status Sistem"
+         style="display:none" aria-hidden="true">
     <section class="panel-grid" aria-label="Status Sistem">
       <article class="panel-card panel-card--full">
         <h2 class="panel-card__title">Status Sistem</h2>
@@ -437,7 +391,8 @@
           <div class="stat-card__label">Meja Aktif</div>
           <div class="stat-card__value" id="statMejaAktif">0</div>
         </article>
-        <article class="stat-card stat-card--member stat-card--clickable" id="cardListMember">
+        <article class="stat-card stat-card--member stat-card--clickable is-hidden"
+                 id="cardListMember" style="display:none" aria-hidden="true">
           <div class="stat-card__label">Daftar Member</div>
           <div class="stat-card__value" id="statListMember">--</div>
           <div class="stat-card__sublabel">Klik untuk lihat rincian kunjungan</div>

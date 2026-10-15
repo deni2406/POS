@@ -60,9 +60,12 @@ body {
 }
 
 .topbar__brand {
-  height: 56px;
-  width: auto;
-  display: block;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
 }
 
 .btn-logout {
