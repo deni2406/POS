@@ -256,6 +256,148 @@ Format tiap entri:
 
 <!-- ENTRI BARU DI BAWAH BARIS INI -->
 
+### Fix #109 — Logo "ALVA" Header Admin Diperbesar 40% (40px → 56px)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-15 |
+| **File** | `admin/css/dashboard.css` (`.topbar__brand`) |
+| **Masalah** | Fix #108 menaikkan height ke 40px, namun masih dianggap terlalu kecil. User meminta diperbesar 40%. |
+| **Akar** | 40px hanya ~9.3% dari ukuran asli 432px; user menginginkan logo lebih dominan di header. |
+| **Fix** | `.topbar__brand`: `height: 56px` (naik 40% dari 40px). Topbar total tinggi juga 56px (padding 16+16 + konten), sehingga logo mengisi penuh area vertikal topbar. Logo persegi 432×432px → tampil 56×56px. |
+| **Verifikasi** | `grep -n "topbar__brand" admin/css/dashboard.css` → `height: 56px` ✓. Logo asli 432×432px PNG. Tidak ada duplikat di `www/`. |
+| **Pelajaran** | Saat logo persegi dipakai di topbar dengan padding 16px atas+bawah, tinggi optimal adalah `56px` (sama dengan tinggi area visual topbar) agar logo terlihat penuh dan proporsional. Rasio peningkatan: `(56-40)/40 = 40%`. |
+
+### Fix #108 — Logo "ALVA" Header Panel Admin Terlalu Kecil (Menyusut Drastis)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-15 |
+| **File** | `admin/css/dashboard.css` (`.topbar__brand`) |
+| **Masalah** | Sebelumnya logo ALVA (`<img src="img/alva-logo.png">`) di topbar admin hanya setinggi 26px (~6% dari ukuran asli 432×432px), hampir tak terlihat. Sebelumnya juga styling-nya berupa properti teks (`font-size`, `font-weight`, `letter-spacing`) yang tidak relevan untuk elemen `<img>`. |
+| **Akar** | Rule `.topbar__brand` awalnya ditulis untuk teks/tanda tangan (Fix sebelumnya), lalu saat logo diubah menjadi gambar PNG, height tidak disesuaikan — 26px terlalu kecil untuk logo persegi 432×432px. |
+| **Fix** | `.topbar__brand`: `height: 40px; width: auto; display: block;` — tinggi 40px (~9.3% dari ukuran asli) proporsional dengan padding topbar (16px atas + 16px bawah = 56px total) dan tombol Logout. Tidak ada duplikasi styling di folder `www/`. |
+| **Verifikasi** | `grep -n "topbar__brand" admin/css/dashboard.css` → line 62, `height: 40px` ✓. Logo asli 432×432px (PNG, non-interlaced, 12KB). Rasio tampilan ~40/432 ≈ 9.3% — cukup besar untuk terbaca jelas. |
+| **Pelajaran** | Saat mengubah elemen `<img>` logo, pastikan rule CSS menggunakan properti dimensi gambar (`height`/`width`), bukan properti tipografi (`font-size`/`font-weight`). Ukuran tinggi logo sebaiknya ~70% dari tinggi visual area topbar (total area ~56px termasuk padding → target ~40px). |
+
+### Fix #107 — Pindahkan Modul Daftar Member ke Halaman Mandiri (member-list.html)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-14 |
+| **File** | `admin/member-list.html` (baru), `admin/js/member-list.js` (baru), `admin/css/member-list.css` (baru), `admin/dashboard.html` (hapus modal `#modalListMember` + modal `#modalEditMember`; sembunyikan stat card `#cardListMember`/`#statListMember`; tambah item burger `#burgerBtnMemberList`), `admin/js/dashboard.js` (hapus seluruh logika Daftar Member ~400 baris; tambah handler burger `burgerBtnMemberList` → `member-list.html`), `admin/js/_archive/dashboard-member.bak.js` (arsip logika lama), `admin/_archive/dashboard-member-panel.html.bak` (arsip markup modal lama) |
+| **Masalah** | Dashboard admin menampung modul Daftar Member sebagai modal dalam-page (`#modalListMember` + `#modalEditMember`) yang membuka dari stat card `#cardListMember`. Modul member cukup besar (~400 baris JS, ~100 baris HTML, ~200 baris CSS) dan mendominasi dashboard — sementara pola arsitektur Fix #84/#95 sudah menetapkan bahwa modul besar sebaiknya hidup di halaman khusus yang diakses via burger menu (pola pembelian-bank.html, bar-bahan-mentah.html, dapur-bahan-mentah.html). |
+| **Akar** | Modul Daftar Member sejak awal (Fix #23) dirancang sebagai modal internal dashboard, tidak mengikuti pola ekstraksi halaman khusus yang baru diterapkan ke modul lain. |
+| **Fix** | (1) **`admin/member-list.html`** — halaman mandiri baru: header (kembali + logout), panel-card berisi filter bar, chip ringkasan 6 (Total/Aktif/Expired/Pelajar/Umum/Platinum), tabel 8 kolom, dan modal Edit Member. Semua ID elemen dipertahankan identik dengan markup lama. Auth guard: redirect ke `index.html` bila `pbms_admin_session` tak ada. (2) **`admin/js/member-list.js`** — modul mandiri berbasis `getElementById`, tidak bergantung dashboard.js; berisi seluruh logika: `loadMemberList`, `reRenderMemberTable`, `updateGlobalMemberChips`, `handleDeleteMemberClick`, `handleActivateMemberClick`, `openEditMemberModal`, chip filter interaktif, ESC handler, instant cache `pbms_cached_total_member` (pola Fix #29 dipertahankan). (3) **`admin/css/member-list.css`** — CSS mandiri (tidak memuat dashboard.css), styling diadaptasi dari blok member di dashboard.css. (4) **`admin/dashboard.html`** — hapus `<div id="modalListMember">` (~99 baris) + hapus `<div id="modalEditMember">` (~35 baris); stat card `#cardListMember` disembunyikan dengan `style="display:none"` + `aria-hidden="true"` (pola Fix #84/#95); tambah item `#burgerBtnMemberList` ke burger drawer. (5) **`admin/js/dashboard.js`** — hapus blok `MODAL: Daftar Member` (baris 640–1043) + seluruh logika edit/delete/activate + chip filter + instant render total member; ganti dengan komentar arsip; tambah handler `burgerBtnMemberList` → `window.location.href = 'member-list.html'`. (6) **Arsip** — `admin/js/_archive/dashboard-member.bak.js` (logika lama 400 baris + header arsip), `admin/_archive/dashboard-member-panel.html.bak` (markup modal lama lengkap). |
+| **Verifikasi** | `node --check admin/js/dashboard.js` exit 0 ✓. `node --check admin/js/member-list.js` exit 0 ✓. Grep `modalListMember` di dashboard.html → 0 occurrence ✓. Grep `modalEditMember` di dashboard.html → 0 occurrence ✓. Semua ID modul (28 ID) di member-list.html → masing-masing 1 occurrence, 0 duplikat ✓. Struktur HTML member-list.html: div 21/21 seimbang, table 1/1 ✓. Struktur dashboard.html: div 251/251 seimbang, 0 duplikat ID ✓. Stat card `#cardListMember` tetap ada di dashboard.html (hidden `display:none` + `aria-hidden`) ✓. Item `#burgerBtnMemberList` ada di dashboard.html ✓. Handler `burgerBtnMemberList` → `member-list.html` di dashboard.js ✓. Test browser (adaBROWSER, port 3200): `member-list.html` & `dashboard.html` keduanya redirect ke login (auth guard berfungsi); interaksi penuh membutuhkan sesi login admin yang tak tersedia di sesi agent — test manual oleh user diminta. |
+| **Pelajaran** | (1) Saat mengekstrak modul dari dashboard, pertahankan stat card sebagai elemen hidden agar CSS & kode lain yang merujuk `#cardListMember`/`#statListMember` tak error — pola Fix #84/#95. (2) Arsipkan logika lama ke `_archive/*.bak.js` sebelum menghapus, bukan hanya `git log` — memudahkan diff & review. (3) CSS modal-edit-member (`#modalEditMember`) di dashboard.css tak perlu dihapus — rule-nya hanya berlaku bila elemen ada di DOM; di halaman member-list.html, CSS-nya ditangani oleh member-list.css sendiri. |
+
+
+### Fix #106 — Gateway WA 409 Conflict: Chat ID Format Mismatch (`@c.us` vs `@s.whatsapp.net`)
+| | |
+|---|---|
+| **Tanggal** | 2026-10-14 |
+| **File** | `wa-gateway/index.new.js` |
+| **Masalah** | Setelah Fix #105, test rapid-fire ke nomor `6281775042284` tetap mengembalikan 409 Conflict. API response: `{"ok":false,"error":"Terdapat pengiriman ke nomor ini yang masih menunggu konfirmasi."}`. Gateway log menunjukkan `[cleanup] Removed pre-create orphan send_1` dan `send_2` — artinya entry dihapus sebelum pernah mendapat `message_create`. |
+| **Akar** | **Chat ID format mismatch**: Kita menyimpan entry dengan key `"6281775042284@c.us"` (format input), tapi WhatsApp event `msg.to` berisi `"6281775042284@s.whatsapp.net"` (format internal WhatsApp). Fungsi `lookupPending()` membandingkan string secara literal → tidak match → event handler tidak menemukan entry → `createdTs` tidak pernah ter-set → cleanup menganggap entry sebagai "pre-create orphan" dan menghapusnya sebelum ACK sempat tiba. |
+| **Fix** | Tambah fungsi `normalizeChatId(raw)` yang menormalkan semua format ID ke `"xxx@c.us"`: (1) Hapus `+` prefix, (2) Konversi `@s.whatsapp.net` → `@c.us`, (3) Tambah `@c.us` suffix jika tidak ada. Terapkan normalisasi di: (a) `POST /send` saat membuat `chatId`, (b) `lookupPending()` saat membandingkan `msg.to`. |
+| **Verifikasi** | `node --check C:/POS/wa-gateway/index.new.js` → exit 0. Test fungsi `normalizeChatId` dengan 5 kasus: `@c.us` input → sama, `@s.whatsapp.net` → konversi benar, plain number → tambah suffix, `+62...` → hapus prefix, null → return null. Semua pass. Diff menunjukkan 3 perubahan: tambah `normalizeChatId()`, update `lookupPending()`, update `chatId` di POST handler. |
+| **Pelajaran** | WhatsApp API menggunakan beberapa format ID yang saling berbeda: `@c.us` (chat/user), `@s.whatsapp.net` (server internal), plain number, dengan/ tanpa `+`. HARUS dinormalisasi ke satu format konsisten di semua titik perbandingan. Jangan asumsikan format input sama dengan format event. |
+
+### Fix #105 — Gateway WA Entry Pending "Abadi" (Immortal Stuck Entry)
+| | |
+|---|---|
+| **Tanggal** | 2026-10-14 |
+| **File** | `wa-gateway/index.new.js` |
+| **Masalah** | Setelah gateway berjalan >12 jam, pengiriman pesan ke nomor tertentu ditolak 409 (`Terdapat pengiriman ke nomor ini yang masih menunggu konfirmasi`). Test rapid-fire ke nomor `6281775042284` (nomor sendiri yang terdaftar) menghasilkan 409 pada kedua request. PID 7200 (`index.new.js`) berjalan stabil (61.5 MB RAM, 9 thread, handle 238). |
+| **Akar** | `cleanupStaleEntries()` (baris 56) hanya menghapus entry dengan `!entry.createdTs` — entry yang sudah dapat `message_create` (mencatat `createdTs`) tapi `message_ack` tidak pernah tiba (disconnect, network glitch, WhatsApp server delay) menjadi **immortal**: masuk ke Map, punya `createdTs`, tapi `confirmed` dan `ackError` tetap `false`. Timer timeout 30 detik di `ackPromise` tidak menghapus entry dari Map karena callback-nya hanya menghapus berdasarkan `correlId` riil yang mungkin sudah dimigrasi atau timeout sendiri. Dengan demikian entry menumpuk selamanya. |
+| **Fix** | (1) Tambah field `lastActivityTs: Date.now()` di `createPendingEntry()`. (2) Update `lastActivityTs` di setiap titik event: `message_ack` (line 241, 254) dan `message_create` (line 264). (3) Perluas `cleanupStaleEntries()`: case 2 baru — hapus entry `confirmed=false && ackError=false` jika `Date.now() - lastActivityTs > STALE_TIMEOUT_MS` (60 detik tanpa aktivitas). |
+| **Verifikasi** | `node --check C:/POS/wa-gateway/index.new.js` → exit 0. Grep `lastActivityTs` menemukan 4 match: 1 di `createPendingEntry`, 2 di `handleSendEvent` (ACK path), 1 di `message_create` path. Grep `cleanupStaleEntries` menunjukkan 2 case: pre-create orphan + silent entry. Gateway tetap aktif (belum di-restart) — setelah restart, entry stuck akan terhapus dalam ≤60 detik. |
+| **Pelajaran** | `cleanupStaleEntries` harus mencakup dua kondisi: (a) entry belum pernah mendapat `message_create` (orphan murni), DAN (b) entry yang sudah dapat `message_create` tapi tidak ada aktivitas ≥ `STALE_TIMEOUT_MS` (stuck tanpa ACK). Waktu terakhir aktivitas HARUS dicatat di setiap event handler yang menyentuh entry. |
+
+### Fix #104 — Kebocoran Identitas Member Antar Sesi: Meja Non-Member Mengambil Tarif Member dari Sesi Sebelumnya
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-14 |
+| **File** | `index-check.js` & `www/index-check.js` (2 titik) |
+| **Masalah** | Meja non-member (atau setelah sesi member selesai) menampilkan harga/member sesuai jadwal yang salah — misalnya sisa identitas member dari sesi sebelumnya muncul kembali. |
+| **Akar** | Tiga sumber kebocoran state: (1) Handler `memberSelected`: early return saat `event.detail?.member` kosong/falsy tidak membersihkan `pendingMemberForMeja`, sehingga nilai lama tetap tersimpan; (2) `tutupModalBukaMeja()`: menutup modal tanpa membersihkan `pendingMemberForMeja`, sehingga jika user memilih member → batal tutup modal → pending tetap ada → dipakai di sesi berikutnya; (3) `addMemberToMeja()` (baris 83): setelah assign member ke `memberByMeja.set(activeMeja, member)`, `pendingMemberForMeja` tidak dikosongkan. Keempat titik reset state (session expired, logout, simpan pesanan, dan kondisi tanpa meja aktif) sebelumnya tidak membersihkan `pendingMemberForMeja`. |
+| **Fix** | (1) Handler `memberSelected`: ubah early return jadi `if (!member) { pendingMemberForMeja = null; return; }`; (2) `tutupModalBukaMeja()`: tambahkan `pendingMemberForMeja = null`; (3) Keempat titik reset state (handleSessionExpired, logoutKasir, simpanPesananMeja, kondisi tanpa meja aktif) tambahkan `memberByMeja.clear()` + `pendingMemberForMeja = null` agar state bersih total. |
+| **Verifikasi** | `node --check index-check.js www/index-check.js` → exit 0. Kedua file identik setelah diff. Alur yang perlu uji browser: pilih member → batal tutup modal buka meja → buka meja baru non-member → tarif harus normal (bukan member); buka meja non-member setelah sesi member selesai → tarif tetap normal; buka sesi member valid → tarif member tetap benar. |
+| **Pelajaran** | State pending (yang belum dikonfirmasikan ke server) harus dibersihkan setiap kali flow batal atau sesi berubah, bukan hanya saat sukses. Gunakan clear total (`memberByMeja.clear()` + `pendingMemberForMeja = null`) di semua titik reset state, bukan parsial. |
+
+### Fix #102 — Gateway WA Crash: SEND_TIMEOUT_MS Tidak Dideklarasikan di index.new.js
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-14 |
+| **File** | `wa-gateway/index.new.js` |
+| **Masalah** | Baris 372 mereferensikan `SEND_TIMEOUT_MS` padahal konstanta tersebut tidak dideklarasikan di file. Hanya `STALE_TIMEOUT_MS = 60_000` yang ada. Saat runtime, `ReferenceError: SEND_TIMEOUT_MS is not defined` membuat gateway crash sebelum sempat memproses pengiriman pesan. |
+| **Akar** | Saat refactoring dari backup (`index.new.js.bak.20261014_034629`), konstanta `SEND_TIMEOUT_MS = 30_000` tidak ikut dipindahkan — hanya `STALE_TIMEOUT_MS` yang tersisa. |
+| **Fix** | Menambahkan baris deklarasi `const SEND_TIMEOUT_MS = 30_000;` tepat di bawah baris `STALE_TIMEOUT_MS`. Verifikasi: `node --check` exit 0, grep `SEND_TIMEOUT_MS` menemukan 2 match (1 deklusi, 1 usage). |
+| **Verifikasi** | `node --check C:/POS/wa-gateway/index.new.js` → exit 0. Grep `SEND_TIMEOUT_MS` → 2 match (line 49 declaration, line 373 usage). Tidak ada lagi undefined reference. |
+| **Pelajaran** | Saat memigrasi kode dari backup, pastikan semua konstanta yang direferensikan juga dipindahkan. Cek `node --check` sebelum deploy. |
+
+### Fix #103 — Bar 原料表 showAlert 只弹出类型标签不显示消息文本
+| | |
+|---|---|
+| **Tanggal** | 2026-10-14 |
+| **File** | `admin/js/bar-bahan-mentah.js`（`showAlert` 定义行） |
+| **Masalah** | 前端表单校验、加料和删除操作中调用的 `showAlert('danger'|'success', pesan_lengkap)` 只弹出 `'danger'`/`'success'`，完整消息文本完全不显示。`showAlert` 实现为 `const showAlert = (msg) => window.alert(msg)`，只接受一个参数，导致调用方传入的两个实参中的第二个被忽略。 |
+| **Akar** | 函数签名只声明了一个形参 `msg`，调用方却传了 `(type, msg)` 两个参数；JS 中多余的参数被丢弃，`window.alert` 仅收到第一个参数 `'danger'` 或 `'success'`。 |
+| **Fix** | 将签名改为 `const showAlert = (_type, msg) => window.alert(msg)`，丢弃第一个参数，直接展示消息文本。不影响任何业务逻辑（添加/补料/删除）、API 调用及 DOM 渲染。 |
+| **Verifikasi** | `node --check C:/POS/admin/js/bar-bahan-mentah.js` → exit 0；grep 确认所有 `showAlert(` 调用均含两参数，新签��兼容；grep 确认 `colspan="8"` 共 2 处，与 8 列表头/每行 8 个 `<td>` 一致，无需改动 HTML。 |
+| **Pelajaran** | 包装 `window.alert` 的 helper 必须与调用方签名对齐；若调用方传入语义参数（如 type + msg），helper 要显式忽略多余参数而非截断。 |
+
+### Fix #101 — Harga Meja Meleleh saat Jam Berubah (Breakage)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-14 |
+| **File** | `www/pricing-meja.js` (publikasi `lockTariffSesi` + ekspor), `www/index-check.js` (waktu_mulai sesi dipakai, bukan jam runtime) |
+| **Masalah** | Setelah meja didaratkan & dibuka ulang, harga yang ditampilkan "meleleh" naik — Pelajar misal Rp15.000/jam berubah jadi tarif umum Rp25.000/jam, padahal kategori member tidak berubah. |
+| **Akar** | Saat reset meja (meja → kosong), `lastCacheKey` dan `hargaCached` direset, **tetapi** field `waktuMulaiSesi` & `durasiJamAsli` tetap terisi dari sesi sebelumnya. Saat `hitungHargaMeja()` dipanggil ulang, dua masalah: (1) tidak ada cache key unik per-waktu-jam, sehingga ganti jam = cache miss & kalkulasi ulang; (2) lebih parah — `jamUntukRequest` di `index-check.js` mengambil waktu runtime (`new Date()`) bukan `waktu_mulai` sesi, sehingga tarif yang dihitung tidak konsisten dengan waktu buka sesi. |
+| **Fix** | 1) `pricing-meja.js`: tambah field `waktuMulaiSesi` & `durasiJamAsli` per-meja; setelah reset meja, kosongkan kedua field ini; sediakan fungsi `lockTariffSesi(nomorMeja, waktuMulai, durasiJam)` yang mengunci harga berbasis waktu_mulai asli + durasi; cache key = `${kat}_${durasiJam}_${jam}j` per-waktu. 2) `index-check.js`: gunakan `session.waktuMulai` (bukan jam sekarang) sebagai `jam` di payload request /hitung-harga. 3) Publikasikan `lockTariffSesi` melalui API. |
+| **Verifikasi** | Test manual buka meja → harga sesuai kategori; ganti jam sistem → harga tidak berubah; tutup & buka ulang meja → harga tetap sesuai kategori member, tidak bocor ke tarif umum. |
+| **Pelajaran** | State sesi (waktu_mulai, durasi) harus di-clear bersamaan dengan hargaCached & lastCacheKey saat reset. Waktu untuk kalkulasi tarif HARUS dari waktu_mulai sesi, BUKAN jam runtime saat tombol ditekan — keduanya bisa berbeda jika browser/device berubah jam. |
+
+### Fix #100 — Kebocoran Tarif Member Antar Sesi: Member Status "PELAJAR" Bocor ke Sesi Berikutnya (State Leak)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-14 |
+| **File** | `index-check.js` & `www/index-check.js` (4 titik clear state), `www/pricing-meja.js` (stopSemuaTimer) |
+| **Masalah** | Jika Meja 1 sebelumnya dipakai oleh Member "PELAJAR", lalu sesi selesai dan Meja 1 dibuka kembali untuk Member "UMUM" atau "NON-MEMBER", sistem masih mengenakan tarif "PELAJAR" milik pemain sebelumnya. Bug terjadi karena variabel state `memberByMeja` (Map) dan `pendingMemberForMeja` tidak dibersihkan saat `activeMeja` di-set null. Akibatnya, referensi member lama tetap ada di memori dan bisa digunakan oleh sesi baru. Selain itu, `pricing-meja.js`'s `stopSemuaTimer()` hanya menghentikan timer tanpa membersihkan `meja.member`, `meja.kategori`, dan cache harga. |
+| **Akar** | (1) Di `index-check.js`: fungsi logout/reset (`activeMeja = null`) hanya membersihkan `activeMeja`, `nomorMeja`, `cart` — tetapi melewatkan `memberByMeja.clear()` dan `pendingMemberForMeja = null`. (2) Di `pricing-meja.js`: `stopSemuaTimer()` berhenti hanya clearing `intervalId` dan `status` — tidak reset `member`, `kategori`, `lastCacheKey`, `hargaCached`. |
+| **Fix** | (1) Tambah `memberByMeja.clear()` + `pendingMemberForMeja = null` di 4 lokasi yang sama persis dimana `activeMeja = null` terjadi: — `resetApp()` (logout) — baris ~278 — `logoutKasir()` (pindah kasir) — baris ~372 — `simpanPesananKeMejaSelesai()` (setelah pesanan disimpan) — baris ~2669 — `handlePaymentSelesai()` (setelah pembayaran lunas) — baris ~4208 (2) Di `pricing-meja.js`: `stopSemuaTimer()` sekarang juga mereset setiap meja: `meja.member = null`, `meja.kategori = "NON_MEMBER"`, `meja.lastCacheKey = null`, `meja.hargaCached = null`. |
+| **Verifikasi** | `node -c index-check.js` ✓, `node -c www/index-check.js` ✓, `node -c www/pricing-meja.js` ✓. Grep `memberByMeja.clear()` = 4 match di root + 4 di www (total 8) ✓. Grep `pendingMemberForMeja = null` = 6 match (4 clear + 2 assignment) ✓. Grep `meja\.member = null` di pricing-meja.js = 1 match (di stopSemuaTimer) ✓. Butuh verifikasi live: buka meja dengan member PELAJAR → tutup → buka lagi meja sama dengan non-member → harga harus reguler (bukan PELAJAR). |
+| **Pelajaran** | State session-based (Map per meja) harus dibersihkan total bersamaan dengan clearing state utama. Jangan hanya set `activeMeja = null` — pastikan semua struktur data yang merekam state transisional (memberByMeja, pendingMemberForMeja, harga cache) ikut dibersihkan di setiap titik reset. |
+
+### Fix #99 — Member MENUNGGU_AKTIF Dapat Buka Meja dengan Tarif Reguler (Non-Member)
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-14 |
+| **File** | `server.js` (validasi status member di `/api/meja/buka` + harga sesi) |
+| **Masalah** | Member dengan status `MENUNGGU_AKTIF` (mis. ID `153` / `PLJ-0042`) ditolak saat membuka meja di POS dengan error `400 "Member belum aktif."`. Seharusnya member ini tetap bisa dipilih dan dicatat pada sesi meja, namun dikenakan tarif reguler (non-member), sama seperti member `EXPIRED`. |
+| **Akar** | Validasi `if (foundMember.status !== "AKTIF" && foundMember.status !== "EXPIRED")` di `/api/meja/buka` (line 6231) memblokir semua status selain AKTIF/EXPIRED, termasuk MENUNGGU_AKTIF. Selain itu, penentuan `kategoriMember` dan `cacheHarga` hanya mengecek `status === "EXPIRED"`, bukan juga `MENUNGGU_AKTIF`. Di bagian harga sesi (line 5935), `isExpiredHarga` hanya mengecek `EXPIRED`. |
+| **Fix** | (1) Hapus validasi pemblokiran 400 untuk MENUNGGU_AKTIF. (2) Tambah variabel `isExpiredOrPending = status === "EXPIRED" || status === "MENUNGGU_AKTIF"`. (3) `kategoriMember = isExpiredOrPending ? null : kategori`. (4) `cacheHarga = isExpiredOrPending ? { hargaPerJam: null, jam: null }` (fallback harga normal). (5) `isExpiredHarga` di handler harga sesi ditambah `|| memberHarga?.status === "MENUNGGU_AKTIF"`. (6) `member_id` tetap tersimpan di `sesi_meja` untuk pencatatan riwayat transaksi. |
+| **Verifikasi** | `node -c server.js` ✓. Grep `\"Member belum aktif.\"` = 0 match ✓. Grep `isExpiredOrPending` = 2 match (definisi + penggunaan) ✓. Grep `isExpiredHarga.*MENUNGGU_AKTIF` = 1 match ✓. `member_id` tetap masuk INSERT `sesi_meja` ✓. Butuh verifikasi live: pilih member MENUNGGU_AKTIF saat buka meja → sukses, harga reguler, `member_id` tercatat di `sesi_meja`. |
+| **Pelajaran** | Status `MENUNGGU_AKTIF` adalah status transisional — member sudah terdaftar tapi belum aktif penuh. Perlu diperlakukan sama seperti `EXPIRED` di seluruh titik keputusan bisnis (buka meja, harga, validasi) agar konsisten. |
+
+### Fix #98 — Race Condition `/send` Concurrent: 409 Palsu & Entry Tabrakan Kunci Map
+
+| | |
+|---|---|
+| **Tanggal** | 2026-10-14 |
+| **File** | `wa-gateway/index.new.js` (refactor pendingSends keying + lookup + migration) |
+| **Masalah** | Dua pesan berurutan ke nomor WhatsApp yang sama ditolak dengan HTTP 409 Conflict palsu, karena `pendingSends` menggunakan `chatId` (`628xxx@c.us`) sebagai kunci Map — pesan kedua masuk sebelum ACK pesan pertama tiba, dan `pendingSends.has(chatId)` tetap `true`. Selain itu, event `message_create`/`message_ack` dari pesan berbeda yang tiba bersamaan bisa salah korelasi jika kedua pesan itu memiliki `chatId` sama (nomor tujuan sama). |
+| **Akar** | (1) Key Map `chatId` tidak unik per-pengiriman — dua pengiriman berurutan ke nomor sama menimpa entri pertama di Map sebelum ACK pertama selesai. (2) `lookupPending` hanya mencari `msg.id.id` (belum ada saat message_create pertama) dan `msg.to` (sudah diganti key-nya) → entri tidak ditemukan. (3) Tidak ada pembersihan entri orphan (timeout tapi belum di-resolve). |
+| **Fix** | (1) Tambah `sendSeq` counter global; tiap pengiriman didaftarkan dengan key unik `send_N` di `pendingSends`. (2) `handleSendEvent` mendeteksi transisi: saat `message_create` pertama tiba dengan `msg.id.id` riil WhatsApp, kunci dimigrasi dari `send_N` ke `msg.id.id` — hanya sekali. (3) `lookupPending` 3 tahap fallback: (a) `msg.id.id` langsung, (b) `msg.to` lama, (c) loop semua entry cocokkan `entry.chatId === msg.to`. (4) Callback resolve/reject/timeout membersihkan kedua key (`correlId` baru + key lama). (5) `cleanupStaleEntries()` interval 10 detik menghapus entri yang >60 detik tanpa `createdTs` dan belum settle. |
+| **Verifikasi** | `node -c index.new.js` ✓ (syntax OK). `sendSeq` counter: true. `sendKey` per send: true. `lookupPending` fallback ke `chatId` match: true. Migrasi `send_` → `msg.id.id`: true. `cleanupStaleEntries`: true. Butuh verifikasi live: kirim 2 pesan berurutan ke nomor sama dalam 1 detik — harus keduanya sukses (bukan 409). |
+| **Pelajaran** | Untuk sistem tracking pengiriman pesan berbasis Map, gunakan kunci yang unik per *pengiriman* (bukan per tujuan), karena event konfirmasi (ACK) bisa tertunda. Pembersihan entri orphan wajib ada — timeout tunggal tak cukup karena event stream bisa terputus tanpa pemberitahuan. |
+
 ### Fix #97 — Format Input Nominal Pembelian Bank (pemisah ribuan titik)
 
 | | |
