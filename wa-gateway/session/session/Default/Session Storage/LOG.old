@@ -1,0 +1,4 @@
+2026/10/15-01:51:43.585 1a34 Creating DB C:\pos\wa-gateway\session\session\Default\Session Storage since it was missing.
+2026/10/15-01:51:43.631 1a34 Reusing MANIFEST C:\pos\wa-gateway\session\session\Default\Session Storage/MANIFEST-000001
+2026/10/15-01:51:43.633 1a34 Recovering log #3
+2026/10/15-01:51:43.635 1a34 Reusing old log C:\pos\wa-gateway\session\session\Default\Session Storage/000003.log 

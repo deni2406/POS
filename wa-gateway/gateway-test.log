@@ -1,0 +1,18 @@
+WHATSAPP_API_LISTENING http://127.0.0.1:3101
+O:\wa-gateway\node_modules\puppeteer-core\lib\cjs\puppeteer\node\BrowserLauncher.js:334
+                    throw new Error(`Could not find Chrome (ver. ${this.puppeteer.browserVersion}). This can occur if either\n` +
+                          ^
+
+Error: Could not find Chrome (ver. 146.0.7680.31). This can occur if either
+ 1. you did not perform an installation before running the script (e.g. `npx puppeteer browsers install chrome`) or
+ 2. your cache path is incorrectly configured (which is: C:\Users\USER\.cache\puppeteer).
+For (2), check out our guide on configuring puppeteer at https://pptr.dev/guides/configuration.
+    at ChromeLauncher.resolveExecutablePath (O:\wa-gateway\node_modules\puppeteer-core\lib\cjs\puppeteer\node\BrowserLauncher.js:334:27)
+    at ChromeLauncher.computeLaunchArguments (O:\wa-gateway\node_modules\puppeteer-core\lib\cjs\puppeteer\node\ChromeLauncher.js:94:24)
+    at ChromeLauncher.launch (O:\wa-gateway\node_modules\puppeteer-core\lib\cjs\puppeteer\node\BrowserLauncher.js:85:39)
+    at ChromeLauncher.launch (O:\wa-gateway\node_modules\puppeteer-core\lib\cjs\puppeteer\node\ChromeLauncher.js:46:22)
+    at PuppeteerNode.launch (O:\wa-gateway\node_modules\puppeteer-core\lib\cjs\puppeteer\node\PuppeteerNode.js:141:31)
+    at Client.initialize (O:\wa-gateway\node_modules\whatsapp-web.js\src\Client.js:462:39)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+Node.js v24.19.0

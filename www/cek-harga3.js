@@ -1,0 +1,1 @@
+const sqlite3=require("sqlite3").verbose(); const db=new sqlite3.Database("pos.db"); db.all("SELECT * FROM harga_member_cache WHERE kategori = ?", ["UMUM"], (err,rows) => { if(err) console.error(err); else console.table(rows); db.close(); });

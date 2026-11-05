@@ -1,0 +1,56 @@
+warning: in the working copy of 'android/app/build.gradle', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'android/app/src/main/res/drawable/ic_launcher_background.xml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'android/app/src/main/res/values/strings.xml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'android/gradle.properties', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'capacitor.config.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lamp-controlle/lamp-controller.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'meja-modal.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'meja-timer.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package-lock.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pos.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'waitinglist.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'waitinglist.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'www/index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'www/meja-modal.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'www/meja-timer.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'www/waitinglist.js', LF will be replaced by CRLF the next time Git touches it
+ .gitignore                                         |    1 [32m+[m
+ 99_DebugMemberNode.js                              |   69 [31m-[m
+ android/app/build.gradle                           |   15 [32m+[m[31m-[m
+ .../res/drawable-v24/ic_launcher_foreground.xml    |   34 [31m-[m
+ .../main/res/drawable/ic_launcher_background.xml   |  174 [32m+[m[31m-[m
+ .../src/main/res/mipmap-anydpi-v26/ic_launcher.xml |    8 [32m+[m[31m-[m
+ .../res/mipmap-anydpi-v26/ic_launcher_round.xml    |    8 [32m+[m[31m-[m
+ .../app/src/main/res/mipmap-hdpi/ic_launcher.png   |  Bin [31m2786[m -> [32m1868[m bytes
+ .../src/main/res/mipmap-hdpi/ic_launcher_round.png |  Bin [31m4341[m -> [32m1868[m bytes
+ .../app/src/main/res/mipmap-mdpi/ic_launcher.png   |  Bin [31m1869[m -> [32m1081[m bytes
+ .../src/main/res/mipmap-mdpi/ic_launcher_round.png |  Bin [31m2725[m -> [32m1081[m bytes
+ .../app/src/main/res/mipmap-xhdpi/ic_launcher.png  |  Bin [31m3981[m -> [32m2893[m bytes
+ .../main/res/mipmap-xhdpi/ic_launcher_round.png    |  Bin [31m6593[m -> [32m2893[m bytes
+ .../app/src/main/res/mipmap-xxhdpi/ic_launcher.png |  Bin [31m6644[m -> [32m5269[m bytes
+ .../main/res/mipmap-xxhdpi/ic_launcher_round.png   |  Bin [31m10455[m -> [32m5269[m bytes
+ .../src/main/res/mipmap-xxxhdpi/ic_launcher.png    |  Bin [31m9441[m -> [32m7947[m bytes
+ .../main/res/mipmap-xxxhdpi/ic_launcher_round.png  |  Bin [31m15916[m -> [32m7947[m bytes
+ android/app/src/main/res/values/strings.xml        |   10 [32m+[m[31m-[m
+ android/gradle.properties                          |    5 [32m+[m
+ capacitor.config.json                              |    8 [32m+[m[31m-[m
+ cek-member.js                                      |   20 [32m+[m[31m-[m
+ index.html                                         | 3615 [32m+++++++++++++++++[m[31m---[m
+ lamp-controlle/lamp-controller.js                  |   26 [32m+[m[31m-[m
+ meja-modal.js                                      |    6 [32m+[m[31m-[m
+ meja-timer.js                                      |   11 [32m+[m
+ package-lock.json                                  |  387 [32m+++[m
+ package.json                                       |    1 [32m+[m
+ pos.css                                            |  142 [32m+[m[31m-[m
+ server.js                                          | 2328 [32m+++++++++[m[31m----[m
+ waitinglist.css                                    |    7 [32m+[m[31m-[m
+ waitinglist.js                                     |  846 [32m++++[m[31m-[m
+ www/index.html                                     | 2789 [32m++++++++++++++[m[31m-[m
+ www/meja-modal.js                                  |    6 [32m+[m[31m-[m
+ www/meja-timer.js                                  |   24 [32m+[m[31m-[m
+ www/printer-bluetooth.js                           |  521 [32m++[m[31m-[m
+ www/waitinglist.js                                 |  846 [32m++++[m[31m-[m
+ 36 files changed, 10354 insertions(+), 1553 deletions(-)

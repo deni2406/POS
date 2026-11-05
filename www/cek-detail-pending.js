@@ -1,0 +1,1 @@
+const sqlite3=require("sqlite3").verbose();const db=new sqlite3.Database("./pos.db");db.all("SELECT t.id,t.nomor_transaksi,t.tanggal,t.jam,t.kasir,d.nama_barang,d.qty,d.harga_jual,d.hpp,d.subtotal FROM transaksi t LEFT JOIN detail_transaksi d ON d.transaksi_id=t.id WHERE t.status_sync='PENDING' ORDER BY t.id,d.id",(e,r)=>{if(e)console.error(e);else console.table(r);db.close()});

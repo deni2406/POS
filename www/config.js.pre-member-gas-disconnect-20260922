@@ -1,0 +1,16 @@
+module.exports = {
+  PORT: 3100,
+
+  // GAS TRANSAKSI POS + PENJUALAN
+  GAS_URL: "https://script.google.com/macros/s/AKfycbyL7BFXBNR6afG43SO2DmIfg9SkkkqetUjH_O76zbrD7OI4-KJlG--ooTvKhzLJDhCj/exec",
+
+  // GAS MEMBER
+  GAS_MEMBER_URL: "https://script.google.com/macros/s/AKfycbzEDWxLvxXAYmVpP3dO8531HWgk_qi6dNT66zoOeO0P_-WNHQlGO_8u7w6-XBVBAzGp/exec",
+
+  // GAS HARGA MEMBER
+  GAS_HARGA_URL: "https://script.google.com/macros/s/AKfycbyDIrFg9Fk4OY8HjMUWaFP6uJbFp6vQvhnatno7yWfp0-osGfZfK31IRjj4IjU1phaLEw/exec",
+
+  API_KEY: "POS-POLAR-2026",
+
+  MANAGER_TOTP_SECRET: "QTQRRBBO3AOTULG23AXOUDLZV756XH74"
+};

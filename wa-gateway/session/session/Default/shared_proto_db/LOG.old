@@ -1,0 +1,4 @@
+2026/10/15-01:51:42.766 1f74 Creating DB C:\pos\wa-gateway\session\session\Default\shared_proto_db since it was missing.
+2026/10/15-01:51:42.828 1f74 Reusing MANIFEST C:\pos\wa-gateway\session\session\Default\shared_proto_db/MANIFEST-000001
+2026/10/15-01:51:42.829 1f74 Recovering log #3
+2026/10/15-01:51:42.830 1f74 Reusing old log C:\pos\wa-gateway\session\session\Default\shared_proto_db/000003.log 

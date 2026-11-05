@@ -1,0 +1,1303 @@
+#!/usr/bin/env node
+"use strict";
+
+const readline = require("node:readline");
+const { spawnSync } = require("node:child_process");
+const { GoogleGenAI } = require("@google/genai");
+const { GEMINI_MODELS, REQUEST_TIMEOUT_MS } = require("./gemini-config");
+const { generateWithFallback, GeminiRequestError } = require("./gemini-fallback");
+const { ApiKeyPool, ApiKeyPoolError } = require("./api-key-pool");
+const {
+  ALVA_BRAIN_SYSTEM_INSTRUCTION,
+  createProjectInspector,
+  prepareBrainRequest,
+  redactSecrets
+} = require("./alva-brain");
+
+const SPINNER_FRAMES = ["|", "/", "-", "\\"];
+const ANSI = {
+  reset: "\x1b[0m",
+  accent: "\x1b[96m",
+  label: "\x1b[36m",
+  muted: "\x1b[90m",
+  content: "\x1b[37m",
+  status: "\x1b[32m",
+  heading: "\x1b[1;97m",
+  code: "\x1b[90m",
+  emphasis: "\x1b[1m"
+};
+
+function isInteractiveTerminal(input, output, env = process.env) {
+  const ci = /^(1|true|yes)$/i.test(String(env.CI || ""));
+  const dumbTerminal = String(env.TERM || "").toLowerCase() === "dumb";
+  return Boolean(input.isTTY && output.isTTY && !ci && !dumbTerminal);
+}
+
+function supportsColor(output, env = process.env, interactive = Boolean(output.isTTY)) {
+  return Boolean(
+    output.isTTY &&
+    interactive &&
+    !env.NO_COLOR &&
+    !/^(1|true|yes)$/i.test(String(env.CI || "")) &&
+    String(env.TERM || "").toLowerCase() !== "dumb"
+  );
+}
+
+function renderComposerLine({
+  width = 80,
+  inputText = "",
+  secretInput = false,
+  placeholder = "Ketik sesuatu...",
+  colors = false
+} = {}) {
+  const columns = Math.max(20, Math.floor(width) || 80);
+  const inputPrefix = "› ";
+  const availableInputWidth = Math.max(1, columns - displayWidth(inputPrefix) - 2);
+  const visibleInput = secretInput
+    ? "*".repeat(Math.min(availableInputWidth, inputText.length))
+    : Array.from(cleanText(inputText.slice(-availableInputWidth * 8))).slice(-availableInputWidth).join("");
+  const text = inputText
+    ? `${colorize(inputPrefix, ANSI.accent, colors)}${visibleInput}`
+    : `${colorize(inputPrefix, ANSI.accent, colors)}${colorize(placeholder, ANSI.muted, colors)}`;
+  return {
+    text,
+    inputColumn: Math.min(columns, displayWidth(inputPrefix) + displayWidth(visibleInput) + 1)
+  };
+}
+
+function colorize(value, color, enabled) {
+  return enabled ? `${color}${value}${ANSI.reset}` : value;
+}
+
+function cleanText(value) {
+  return String(value)
+    .replace(/\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1B\\))/g, "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .replace(/\t/g, "  ")
+    .replace(/\r\n?/g, "\n");
+}
+
+function characterWidth(character) {
+  const codePoint = character.codePointAt(0);
+  if (/[\p{Mark}\u200D\uFE00-\uFE0F]/u.test(character)) return 0;
+  if (
+    codePoint >= 0x1100 &&
+    (codePoint <= 0x115F ||
+      codePoint === 0x2329 ||
+      codePoint === 0x232A ||
+      (codePoint >= 0x2E80 && codePoint <= 0xA4CF) ||
+      (codePoint >= 0xAC00 && codePoint <= 0xD7A3) ||
+      (codePoint >= 0xF900 && codePoint <= 0xFAFF) ||
+      (codePoint >= 0xFE10 && codePoint <= 0xFE19) ||
+      (codePoint >= 0xFE30 && codePoint <= 0xFE6F) ||
+      (codePoint >= 0xFF00 && codePoint <= 0xFF60) ||
+      (codePoint >= 0xFFE0 && codePoint <= 0xFFE6) ||
+      (codePoint >= 0x1F300 && codePoint <= 0x1FAFF))
+  ) return 2;
+  return 1;
+}
+
+function displayWidth(value) {
+  return Array.from(value).reduce((width, character) => width + characterWidth(character), 0);
+}
+
+function splitLongWord(word, width) {
+  const chunks = [];
+  let chunk = "";
+  for (const character of Array.from(word)) {
+    if (chunk && displayWidth(chunk) + characterWidth(character) > width) {
+      chunks.push(chunk);
+      chunk = "";
+    }
+    chunk += character;
+  }
+  if (chunk) chunks.push(chunk);
+  return chunks;
+}
+
+function wrapText(text, width, firstPrefix = "", continuationPrefix = firstPrefix) {
+  const maxWidth = Math.max(1, Math.floor(width));
+  const lines = [];
+  for (const paragraph of cleanText(text).split("\n")) {
+    if (!paragraph) {
+      lines.push("");
+      continue;
+    }
+
+    let line = "";
+    let prefix = firstPrefix;
+    const available = () => Math.max(1, maxWidth - displayWidth(prefix));
+    for (const rawWord of paragraph.split(/\s+/)) {
+      for (const word of splitLongWord(rawWord, available())) {
+        if (line && displayWidth(line) + 1 + displayWidth(word) > available()) {
+          lines.push(`${prefix}${line}`);
+          line = "";
+          prefix = continuationPrefix;
+        }
+        if (line) line += " ";
+        line += word;
+      }
+    }
+    lines.push(`${prefix}${line}`);
+  }
+  return lines;
+}
+
+function formatInline(text, { colors = false } = {}) {
+  let result = text
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, "$1 ($2)")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
+    .replace(/`([^`]+)`/g, (_, code) => colorize(code, ANSI.code, colors))
+    .replace(/\*\*(.+?)\*\*|__(.+?)__/g, (_, a, b) => colorize(a ?? b, ANSI.emphasis, colors))
+    .replace(/(^|[^\w])\*([^*\n]+)\*|(^|[^\w])_([^_\n]+)_/g, (match, leadA, a, leadB, b) => {
+      const lead = leadA ?? leadB ?? "";
+      return `${lead}${colorize(a ?? b, ANSI.emphasis, colors)}`;
+    });
+  result = result.replace(/\\([\\`*_{}\[\]()#+.!>~-])/g, "$1");
+  return result;
+}
+
+function formatAssistantResponse(value, width = 80, { colors = false } = {}) {
+  const availableWidth = Math.max(10, Math.floor(width) - 4);
+  const sourceLines = cleanText(value).split("\n");
+  const output = [];
+  let paragraph = [];
+  let codeLines = [];
+  let inCodeBlock = false;
+  let listContinuation = null;
+
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    const text = formatInline(paragraph.join(" ").trim(), { colors: false });
+    output.push(...wrapText(text, availableWidth, "  ", "  ")
+      .map(line => colorize(`  ${formatInline(line.slice(2), { colors })}`, ANSI.content, colors)));
+    output.push("");
+    paragraph = [];
+    listContinuation = null;
+  };
+
+  const flushCode = () => {
+    for (const codeLine of codeLines) {
+      const wrapped = wrapText(codeLine, availableWidth - 4, "    ", "    ");
+      output.push(...wrapped.map(line => colorize(line, ANSI.code, colors)));
+    }
+    codeLines = [];
+    output.push("");
+  };
+
+  for (const sourceLine of sourceLines) {
+    const fence = sourceLine.match(/^\s*(```+|~~~+)\s*(.*)$/);
+    if (fence) {
+      if (inCodeBlock) {
+        flushCode();
+        inCodeBlock = false;
+      } else {
+        flushParagraph();
+        inCodeBlock = true;
+      }
+      continue;
+    }
+    if (inCodeBlock) {
+      codeLines.push(sourceLine);
+      continue;
+    }
+
+    if (!sourceLine.trim()) {
+      flushParagraph();
+      if (output.length && output[output.length - 1] !== "") output.push("");
+      listContinuation = null;
+      continue;
+    }
+
+    const heading = sourceLine.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/);
+    if (heading) {
+      flushParagraph();
+      const headingText = formatInline(heading[1], { colors: false });
+      output.push(...wrapText(headingText, availableWidth, "  ", "  ")
+        .map(line => colorize(`  ${formatInline(line.slice(2), { colors })}`, ANSI.heading, colors)));
+      output.push("");
+      listContinuation = null;
+      continue;
+    }
+
+    if (/^\s{0,3}([-*_]\s*){3,}$/.test(sourceLine)) {
+      flushParagraph();
+      output.push(colorize(`  ${"-".repeat(Math.min(availableWidth - 2, 24))}`, ANSI.muted, colors));
+      output.push("");
+      listContinuation = null;
+      continue;
+    }
+
+    const listItem = sourceLine.match(/^(\s*)([-+*]|\d+[.)])\s+(.+)$/);
+    if (listItem) {
+      flushParagraph();
+      const marker = /^\d/.test(listItem[2]) ? `${listItem[2]} ` : "- ";
+      const indent = " ".repeat(Math.min(6, Math.floor(listItem[1].length / 2) * 2));
+      const firstPrefix = `  ${indent}${marker}`;
+      const continuationPrefix = `  ${indent}${" ".repeat(Array.from(marker).length)}`;
+      const text = formatInline(listItem[3], { colors: false });
+      output.push(...wrapText(text, availableWidth, firstPrefix, continuationPrefix)
+        .map(line => colorize(formatInline(line, { colors }), ANSI.content, colors)));
+      listContinuation = continuationPrefix;
+      continue;
+    }
+
+    const quote = sourceLine.match(/^\s{0,3}>\s?(.*)$/);
+    if (quote) {
+      flushParagraph();
+      const text = formatInline(quote[1], { colors: false });
+      output.push(...wrapText(text, availableWidth, "  | ", "  | ")
+        .map(line => colorize(`  | ${formatInline(line.slice(4), { colors })}`, ANSI.content, colors)));
+      listContinuation = null;
+      continue;
+    }
+
+    if (listContinuation && /^\s{2,}\S/.test(sourceLine)) {
+      const text = formatInline(sourceLine.trim(), { colors: false });
+      output.push(...wrapText(text, availableWidth, listContinuation, listContinuation)
+        .map(line => colorize(formatInline(line.slice(listContinuation.length), { colors }), ANSI.content, colors)));
+      continue;
+    }
+    listContinuation = null;
+    paragraph.push(sourceLine.trim());
+  }
+
+  if (inCodeBlock) flushCode();
+  flushParagraph();
+  while (output.length && output[output.length - 1] === "") output.pop();
+  return output.join("\n");
+}
+
+function formatHistory(contents, width, options) {
+  return contents.map(({ role, parts }) => {
+    const label = role === "user" ? "YOU" : "ALVA";
+    const text = parts.map(part => part.text ?? "").join("");
+    const styledLabel = colorize(label, role === "user" ? ANSI.label : ANSI.accent, options.colors);
+    return `${styledLabel}\n${role === "user"
+      ? wrapText(text, Math.max(10, width - 4), "  > ", "    ").join("\n")
+      : formatAssistantResponse(text, width, options)}`;
+  }).join("\n\n");
+}
+
+function displayModelName(model) {
+  return model.replace(/^gemini-/i, "");
+}
+
+function formatTrace(message) {
+  return GEMINI_MODELS.reduce(
+    (formatted, model) => formatted.replaceAll(model, displayModelName(model)),
+    message
+  );
+}
+
+function redactCliSecrets(value) {
+  return redactSecrets(value)
+    .replace(/\b((?:token|auth[_-]?token|id[_-]?token)\s*[:=]\s*['"]?)[^\s'",;}\]]+/gi, "$1[REDACTED]");
+}
+
+function plainTextForClipboard(value, redact = redactCliSecrets) {
+  return redact(String(value)
+    .replace(/\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1B\\))/g, ""));
+}
+
+function createAssistantResponseBuffer(onChunk = () => {}) {
+  let chunks = [];
+  let committed = false;
+  return Object.freeze({
+    append(chunk) {
+      if (committed) throw new Error("Assistant response is already complete.");
+      const text = String(chunk);
+      chunks.push(text);
+      onChunk(text);
+    },
+    commit() {
+      if (committed) throw new Error("Assistant response is already complete.");
+      committed = true;
+      const text = chunks.join("");
+      chunks = [];
+      return text;
+    }
+  });
+}
+
+function writeClipboardText(text, {
+  output,
+  terminal,
+  platform = process.platform,
+  env = process.env,
+  spawn = spawnSync
+}) {
+  if (platform === "win32") {
+    const result = spawn("clip.exe", [], {
+      input: text,
+      encoding: "utf8",
+      timeout: 3000,
+      maxBuffer: 1024 * 1024
+    });
+    if (!result.error && result.status === 0) return true;
+    if (result.error?.code !== "ENOENT") return false;
+  }
+
+  if (terminal && env.ALVA_OSC52 === "1") {
+    const encoded = Buffer.from(text, "utf8").toString("base64");
+    output.write(`\x1b]52;c;${encoded}\x07`);
+    return true;
+  }
+
+  return false;
+}
+
+function isQuotaExhaustion(error) {
+  if (Number(error?.status ?? error?.response?.status) === 429) return true;
+  const message = typeof error?.message === "string" ? error.message.toLowerCase() : "";
+  return /quota|resource[_ ]exhausted|rate[_ ]limit/.test(message);
+}
+
+function createTerminalStatus(output, isTerminal, colors) {
+  let interval;
+  let frameIndex = 0;
+  const render = () => {
+    const frame = SPINNER_FRAMES[frameIndex % SPINNER_FRAMES.length];
+    frameIndex += 1;
+    const narrow = Math.max(10, output.columns || 80) < 16;
+    const label = narrow ? "..." : "Thinking...";
+    output.write(`\r${narrow ? "" : "  "}${colorize(frame, ANSI.muted, colors)} ${colorize(label, ANSI.muted, colors)}`);
+  };
+  return {
+    start() {
+      if (!isTerminal) return;
+      render();
+      interval = setInterval(render, 180);
+      if (typeof interval.unref === "function") interval.unref();
+    },
+    stop() {
+      if (interval) clearInterval(interval);
+      interval = undefined;
+      if (isTerminal) output.write("\r\x1b[2K");
+    }
+  };
+}
+
+function renderWorkspaceScreen({
+  width = 80,
+  height = 24,
+  entries = [],
+  inputText = "",
+  thinking = false,
+  spinner = SPINNER_FRAMES[0],
+  notice = "",
+  colors = false,
+  scrollFromBottom = 0,
+  view = "chat",
+  panelEntries = [],
+  secretInput = false,
+  placeholder = "Ketik sesuatu..."
+} = {}) {
+  const columns = Math.max(20, Math.floor(width) || 80);
+  const rows = Math.max(10, Math.floor(height) || 24);
+  const contentWidth = Math.max(10, Math.min(100, columns - 4));
+  const viewportHeight = Math.max(2, rows - 5);
+  const body = [];
+
+  for (const entry of view === "chat" ? entries : panelEntries) {
+    if (entry.role === "panel") {
+      for (const line of cleanText(entry.text).split("\n")) {
+        if (/^(ALVA SETTINGS|ALVA COMMANDS|API KEYS|API KEY MANAGEMENT|Add API Key|Remove API Key|Test API Keys|Set Active Key)$/.test(line)) {
+          body.push(colorize(line, ANSI.heading, colors));
+        } else {
+          body.push(...wrapText(line, contentWidth, "  ", "  "));
+        }
+      }
+      body.push("");
+      continue;
+    }
+    if (entry.role === "user") {
+      body.push(colorize("YOU", ANSI.label, colors));
+      const preview = entry.text.length > 8000
+        ? `${entry.text.slice(0, 4000)}\n[Long message preview; full message sent]\n${entry.text.slice(-4000)}`
+        : entry.text;
+      body.push(...wrapText(preview, contentWidth, "  > ", "    "));
+      body.push("");
+      continue;
+    }
+
+    if (entry.role === "assistant") {
+      body.push(colorize("ALVA  /  now", ANSI.accent, colors));
+      const formatted = formatAssistantResponse(entry.text, contentWidth + 4, { colors });
+      if (formatted) body.push(...formatted.split("\n"));
+      body.push("");
+      continue;
+    }
+
+    body.push(...wrapText(entry.text, contentWidth, "  ", "  ")
+      .map(line => colorize(line, ANSI.muted, colors)));
+  }
+
+  if (thinking) {
+    body.push(colorize(`  ${spinner} Thinking...`, ANSI.muted, colors));
+  }
+  if (notice) {
+    body.push(colorize(notice, ANSI.status, colors));
+  }
+
+  const maxScroll = Math.max(0, body.length - viewportHeight);
+  const fromBottom = Math.min(maxScroll, Math.max(0, scrollFromBottom));
+  const start = Math.max(0, body.length - viewportHeight - fromBottom);
+  const conversation = body.slice(start, start + viewportHeight);
+  while (conversation.length < viewportHeight) conversation.push("");
+
+  const status = "● ONLINE";
+  const top = `${colorize("ALVA", ANSI.accent, colors)}${" ".repeat(Math.max(1, columns - displayWidth("ALVA") - displayWidth(status)))}${colorize(status, ANSI.status, colors)}`;
+  const subheader = colorize("by Deni Hasyim", ANSI.muted, colors);
+  const separator = colorize("-".repeat(columns), ANSI.muted, colors);
+  const composer = renderComposerLine({ width: columns, inputText, secretInput, placeholder, colors });
+  const screen = [
+    top,
+    subheader,
+    separator,
+    ...conversation,
+    separator,
+    composer
+  ].slice(0, rows);
+  while (screen.length < rows) screen.push("");
+
+  return {
+    text: [...screen.slice(0, -1), composer.text].join("\n"),
+    width: columns,
+    height: rows,
+    viewportHeight,
+    inputRow: rows,
+    inputColumn: composer.inputColumn,
+    thinkingRow: thinking ? 4 + body.length - 1 - start : undefined,
+    maxScroll
+  };
+}
+
+async function createInteractiveWorkspace({
+  ai,
+  apiKeyPool,
+  projectInspector = createProjectInspector(),
+  clipboardWriter,
+  createAI,
+  input = process.stdin,
+  output = process.stdout,
+  env = process.env,
+  args = []
+}) {
+  const isTerminal = isInteractiveTerminal(input, output, env);
+  const colors = supportsColor(output, env, isTerminal);
+  const contents = [];
+  let uiState = "CHAT";
+  let settingsKeys = [];
+  let pendingRemoval = null;
+  let settingsNotice = "";
+  let testedStatuses = new Map();
+  const initialArgs = args.filter(argument => argument !== "--verbose");
+  let verbose = args.includes("--verbose");
+  let selectedModel;
+  let closed = false;
+  let secretInput = false;
+  const getWidth = () => Math.max(10, output.columns || 80);
+
+  async function testConfiguredKeys() {
+    if (!apiKeyPool) {
+      settingsNotice = "API key management is unavailable.";
+      showSettings();
+      return;
+    }
+    uiState = "TEST_API_KEYS";
+    panel("TEST API KEYS\n\nTesting configured API keys...");
+    try {
+      const results = await apiKeyPool.testAll(async key => {
+        const client = makeAI(key);
+        await client.models.generateContent({
+          model: GEMINI_MODELS[GEMINI_MODELS.length - 1],
+          contents: "Reply with OK."
+        });
+      });
+      testedStatuses = new Map(results.map(result => [result.id, result.status]));
+      const resultText = [
+        "TEST API KEYS",
+        "",
+        ...results.map(result => {
+          const marker = result.status === "INVALID" || result.status === "RATE LIMITED" ||
+            result.status === "UNAVAILABLE" ? "!" : "✓";
+          return `${marker} ${result.label}   ${result.masked}   ${result.status}`;
+        }),
+        "",
+        "Returning to settings..."
+      ].join("\n");
+      output.write(`${resultText}\n\n`);
+      settingsNotice = results.length
+        ? `Tested ${results.length} API key${results.length === 1 ? "" : "s"}.`
+        : "No API keys configured.";
+    } catch {
+      settingsNotice = "Unable to test API keys.";
+    }
+    showSettings();
+  }
+
+  function getModels() {
+    return selectedModel
+      ? [selectedModel, ...GEMINI_MODELS.filter(model => model !== selectedModel)]
+      : GEMINI_MODELS;
+  }
+
+  const makeAI = createAI || (key => new GoogleGenAI({
+    apiKey: key,
+    httpOptions: {
+      timeout: REQUEST_TIMEOUT_MS,
+      retryOptions: { attempts: 1 }
+    }
+  }));
+
+  function panel(text) {
+    const safeText = redactCliSecrets(apiKeyPool ? apiKeyPool.redact(text) : text);
+    output.write(`${safeText}\n\n`);
+  }
+
+  function showChat() {
+    uiState = "CHAT";
+    secretInput = false;
+  }
+
+  function showHelp() {
+    uiState = "HELP";
+    secretInput = false;
+    panel([
+      "ALVA COMMANDS",
+      "",
+      "/setting    Manage API keys and ALVA settings",
+      "/clear      Clear conversation",
+      "/history    View conversation history",
+      "/copy [n]   Copy an assistant response (latest by default)",
+      "/model      View or choose a model",
+      "/project scan  Refresh project filesystem index",
+      "/verbose    Toggle technical details",
+      "/exit       Exit ALVA",
+      "",
+      "/back       Return to chat"
+    ].join("\n"));
+  }
+
+  function showSettings() {
+    uiState = "SETTINGS";
+    settingsKeys = apiKeyPool ? apiKeyPool.list() : [];
+    pendingRemoval = null;
+    secretInput = false;
+    const lines = [
+      "ALVA SETTINGS",
+      "",
+      "API KEYS",
+      ...(settingsKeys.length
+        ? settingsKeys.map((key, index) => {
+          const testedStatus = testedStatuses.get(key.id);
+          const status = key.status === "COOLDOWN" || key.status === "INVALID"
+            ? key.status
+            : testedStatus === "ACTIVE" ? "READY" : testedStatus || key.status;
+          return `${key.id === apiKeyPool.activeId ? "*" : "o"} Key ${index + 1}  ${key.masked}  ${status}`;
+        })
+        : ["No API keys configured."]),
+      "",
+      "API KEY MANAGEMENT",
+      "[1] Add API Key",
+      "[2] Remove API Key",
+      "[3] Test API Keys",
+      "[4] Set Active Key",
+      "[5] Back",
+      ...(settingsNotice ? ["", settingsNotice] : [])
+    ];
+    panel(lines.join("\n"));
+  }
+
+  function showKeySelection(action) {
+    settingsKeys = apiKeyPool?.list() ?? [];
+    if (!settingsKeys.length) {
+      settingsNotice = "No API keys configured.";
+      showSettings();
+      return;
+    }
+    uiState = action;
+    secretInput = false;
+    panel([
+      action === "REMOVE_API_KEY" ? "REMOVE API KEY" : "SET ACTIVE KEY",
+      "",
+      ...settingsKeys.map((key, index) => `[${index + 1}] ${key.masked}  ${key.status}`),
+      "",
+      "Type a number, or /back to return to settings."
+    ].join("\n"));
+  }
+
+  function showRemovalConfirmation() {
+    uiState = "REMOVE_CONFIRMATION";
+    panel([
+      "REMOVE API KEY",
+      "",
+      `Remove ${pendingRemoval.masked}?`,
+      "",
+      "Type Y to confirm or N to cancel."
+    ].join("\n"));
+  }
+
+  async function handleSettingsInput(line) {
+    const choice = line.trim();
+    switch (uiState) {
+      case "SETTINGS":
+        switch (choice) {
+          case "1":
+            uiState = "ADD_API_KEY";
+            secretInput = true;
+            panel("ADD API KEY\n\nPaste the API key. It will be masked while you type.");
+            return;
+          case "2":
+            showKeySelection("REMOVE_API_KEY");
+            return;
+          case "3":
+            await testConfiguredKeys();
+            return;
+          case "4":
+            showKeySelection("SET_ACTIVE_KEY");
+            return;
+          case "5":
+            showChat();
+            return;
+          default:
+            settingsNotice = "Invalid option. Choose 1, 2, 3, 4, or 5.";
+            showSettings();
+            return;
+        }
+
+      case "ADD_API_KEY":
+        if (!apiKeyPool) {
+          settingsNotice = "API key management is unavailable.";
+        } else {
+          try {
+            const added = apiKeyPool.add(line);
+            settingsNotice = `API key added successfully: ${added.masked}`;
+          } catch (error) {
+            settingsNotice = error instanceof Error ? error.message : "Unable to add API key.";
+          }
+        }
+        showSettings();
+        return;
+
+      case "REMOVE_API_KEY": {
+        const index = /^\d+$/.test(choice) ? Number(choice) - 1 : -1;
+        if (index < 0 || index >= settingsKeys.length) {
+          settingsNotice = "Invalid key selection.";
+          showKeySelection("REMOVE_API_KEY");
+          return;
+        }
+        pendingRemoval = settingsKeys[index];
+        showRemovalConfirmation();
+        return;
+      }
+
+      case "REMOVE_CONFIRMATION":
+        if (/^y(es)?$/i.test(choice)) {
+          try {
+            apiKeyPool.remove(pendingRemoval.id, { confirmed: true });
+            settingsNotice = `API key removed: ${pendingRemoval.masked}`;
+          } catch (error) {
+            settingsNotice = error instanceof Error ? error.message : "Unable to remove API key.";
+          }
+          pendingRemoval = null;
+          showSettings();
+        } else if (/^n(o)?$/i.test(choice)) {
+          pendingRemoval = null;
+          settingsNotice = "Removal cancelled.";
+          showSettings();
+        } else {
+          showRemovalConfirmation();
+        }
+        return;
+
+      case "SET_ACTIVE_KEY": {
+        const index = /^\d+$/.test(choice) ? Number(choice) - 1 : -1;
+        if (index < 0 || index >= settingsKeys.length) {
+          settingsNotice = "Invalid key selection.";
+          showKeySelection("SET_ACTIVE_KEY");
+          return;
+        }
+        try {
+          const selected = apiKeyPool.setActive(settingsKeys[index].id);
+          settingsNotice = `Active API key set to ${selected.masked}.`;
+        } catch (error) {
+          settingsNotice = error instanceof Error ? error.message : "Unable to set active API key.";
+        }
+        showSettings();
+        return;
+      }
+
+      case "TEST_API_KEYS":
+        return;
+
+      default:
+        showSettings();
+    }
+  }
+
+  function writeDivider() {
+    output.write(`${colorize(`  ${"-".repeat(Math.max(1, Math.min(40, getWidth() - 4)))}`, ANSI.muted, colors)}\n`);
+  }
+
+  function writeAssistant(text) {
+    const safeText = redactCliSecrets(apiKeyPool ? apiKeyPool.redact(text) : text);
+    output.write(`${colorize("ALVA", ANSI.accent, colors)}\n`);
+    const formatted = formatAssistantResponse(safeText, getWidth(), { colors });
+    if (formatted) output.write(`${formatted}\n`);
+    output.write("\n");
+  }
+
+  function copyToClipboard(text) {
+    return writeClipboardText(text, { output, terminal: isTerminal });
+  }
+
+  async function sendPrompt(prompt) {
+    const poolRedactedPrompt = apiKeyPool ? apiKeyPool.redact(prompt) : prompt;
+    const safePrompt = redactCliSecrets(poolRedactedPrompt);
+    output.write(`${colorize("YOU", ANSI.label, colors)}\n`);
+    output.write(`${wrapText(safePrompt, Math.max(10, getWidth() - 4), "  > ", "    ").join("\n")}\n\n`);
+    if (!apiKeyPool && !ai) {
+      writeAssistant("Kunci API belum tersedia untuk ALVA.");
+      return;
+    }
+    if (apiKeyPool && !apiKeyPool.list().length) {
+      writeAssistant("No API keys are configured. Type /setting to add one.");
+      return;
+    }
+
+    contents.push({ role: "user", parts: [{ text: safePrompt }] });
+    const brainRequest = prepareBrainRequest(safePrompt, { inspector: projectInspector });
+    const providerContents = [
+      ...contents.slice(0, -1),
+      { role: "user", parts: [{ text: brainRequest.userText }] }
+    ];
+    const status = createTerminalStatus(output, isTerminal, colors);
+    status.start();
+    try {
+      const generateForKey = key => {
+        const client = apiKeyPool ? makeAI(key) : ai;
+        return generateWithFallback({
+          models: getModels(),
+          generateContent: async model => {
+            try {
+              return await client.models.generateContent({
+                model,
+                contents: providerContents,
+                config: {
+                  systemInstruction: `${ALVA_BRAIN_SYSTEM_INSTRUCTION}\n\nCURRENT REQUEST INTENT: ${brainRequest.intent}${brainRequest.executionGuard ? `\n${brainRequest.executionGuard}` : ""}`
+                }
+              });
+            } catch (error) {
+              if (isQuotaExhaustion(error) && Number(error?.status ?? error?.response?.status) !== 429) {
+                throw Object.assign(new Error("API quota exhausted."), { status: 429 });
+              }
+              throw error;
+            }
+          },
+          log: verbose
+            ? message => output.write(`  ${colorize("[trace]", ANSI.muted, colors)} ${formatTrace(message)}\n`)
+            : undefined
+        });
+      };
+      const response = apiKeyPool
+        ? await apiKeyPool.runWithRotation(generateForKey, {
+          log: verbose ? message => output.write(`  ${colorize("[key pool]", ANSI.muted, colors)} ${message}\n`) : undefined
+        })
+        : await generateForKey(undefined);
+      let answer = redactCliSecrets(apiKeyPool ? apiKeyPool.redact(response.text ?? "") : response.text ?? "");
+      if (brainRequest.intent === "EXECUTION_REQUEST") {
+        const refusal = "Saya berperan sebagai analis, bukan executor. Perubahan source dilakukan oleh Copilot.";
+        answer = `${refusal}\n\n${answer.replace(/^Saya berperan sebagai analis, bukan executor\.\s*Perubahan source dilakukan oleh Copilot\.?\s*/i, "")}`.trim();
+        if (!/COPILOT IMPLEMENTATION BRIEF/i.test(answer)) {
+          answer = `${answer}\n\nCOPILOT IMPLEMENTATION BRIEF`;
+        }
+      }
+      status.stop();
+      writeAssistant(answer);
+      contents.push({ role: "model", parts: [{ text: answer }] });
+    } catch (error) {
+      status.stop();
+      const reason = error instanceof GeminiRequestError
+        ? error.transient
+          ? "semua model gagal setelah retry"
+          : error.status
+            ? `kesalahan permanen (HTTP ${error.status})`
+            : "kesalahan permanen atau tidak dapat dipulihkan"
+        : error instanceof ApiKeyPoolError
+          ? error.code === "all_rate_limited"
+            ? "all API keys are temporarily unavailable"
+            : error.code === "no_valid_keys"
+              ? "no valid API keys are available"
+              : "no API key is configured"
+        : "kesalahan internal";
+      contents.pop();
+      writeAssistant(`Permintaan ALVA gagal: ${reason}.`);
+    }
+  }
+
+  function handleCommand(line) {
+    const [command = "", ...parameters] = line.trim().split(/\s+/);
+    switch (command.toLowerCase()) {
+      case "/help":
+        showHelp();
+        return true;
+      case "/setting":
+        showSettings();
+        return true;
+      case "/back":
+        showChat();
+        return true;
+      case "/clear":
+        contents.length = 0;
+        writeDivider();
+        writeAssistant("Percakapan dibersihkan.");
+        return true;
+      case "/history":
+        {
+          const history = contents.length
+            ? formatHistory(contents, getWidth(), { colors })
+            : "Belum ada riwayat percakapan.";
+          writeAssistant(history);
+        }
+        return true;
+      case "/copy":
+        {
+          const responses = contents.filter(entry => entry.role === "model");
+          const requested = parameters.length && /^\d+$/.test(parameters[0])
+            ? Number(parameters[0])
+            : responses.length;
+          const selected = requested > 0 ? responses[requested - 1] : undefined;
+          if (!selected) {
+            writeAssistant("No assistant response is available to copy.");
+            return true;
+          }
+          const clipboardText = plainTextForClipboard(selected.parts.map(part => part.text ?? "").join(""), text =>
+            redactCliSecrets(apiKeyPool ? apiKeyPool.redact(text) : text)
+          );
+          let copyResult;
+          try {
+            copyResult = clipboardWriter
+              ? clipboardWriter(clipboardText)
+              : copyToClipboard(clipboardText);
+          } catch {
+            copyResult = false;
+          }
+          if (copyResult === true || copyResult?.copied) {
+            const status = "✓ Response copied to clipboard.";
+            output.write(`${status}\n`);
+          } else {
+            const status = "Copy unavailable in this terminal.";
+            output.write(`${status}\n`);
+          }
+        }
+        return true;
+      case "/model":
+        if (parameters.length === 0) {
+          const activeModel = selectedModel ? displayModelName(selectedModel) : "otomatis";
+          const availableModels = GEMINI_MODELS.map(displayModelName).join(", ");
+          writeAssistant(`Model aktif: ${activeModel}\nModel tersedia: ${availableModels}`);
+        } else if (GEMINI_MODELS.includes(parameters[0])) {
+          selectedModel = parameters[0];
+          writeAssistant(`Model utama diatur ke ${displayModelName(selectedModel)}; fallback otomatis tetap aktif.`);
+        } else {
+          writeAssistant(`Model tidak dikenal. Pilihan: ${GEMINI_MODELS.map(displayModelName).join(", ")}`);
+        }
+        return true;
+      case "/project":
+        if (parameters[0]?.toLowerCase() !== "scan") {
+          writeAssistant("Gunakan /project scan untuk memindai ulang filesystem C:\\POS.");
+          return true;
+        }
+        {
+          const index = projectInspector.refresh();
+          const directoryCount = index.entries.filter(entry => entry.type === "directory").length;
+          const fileCount = index.entries.filter(entry => entry.type === "file").length;
+          writeAssistant(`Project filesystem index refreshed from ${projectInspector.root}.\n${directoryCount} directories and ${fileCount} files discovered.\nScanned: ${index.scannedAt}`);
+        }
+        return true;
+      case "/verbose":
+        verbose = !verbose;
+        writeAssistant(`Mode verbose ${verbose ? "aktif" : "nonaktif"}.`);
+        return true;
+      case "/exit":
+        return false;
+      default:
+        writeAssistant("Perintah tidak dikenal. Ketik /help untuk daftar perintah.");
+        return true;
+    }
+  }
+
+  async function processLine(line, { pasted = false } = {}) {
+    const trimmed = line.trim();
+    if (!pasted && trimmed === "/exit") return handleCommand(trimmed);
+    if (!trimmed && uiState !== "ADD_API_KEY") return true;
+
+    if (uiState === "CHAT") {
+      if (!pasted && trimmed.startsWith("/")) return handleCommand(trimmed);
+      await sendPrompt(pasted ? line : trimmed);
+      return true;
+    }
+
+    if (uiState === "HELP") {
+      if (!pasted && trimmed === "/back") showChat();
+      else if (!pasted && trimmed === "/setting") showSettings();
+      else if (!pasted && trimmed === "/help") showHelp();
+      else if (!pasted && trimmed.startsWith("/")) {
+        showChat();
+        return handleCommand(trimmed);
+      } else showHelp();
+      return true;
+    }
+
+    if (!pasted && trimmed === "/setting") {
+      showSettings();
+      return true;
+    }
+    if (!pasted && trimmed === "/help") {
+      showHelp();
+      return true;
+    }
+    if (!pasted && trimmed === "/back") {
+      if (uiState === "SETTINGS") showChat();
+      else showSettings();
+      return true;
+    }
+
+    if (uiState === "ADD_API_KEY" && !trimmed) {
+      settingsNotice = "API key cannot be empty.";
+      uiState = "SETTINGS";
+      showSettings();
+      return true;
+    }
+    await handleSettingsInput(line);
+    return true;
+  }
+
+  function submitInput() {
+    if (busy || closed) return;
+    const line = getInputText();
+    const pasted = inputWasPasted;
+    clearInput();
+    busy = true;
+    drawWorkspace();
+    activeTask = (async () => {
+      try {
+        if (!await processLine(line, { pasted })) closeSession();
+      } finally {
+        busy = false;
+        if (!closed) drawWorkspace();
+      }
+    })();
+  }
+
+  function markFallbackPaste() {
+    fallbackPaste = true;
+    if (fallbackPasteTimer) clearTimeout(fallbackPasteTimer);
+    fallbackPasteTimer = setTimeout(() => {
+      fallbackPasteTimer = undefined;
+      fallbackPaste = false;
+    }, 250);
+  }
+
+  function handleNormalInput(text) {
+    let printable = "";
+    const flushPrintable = pasted => {
+      if (!printable) return;
+      appendInput(printable, pasted);
+      printable = "";
+      if (pasted) markFallbackPaste();
+    };
+
+    for (let index = 0; index < text.length;) {
+      const character = text[index];
+      if (character === "\x1b") {
+        flushPrintable(fallbackPaste);
+        const sequence = text.slice(index).match(/^\x1b\[([0-?]*[ -/]*)([@-~])/);
+        if (sequence) {
+          if (sequence[2] === "~" && sequence[1] === "5") {
+            scrollFromBottom += Math.max(1, (output.rows || 24) - 8);
+            scheduleInputRender();
+          } else if (sequence[2] === "~" && sequence[1] === "6") {
+            scrollFromBottom = Math.max(0, scrollFromBottom - Math.max(1, (output.rows || 24) - 8));
+            scheduleInputRender();
+          }
+          index += sequence[0].length;
+        } else {
+          index += 1;
+        }
+        continue;
+      }
+
+      if (character === "\x03") {
+        flushPrintable(fallbackPaste);
+        closeSession();
+        return;
+      }
+      if (character === "\x7f" || character === "\b") {
+        flushPrintable(fallbackPaste);
+        if (pendingEnterTimer) {
+          clearTimeout(pendingEnterTimer);
+          pendingEnterTimer = undefined;
+          fallbackPaste = false;
+        } else {
+          removeLastInputCharacter();
+        }
+        index += 1;
+        continue;
+      }
+      if (character === "\x15") {
+        flushPrintable(fallbackPaste);
+        if (pendingEnterTimer) clearTimeout(pendingEnterTimer);
+        pendingEnterTimer = undefined;
+        fallbackPaste = false;
+        clearInput();
+        scheduleInputRender();
+        index += 1;
+        continue;
+      }
+      if (character === "\r" || character === "\n") {
+        flushPrintable(fallbackPaste);
+        if (character === "\n" && pendingCarriageReturn) {
+          pendingCarriageReturn = false;
+          index += 1;
+          continue;
+        }
+        pendingCarriageReturn = character === "\r";
+        if (fallbackPaste) {
+          appendInput(character === "\r" ? "\n" : character, true);
+          markFallbackPaste();
+        } else if (!pendingEnterTimer) {
+          pendingEnterTimer = setTimeout(() => {
+            pendingEnterTimer = undefined;
+            pendingCarriageReturn = false;
+            submitInput();
+          }, 35);
+        }
+        index += 1;
+        continue;
+      }
+
+      pendingCarriageReturn = false;
+      if (character < " " || character === "\x7f") {
+        index += 1;
+        continue;
+      }
+      if (pendingEnterTimer) {
+        clearTimeout(pendingEnterTimer);
+        pendingEnterTimer = undefined;
+        appendInput("\n", true);
+        markFallbackPaste();
+      }
+      printable += String.fromCodePoint(text.codePointAt(index));
+      index += String.fromCodePoint(text.codePointAt(index)).length;
+    }
+    flushPrintable(fallbackPaste);
+  }
+
+  function longestMarkerPrefixSuffix(value, marker) {
+    const maximum = Math.min(value.length, marker.length - 1);
+    for (let length = maximum; length > 0; length -= 1) {
+      if (value.endsWith(marker.slice(0, length))) return length;
+    }
+    return 0;
+  }
+
+  function parseTerminalInput(chunk) {
+    inputParserBuffer += inputDecoder.write(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+    while (inputParserBuffer) {
+      if (inBracketedPaste) {
+        const end = inputParserBuffer.indexOf(bracketedPasteEnd);
+        const interrupt = inputParserBuffer.indexOf("\x03");
+        if (interrupt !== -1 && (end === -1 || interrupt < end)) {
+          appendInput(inputParserBuffer.slice(0, interrupt), true);
+          inputParserBuffer = "";
+          closeSession();
+          return;
+        }
+        if (end !== -1) {
+          appendInput(inputParserBuffer.slice(0, end), true);
+          inputParserBuffer = inputParserBuffer.slice(end + bracketedPasteEnd.length);
+          inBracketedPaste = false;
+          scheduleInputRender();
+          continue;
+        }
+        const held = longestMarkerPrefixSuffix(inputParserBuffer, bracketedPasteEnd);
+        const readyLength = inputParserBuffer.length - held;
+        if (readyLength) {
+          appendInput(inputParserBuffer.slice(0, readyLength), true);
+          inputParserBuffer = inputParserBuffer.slice(readyLength);
+        }
+        return;
+      }
+
+      const start = inputParserBuffer.indexOf(bracketedPasteStart);
+      if (start !== -1) {
+        handleNormalInput(inputParserBuffer.slice(0, start));
+        inputParserBuffer = inputParserBuffer.slice(start + bracketedPasteStart.length);
+        inBracketedPaste = true;
+        continue;
+      }
+      const held = longestMarkerPrefixSuffix(inputParserBuffer, bracketedPasteStart);
+      const readyLength = inputParserBuffer.length - held;
+      if (!readyLength) return;
+      handleNormalInput(inputParserBuffer.slice(0, readyLength));
+      inputParserBuffer = inputParserBuffer.slice(readyLength);
+    }
+  }
+
+  if (fullScreen) {
+    output.write("\x1b[?1049h\x1b[?25l\x1b[?2004h");
+    lastRenderedLines = undefined;
+    input.setRawMode(true);
+    input.resume();
+    drawWorkspace();
+
+    if (initialArgs.length) {
+      await sendPrompt(initialArgs.join(" "));
+    }
+
+    let resolveSession;
+    const session = new Promise(resolve => { resolveSession = resolve; });
+    closeSession = () => {
+      if (closed) return;
+      closed = true;
+      resolveSession();
+    };
+    inputDataHandler = chunk => {
+      if (closed) return;
+      if (busy) {
+        if (Buffer.isBuffer(chunk) ? chunk.includes(3) : String(chunk).includes("\x03")) closeSession();
+        return;
+      }
+      parseTerminalInput(chunk);
+    };
+    input.on("data", inputDataHandler);
+    const resizeHandler = () => drawWorkspace();
+    output.on("resize", resizeHandler);
+    input.once("end", () => {
+      const remaining = inputDecoder.end();
+      if (remaining) inputParserBuffer += remaining;
+      if (inBracketedPaste) {
+        appendInput(inputParserBuffer, true);
+        inputParserBuffer = "";
+        inBracketedPaste = false;
+      } else if (inputParserBuffer) {
+        handleNormalInput(inputParserBuffer);
+        inputParserBuffer = "";
+      }
+      if (pendingEnterTimer) clearTimeout(pendingEnterTimer);
+      pendingEnterTimer = undefined;
+      if (getInputText()) submitInput();
+      closeSession();
+    });
+    input.once("close", closeSession);
+    await session;
+    await activeTask;
+    if (inputRenderTimer) clearTimeout(inputRenderTimer);
+    if (pendingEnterTimer) clearTimeout(pendingEnterTimer);
+    if (fallbackPasteTimer) clearTimeout(fallbackPasteTimer);
+    input.off("data", inputDataHandler);
+    output.off("resize", resizeHandler);
+    input.setRawMode(false);
+    output.write("\x1b[?2004l\x1b[?25h\x1b[?1049l");
+    return;
+  }
+
+  const status = "● ONLINE";
+  const headerGap = Math.max(1, getWidth() - displayWidth("ALVA") - displayWidth(status));
+  output.write(`${colorize("ALVA", ANSI.accent, colors)}${" ".repeat(headerGap)}${colorize(status, ANSI.status, colors)}\n`);
+  output.write(`  ${colorize("by Deni Hasyim", ANSI.muted, colors)}\n`);
+
+  if (initialArgs.length) await sendPrompt(initialArgs.join(" "));
+
+  const rl = readline.createInterface({
+    input,
+    output,
+    terminal: isTerminal
+  });
+  const setInputPrompt = () => {
+    const promptText = uiState === "ADD_API_KEY"
+      ? "Paste API key..."
+      : uiState === "SETTINGS"
+        ? "Choose an option..."
+        : uiState === "HELP"
+          ? "Type /back to return..."
+          : uiState === "REMOVE_CONFIRMATION"
+            ? "Confirm removal? (Y/N)"
+            : uiState === "REMOVE_API_KEY" || uiState === "SET_ACTIVE_KEY"
+              ? "Choose a key..."
+          : "Ketik sesuatu...";
+    const prompt = getWidth() < 18 ? "" : `${promptText} `;
+    rl.setPrompt(`${colorize("› ", ANSI.accent, colors)}${prompt}`);
+  };
+  setInputPrompt();
+  let pendingLines = Promise.resolve();
+  const complete = new Promise((resolve, reject) => {
+    rl.on("close", () => pendingLines.then(resolve, reject));
+  });
+  rl.on("line", line => {
+    pendingLines = pendingLines.then(async () => {
+      if (closed) return;
+      if (!await processLine(line)) {
+        closed = true;
+        rl.close();
+        return;
+      }
+      if (!closed && !rl.closed) {
+        setInputPrompt();
+        rl.prompt();
+      }
+    }).catch(error => {
+      rl.close();
+      throw error;
+    });
+  });
+  rl.on("SIGINT", () => {
+    output.write("\n");
+    closed = true;
+    output.write(`${colorize("Workspace closed.", ANSI.muted, colors)}\n`);
+    rl.close();
+  });
+  const resizePrompt = () => {
+    setInputPrompt();
+    if (!rl.closed) rl.prompt(true);
+  };
+  output.on("resize", resizePrompt);
+  rl.on("close", () => output.off("resize", resizePrompt));
+  rl.prompt();
+  await complete;
+}
+
+async function main(args = process.argv.slice(2)) {
+  const apiKeyPool = new ApiKeyPool();
+  const createAI = key => new GoogleGenAI({
+    apiKey: key,
+    httpOptions: {
+      timeout: REQUEST_TIMEOUT_MS,
+      retryOptions: { attempts: 1 }
+    }
+  });
+  await createInteractiveWorkspace({ apiKeyPool, createAI, args });
+}
+
+if (require.main === module) {
+  main().catch(() => {
+    console.error("ALVA gagal memulai workspace terminal.");
+    process.exitCode = 1;
+  });
+}
+
+module.exports = {
+  main,
+  createInteractiveWorkspace,
+  createAssistantResponseBuffer,
+  formatAssistantResponse,
+  plainTextForClipboard,
+  writeClipboardText,
+  renderWorkspaceScreen,
+  renderComposerLine,
+  displayWidth,
+  wrapText
+};

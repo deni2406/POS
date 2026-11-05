@@ -1,0 +1,1320 @@
+2026/10/15-01:51:44.542 ff0 Creating DB C:\pos\wa-gateway\session\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb since it was missing.
+2026/10/15-01:51:44.566 ff0 Reusing MANIFEST C:\pos\wa-gateway\session\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/10/15-01:51:44.567 ff0 Recovering log #897
+2026/10/15-01:51:44.570 ff0 Reusing old log C:\pos\wa-gateway\session\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000897.log 
+2026/10/15-01:51:44.570 ff0 Delete type=2 #901
+2026/10/15-01:51:44.570 ff0 Delete type=2 #902
+2026/10/15-01:51:44.570 ff0 Delete type=2 #903
+2026/10/15-01:51:44.570 ff0 Delete type=2 #904
+2026/10/15-01:51:44.570 ff0 Delete type=2 #905
+2026/10/15-01:51:44.571 ff0 Delete type=2 #906
+2026/10/15-01:51:44.571 ff0 Delete type=2 #907
+2026/10/15-01:51:44.571 ff0 Delete type=2 #908
+2026/10/15-01:51:44.571 ff0 Delete type=2 #909
+2026/10/15-01:51:44.571 ff0 Delete type=2 #910
+2026/10/15-01:51:44.571 ff0 Delete type=2 #911
+2026/10/15-01:51:44.571 ff0 Delete type=2 #912
+2026/10/15-01:51:44.571 ff0 Delete type=2 #913
+2026/10/15-01:51:44.571 ff0 Delete type=2 #914
+2026/10/15-01:52:19.946 2adc Level-0 table #899: started
+2026/10/15-01:52:19.988 2adc Level-0 table #899: 1082004 bytes OK
+2026/10/15-01:52:19.995 2adc Delete type=0 #897
+2026/10/15-01:52:22.993 2adc Level-0 table #901: started
+2026/10/15-01:52:23.089 2adc Level-0 table #901: 1248724 bytes OK
+2026/10/15-01:52:23.092 2adc Delete type=0 #898
+2026/10/15-01:52:23.095 2adc Compacting 1@1 + 1@2 files
+2026/10/15-01:52:23.176 2adc Generated table #902@1: 20751 keys, 1374601 bytes
+2026/10/15-01:52:23.176 2adc Compacted 1@1 + 1@2 files => 1374601 bytes
+2026/10/15-01:52:23.178 2adc compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/10/15-01:52:23.178 2adc Delete type=2 #899
+2026/10/15-01:52:23.178 2adc Delete type=2 #901
+2026/10/15-01:52:25.564 2adc Level-0 table #904: started
+2026/10/15-01:52:25.604 2adc Level-0 table #904: 1088684 bytes OK
+2026/10/15-01:52:25.607 2adc Delete type=0 #900
+2026/10/15-01:52:25.683 ff0 Compacting 1@1 + 1@2 files
+2026/10/15-01:52:25.826 ff0 Generated table #905@1: 29425 keys, 1785539 bytes
+2026/10/15-01:52:25.826 ff0 Compacted 1@1 + 1@2 files => 1785539 bytes
+2026/10/15-01:52:25.829 ff0 compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/10/15-01:52:26.901 ff0 Level-0 table #907: started
+2026/10/15-01:52:26.953 ff0 Level-0 table #907: 1164241 bytes OK
+2026/10/15-01:52:26.955 ff0 Delete type=2 #902
+2026/10/15-01:52:26.955 ff0 Delete type=0 #903
+2026/10/15-01:52:26.955 ff0 Delete type=2 #904
+2026/10/15-01:52:27.280 2adc Compacting 1@1 + 1@2 files
+2026/10/15-01:52:27.379 2adc Generated table #908@1: 40781 keys, 2212312 bytes
+2026/10/15-01:52:27.396 2adc Generated table #909@1: 5110 keys, 239367 bytes
+2026/10/15-01:52:27.396 2adc Compacted 1@1 + 1@2 files => 2451679 bytes
+2026/10/15-01:52:27.405 2adc compacted to: files[ 0 0 2 0 0 0 0 ]
+2026/10/15-01:52:28.226 17ac Level-0 table #911: started
+2026/10/15-01:52:28.267 17ac Level-0 table #911: 1050401 bytes OK
+2026/10/15-01:52:28.270 17ac Delete type=2 #905
+2026/10/15-01:52:28.270 17ac Delete type=0 #906
+2026/10/15-01:52:28.270 17ac Delete type=2 #907
+2026/10/15-01:52:28.423 17ac Compacting 1@1 + 2@2 files
+2026/10/15-01:52:28.560 17ac Generated table #912@1: 38228 keys, 2207019 bytes
+2026/10/15-01:52:28.573 17ac Generated table #913@1: 3226 keys, 156033 bytes
+2026/10/15-01:52:28.573 17ac Compacted 1@1 + 2@2 files => 2363052 bytes
+2026/10/15-01:52:28.575 17ac compacted to: files[ 0 0 2 0 0 0 0 ]
+2026/10/15-01:52:29.971 2adc Level-0 table #915: started
+2026/10/15-01:52:30.011 2adc Level-0 table #915: 1605971 bytes OK
+2026/10/15-01:52:30.015 2adc Delete type=2 #908
+2026/10/15-01:52:30.015 2adc Delete type=2 #909
+2026/10/15-01:52:30.015 2adc Delete type=0 #910
+2026/10/15-01:52:30.015 2adc Delete type=2 #911
+2026/10/15-01:52:30.144 17ac Compacting 1@1 + 2@2 files
+2026/10/15-01:52:30.247 17ac Generated table #916@1: 32529 keys, 2183964 bytes
+2026/10/15-01:52:30.337 17ac Generated table #917@1: 12906 keys, 1190059 bytes
+2026/10/15-01:52:30.337 17ac Compacted 1@1 + 2@2 files => 3374023 bytes
+2026/10/15-01:52:30.340 17ac compacted to: files[ 0 0 2 0 0 0 0 ]
+2026/10/15-01:52:32.543 ff0 Level-0 table #919: started
+2026/10/15-01:52:32.591 ff0 Level-0 table #919: 1125631 bytes OK
+2026/10/15-01:52:32.593 ff0 Delete type=2 #912
+2026/10/15-01:52:32.594 ff0 Delete type=2 #913
+2026/10/15-01:52:32.594 ff0 Delete type=0 #914
+2026/10/15-01:52:32.594 ff0 Delete type=2 #915
+2026/10/15-01:52:32.600 2adc Compacting 1@1 + 2@2 files
+2026/10/15-01:52:32.700 2adc Generated table #920@1: 34999 keys, 2191475 bytes
+2026/10/15-01:52:32.747 2adc Generated table #921@1: 14825 keys, 1412394 bytes
+2026/10/15-01:52:32.747 2adc Compacted 1@1 + 2@2 files => 3603869 bytes
+2026/10/15-01:52:32.749 2adc compacted to: files[ 0 0 2 0 0 0 0 ]
+2026/10/15-01:52:34.741 2adc Level-0 table #923: started
+2026/10/15-01:52:34.782 2adc Level-0 table #923: 1194365 bytes OK
+2026/10/15-01:52:34.785 2adc Delete type=2 #916
+2026/10/15-01:52:34.785 2adc Delete type=2 #917
+2026/10/15-01:52:34.785 2adc Delete type=0 #918
+2026/10/15-01:52:34.785 2adc Delete type=2 #919
+2026/10/15-01:52:34.789 2adc Compacting 1@1 + 2@2 files
+2026/10/15-01:52:34.894 2adc Generated table #924@1: 42450 keys, 2207393 bytes
+2026/10/15-01:52:34.948 2adc Generated table #925@1: 16721 keys, 1735508 bytes
+2026/10/15-01:52:34.948 2adc Compacted 1@1 + 2@2 files => 3942901 bytes
+2026/10/15-01:52:34.951 2adc compacted to: files[ 0 0 2 0 0 0 0 ]
+2026/10/15-01:52:43.678 2adc Level-0 table #927: started
+2026/10/15-01:52:43.718 2adc Level-0 table #927: 1218464 bytes OK
+2026/10/15-01:52:43.721 2adc Delete type=2 #920
+2026/10/15-01:52:43.721 2adc Delete type=2 #921
+2026/10/15-01:52:43.721 2adc Delete type=0 #922
+2026/10/15-01:52:43.721 2adc Delete type=2 #923
+2026/10/15-01:52:43.723 2adc Compacting 1@1 + 2@2 files
+2026/10/15-01:52:43.917 2adc Generated table #928@1: 47676 keys, 2207347 bytes
+2026/10/15-01:52:43.997 2adc Generated table #929@1: 23755 keys, 2074070 bytes
+2026/10/15-01:52:43.997 2adc Compacted 1@1 + 2@2 files => 4281417 bytes
+2026/10/15-01:52:44.000 2adc compacted to: files[ 0 0 2 0 0 0 0 ]
+2026/10/15-01:52:44.067 2adc Level-0 table #931: started
+2026/10/15-01:52:44.121 2adc Level-0 table #931: 1346212 bytes OK
+2026/10/15-01:52:44.125 2adc Delete type=2 #924
+2026/10/15-01:52:44.125 2adc Delete type=2 #925
+2026/10/15-01:52:44.125 2adc Delete type=0 #926
+2026/10/15-01:52:44.125 2adc Delete type=2 #927
+2026/10/15-01:52:44.127 2adc Compacting 1@1 + 2@2 files
+2026/10/15-01:52:44.212 2adc Generated table #932@1: 73972 keys, 2235322 bytes
+2026/10/15-01:52:44.260 2adc Generated table #933@1: 11668 keys, 2169125 bytes
+2026/10/15-01:52:44.307 2adc Generated table #934@1: 41985 keys, 1270504 bytes
+2026/10/15-01:52:44.307 2adc Compacted 1@1 + 2@2 files => 5674951 bytes
+2026/10/15-01:52:44.309 2adc compacted to: files[ 0 0 3 0 0 0 0 ]
+2026/10/15-01:52:44.351 2adc Level-0 table #936: started
+2026/10/15-01:52:44.385 2adc Level-0 table #936: 1345079 bytes OK
+2026/10/15-01:52:44.388 2adc Delete type=2 #928
+2026/10/15-01:52:44.388 2adc Delete type=2 #929
+2026/10/15-01:52:44.388 2adc Delete type=0 #930
+2026/10/15-01:52:44.388 2adc Delete type=2 #931
+2026/10/15-01:52:44.394 2adc Compacting 1@1 + 3@2 files
+2026/10/15-01:52:44.490 2adc Generated table #937@1: 91269 keys, 2251034 bytes
+2026/10/15-01:52:44.555 2adc Generated table #938@1: 17308 keys, 2172317 bytes
+2026/10/15-01:52:44.631 2adc Generated table #939@1: 56987 keys, 2203004 bytes
+2026/10/15-01:52:44.631 2adc Level-0 table #941: started
+2026/10/15-01:52:44.675 2adc Level-0 table #941: 1229909 bytes OK
+2026/10/15-01:52:44.679 2adc Delete type=0 #935
+2026/10/15-01:52:44.711 2adc Generated table #942@1: 18121 keys, 503240 bytes
+2026/10/15-01:52:44.711 2adc Compacted 1@1 + 3@2 files => 7129595 bytes
+2026/10/15-01:52:44.714 2adc compacted to: files[ 1 0 4 0 0 0 0 ]
+2026/10/15-01:52:44.715 2adc Delete type=2 #932
+2026/10/15-01:52:44.715 2adc Delete type=2 #933
+2026/10/15-01:52:44.715 2adc Delete type=2 #934
+2026/10/15-01:52:44.715 2adc Delete type=2 #936
+2026/10/15-01:52:45.711 2adc Moved #941 to level-1 1229909 bytes OK: files[ 0 1 4 0 0 0 0 ]
+2026/10/15-01:52:45.728 2adc Compacting 1@1 + 4@2 files
+2026/10/15-01:52:45.901 2adc Generated table #943@1: 66011 keys, 2228294 bytes
+2026/10/15-01:52:45.943 2adc Generated table #944@1: 10052 keys, 2160217 bytes
+2026/10/15-01:52:46.033 2adc Generated table #945@1: 73577 keys, 2216707 bytes
+2026/10/15-01:52:46.062 2adc Generated table #946@1: 13446 keys, 400003 bytes
+2026/10/15-01:52:46.062 2adc Compacted 1@1 + 4@2 files => 7005221 bytes
+2026/10/15-01:52:46.065 2adc compacted to: files[ 0 0 4 0 0 0 0 ]
+2026/10/15-01:52:46.065 2adc Delete type=2 #937
+2026/10/15-01:52:46.065 2adc Delete type=2 #938
+2026/10/15-01:52:46.065 2adc Delete type=2 #939
+2026/10/15-01:52:46.065 2adc Delete type=2 #941
+2026/10/15-01:52:46.065 2adc Delete type=2 #942
+2026/10/15-01:52:48.120 2adc Level-0 table #948: started
+2026/10/15-01:52:48.161 2adc Level-0 table #948: 969959 bytes OK
+2026/10/15-01:52:48.165 2adc Delete type=0 #940
+2026/10/15-01:52:48.169 2adc Compacting 1@1 + 4@2 files
+2026/10/15-01:52:48.304 2adc Generated table #949@1: 46086 keys, 2205716 bytes
+2026/10/15-01:52:48.351 2adc Generated table #950@1: 9855 keys, 2160656 bytes
+2026/10/15-01:52:48.429 2adc Generated table #951@1: 83686 keys, 2231900 bytes
+2026/10/15-01:52:48.452 2adc Generated table #952@1: 10927 keys, 342389 bytes
+2026/10/15-01:52:48.452 2adc Compacted 1@1 + 4@2 files => 6940661 bytes
+2026/10/15-01:52:48.455 2adc compacted to: files[ 0 0 4 0 0 0 0 ]
+2026/10/15-01:52:48.455 2adc Delete type=2 #943
+2026/10/15-01:52:48.455 2adc Delete type=2 #944
+2026/10/15-01:52:48.456 2adc Delete type=2 #945
+2026/10/15-01:52:48.456 2adc Delete type=2 #946
+2026/10/15-01:52:48.456 2adc Delete type=2 #948
+2026/10/15-01:53:01.688 2adc Level-0 table #954: started
+2026/10/15-01:53:01.722 2adc Level-0 table #954: 1070825 bytes OK
+2026/10/15-01:53:01.727 2adc Delete type=0 #947
+2026/10/15-01:53:01.983 2adc Compacting 1@1 + 4@2 files
+2026/10/15-01:53:02.099 2adc Generated table #955@1: 48028 keys, 2210399 bytes
+2026/10/15-01:53:02.170 2adc Generated table #956@1: 9916 keys, 2156953 bytes
+2026/10/15-01:53:02.243 2adc Generated table #957@1: 73653 keys, 2215618 bytes
+2026/10/15-01:53:02.274 2adc Generated table #958@1: 26318 keys, 715208 bytes
+2026/10/15-01:53:02.274 2adc Compacted 1@1 + 4@2 files => 7298178 bytes
+2026/10/15-01:53:02.276 2adc compacted to: files[ 0 0 4 0 0 0 0 ]
+2026/10/15-01:53:02.276 2adc Delete type=2 #949
+2026/10/15-01:53:02.276 2adc Delete type=2 #950
+2026/10/15-01:53:02.276 2adc Delete type=2 #951
+2026/10/15-01:53:02.276 2adc Delete type=2 #952
+2026/10/15-01:53:02.277 2adc Delete type=2 #954
+2026/10/15-01:53:05.422 2adc Level-0 table #960: started
+2026/10/15-01:53:05.459 2adc Level-0 table #960: 1308380 bytes OK
+2026/10/15-01:53:05.462 2adc Delete type=0 #953
+2026/10/15-01:53:05.467 2adc Compacting 1@1 + 4@2 files
+2026/10/15-01:53:05.584 2adc Generated table #961@1: 52393 keys, 2214144 bytes
+2026/10/15-01:53:05.635 2adc Generated table #962@1: 6445 keys, 2153775 bytes
+2026/10/15-01:53:05.724 2adc Generated table #963@1: 35160 keys, 2184606 bytes
+2026/10/15-01:53:05.724 2adc Level-0 table #965: started
+2026/10/15-01:53:05.777 2adc Level-0 table #965: 1300384 bytes OK
+2026/10/15-01:53:05.781 2adc Delete type=0 #959
+2026/10/15-01:53:05.999 2adc Generated table #966@1: 73761 keys, 1854787 bytes
+2026/10/15-01:53:05.999 2adc Compacted 1@1 + 4@2 files => 8407312 bytes
+2026/10/15-01:53:06.001 2adc compacted to: files[ 1 0 4 0 0 0 0 ]
+2026/10/15-01:53:06.006 2adc Moved #965 to level-1 1300384 bytes OK: files[ 0 1 4 0 0 0 0 ]
+2026/10/15-01:53:06.008 2adc Compacting 1@1 + 3@2 files
+2026/10/15-01:53:06.102 2adc Generated table #967@1: 58008 keys, 2222409 bytes
+2026/10/15-01:53:06.139 2adc Generated table #968@1: 1879 keys, 2143840 bytes
+2026/10/15-01:53:06.214 2adc Generated table #969@1: 18985 keys, 2196062 bytes
+2026/10/15-01:53:06.269 2adc Generated table #970@1: 26234 keys, 1284900 bytes
+2026/10/15-01:53:06.269 2adc Compacted 1@1 + 3@2 files => 7847211 bytes
+2026/10/15-01:53:06.271 2adc compacted to: files[ 0 0 5 0 0 0 0 ]
+2026/10/15-01:53:06.323 2adc Level-0 table #972: started
+2026/10/15-01:53:06.357 2adc Level-0 table #972: 1304881 bytes OK
+2026/10/15-01:53:06.360 2adc Delete type=2 #961
+2026/10/15-01:53:06.360 2adc Delete type=2 #962
+2026/10/15-01:53:06.360 2adc Delete type=2 #963
+2026/10/15-01:53:06.360 2adc Delete type=0 #964
+2026/10/15-01:53:06.364 2adc Compacting 1@1 + 3@2 files
+2026/10/15-01:53:06.458 2adc Generated table #973@1: 61018 keys, 2225728 bytes
+2026/10/15-01:53:06.518 2adc Generated table #974@1: 8173 keys, 2167689 bytes
+2026/10/15-01:53:06.566 2adc Generated table #975@1: 9795 keys, 2160788 bytes
+2026/10/15-01:53:06.566 2adc Level-0 table #977: started
+2026/10/15-01:53:06.606 2adc Level-0 table #977: 1364626 bytes OK
+2026/10/15-01:53:06.609 2adc Delete type=0 #971
+2026/10/15-01:53:06.670 2adc Generated table #978@1: 14803 keys, 1313005 bytes
+2026/10/15-01:53:06.670 2adc Compacted 1@1 + 3@2 files => 7867210 bytes
+2026/10/15-01:53:06.672 2adc compacted to: files[ 1 0 6 0 0 0 0 ]
+2026/10/15-01:53:06.675 2adc Moved #977 to level-1 1364626 bytes OK: files[ 0 1 6 0 0 0 0 ]
+2026/10/15-01:53:06.677 2adc Compacting 1@1 + 4@2 files
+2026/10/15-01:53:06.780 2adc Generated table #979@1: 63582 keys, 2228490 bytes
+2026/10/15-01:53:06.882 2adc Generated table #980@1: 13010 keys, 2164478 bytes
+2026/10/15-01:53:07.011 2adc Generated table #981@1: 1929 keys, 2140212 bytes
+2026/10/15-01:53:07.020 2adc Level-0 table #984: started
+2026/10/15-01:53:07.617 2adc Level-0 table #984: 1747212 bytes OK
+2026/10/15-01:53:07.621 2adc Delete type=2 #955
+2026/10/15-01:53:07.622 2adc Delete type=2 #956
+2026/10/15-01:53:07.622 2adc Delete type=2 #957
+2026/10/15-01:53:07.622 2adc Delete type=2 #958
+2026/10/15-01:53:07.622 2adc Delete type=2 #960
+2026/10/15-01:53:07.622 2adc Delete type=2 #965
+2026/10/15-01:53:07.622 2adc Delete type=2 #967
+2026/10/15-01:53:07.622 2adc Delete type=2 #968
+2026/10/15-01:53:07.622 2adc Delete type=2 #969
+2026/10/15-01:53:07.622 2adc Delete type=2 #972
+2026/10/15-01:53:07.622 2adc Delete type=0 #976
+2026/10/15-01:53:07.709 2adc Generated table #982@1: 24219 keys, 2218710 bytes
+2026/10/15-01:53:07.730 2adc Generated table #985@1: 4395 keys, 477518 bytes
+2026/10/15-01:53:07.730 2adc Compacted 1@1 + 4@2 files => 9229408 bytes
+2026/10/15-01:53:07.732 2adc compacted to: files[ 1 0 7 0 0 0 0 ]
+2026/10/15-01:53:08.057 17ac Moved #984 to level-1 1747212 bytes OK: files[ 0 1 7 0 0 0 0 ]
+2026/10/15-01:53:08.257 17ac Compacting 1@1 + 5@2 files
+2026/10/15-01:53:08.489 17ac Generated table #986@1: 46211 keys, 2205640 bytes
+2026/10/15-01:53:08.591 17ac Generated table #987@1: 2333 keys, 2149515 bytes
+2026/10/15-01:53:08.636 17ac Generated table #988@1: 1975 keys, 2142315 bytes
+2026/10/15-01:53:08.718 17ac Level-0 table #991: started
+2026/10/15-01:53:08.803 17ac Level-0 table #991: 935464 bytes OK
+2026/10/15-01:53:08.805 17ac Delete type=2 #973
+2026/10/15-01:53:08.805 17ac Delete type=2 #974
+2026/10/15-01:53:08.805 17ac Delete type=2 #975
+2026/10/15-01:53:08.806 17ac Delete type=2 #977
+2026/10/15-01:53:08.806 17ac Delete type=2 #978
+2026/10/15-01:53:08.806 17ac Delete type=0 #983
+2026/10/15-01:53:08.867 17ac Generated table #989@1: 25048 keys, 2221883 bytes
+2026/10/15-01:53:08.904 17ac Generated table #992@1: 7483 keys, 811916 bytes
+2026/10/15-01:53:08.904 17ac Compacted 1@1 + 5@2 files => 9531269 bytes
+2026/10/15-01:53:08.913 17ac compacted to: files[ 1 0 7 0 0 0 0 ]
+2026/10/15-01:53:08.917 17ac Moved #991 to level-1 935464 bytes OK: files[ 0 1 7 0 0 0 0 ]
+2026/10/15-01:53:08.943 17ac Compacting 1@1 + 5@2 files
+2026/10/15-01:53:09.181 17ac Generated table #993@1: 56463 keys, 2219235 bytes
+2026/10/15-01:53:09.235 17ac Generated table #994@1: 2267 keys, 2148276 bytes
+2026/10/15-01:53:09.276 17ac Generated table #995@1: 2039 keys, 2142682 bytes
+2026/10/15-01:53:09.409 17ac Generated table #996@1: 22784 keys, 2213584 bytes
+2026/10/15-01:53:09.470 17ac Generated table #997@1: 10147 keys, 1012568 bytes
+2026/10/15-01:53:09.470 17ac Compacted 1@1 + 5@2 files => 9736345 bytes
+2026/10/15-01:53:09.473 17ac compacted to: files[ 0 0 7 0 0 0 0 ]
+2026/10/15-01:53:09.473 17ac Delete type=2 #979
+2026/10/15-01:53:09.473 17ac Delete type=2 #980
+2026/10/15-01:53:09.473 17ac Delete type=2 #981
+2026/10/15-01:53:09.474 17ac Delete type=2 #982
+2026/10/15-01:53:09.474 17ac Delete type=2 #984
+2026/10/15-01:53:09.474 17ac Delete type=2 #985
+2026/10/15-01:53:10.486 2adc Level-0 table #999: started
+2026/10/15-01:53:10.527 2adc Level-0 table #999: 1103123 bytes OK
+2026/10/15-01:53:10.530 2adc Delete type=2 #986
+2026/10/15-01:53:10.530 2adc Delete type=2 #987
+2026/10/15-01:53:10.530 2adc Delete type=2 #988
+2026/10/15-01:53:10.530 2adc Delete type=2 #989
+2026/10/15-01:53:10.530 2adc Delete type=0 #990
+2026/10/15-01:53:10.530 2adc Delete type=2 #991
+2026/10/15-01:53:10.530 2adc Delete type=2 #992
+2026/10/15-01:53:10.550 2adc Compacting 1@1 + 1@2 files
+2026/10/15-01:53:10.652 2adc Generated table #1000@1: 59830 keys, 2224375 bytes
+2026/10/15-01:53:10.670 2adc Generated table #1001@1: 3974 keys, 300617 bytes
+2026/10/15-01:53:10.670 2adc Compacted 1@1 + 1@2 files => 2524992 bytes
+2026/10/15-01:53:10.673 2adc compacted to: files[ 0 0 8 0 0 0 0 ]
+2026/10/15-01:53:10.674 2adc Delete type=2 #993
+2026/10/15-01:53:10.674 2adc Delete type=2 #999
+2026/10/15-01:53:28.187 2adc Level-0 table #1003: started
+2026/10/15-01:53:28.225 2adc Level-0 table #1003: 1149456 bytes OK
+2026/10/15-01:53:28.229 2adc Delete type=0 #998
+2026/10/15-01:53:28.232 2adc Compacting 1@1 + 6@2 files
+2026/10/15-01:53:28.360 2adc Generated table #1004@1: 62590 keys, 2230365 bytes
+2026/10/15-01:53:28.405 2adc Generated table #1005@1: 2135 keys, 2146214 bytes
+2026/10/15-01:53:28.451 2adc Generated table #1006@1: 2054 keys, 2145507 bytes
+2026/10/15-01:53:28.503 2adc Level-0 table #1009: started
+2026/10/15-01:53:28.540 2adc Level-0 table #1009: 1271580 bytes OK
+2026/10/15-01:53:28.543 2adc Delete type=0 #1002
+2026/10/15-01:53:28.564 2adc Generated table #1007@1: 16115 keys, 2187033 bytes
+2026/10/15-01:53:28.640 2adc Generated table #1010@1: 19767 keys, 1708433 bytes
+2026/10/15-01:53:28.640 2adc Compacted 1@1 + 6@2 files => 10417552 bytes
+2026/10/15-01:53:28.644 2adc compacted to: files[ 1 0 7 0 0 0 0 ]
+2026/10/15-01:53:28.644 2adc Delete type=2 #994
+2026/10/15-01:53:28.644 2adc Delete type=2 #995
+2026/10/15-01:53:28.644 2adc Delete type=2 #996
+2026/10/15-01:53:28.645 2adc Delete type=2 #997
+2026/10/15-01:53:28.645 2adc Delete type=2 #1000
+2026/10/15-01:53:28.645 2adc Delete type=2 #1001
+2026/10/15-01:53:28.645 2adc Delete type=2 #1003
+2026/10/15-01:53:28.651 17ac Moved #1009 to level-1 1271580 bytes OK: files[ 0 1 7 0 0 0 0 ]
+2026/10/15-01:53:28.654 2adc Compacting 1@1 + 5@2 files
+2026/10/15-01:53:28.758 2adc Generated table #1011@1: 58228 keys, 2225817 bytes
+2026/10/15-01:53:28.812 2adc Generated table #1012@1: 12429 keys, 2157988 bytes
+2026/10/15-01:53:28.837 2adc Level-0 table #1015: started
+2026/10/15-01:53:28.876 2adc Level-0 table #1015: 1333730 bytes OK
+2026/10/15-01:53:28.879 2adc Delete type=0 #1008
+2026/10/15-01:53:28.896 2adc Generated table #1013@1: 2940 keys, 2159803 bytes
+2026/10/15-01:53:28.932 2adc Generated table #1016@1: 2287 keys, 2140523 bytes
+2026/10/15-01:53:29.025 2adc Generated table #1017@1: 31844 keys, 2247584 bytes
+2026/10/15-01:53:29.051 2adc Generated table #1018@1: 6759 keys, 758637 bytes
+2026/10/15-01:53:29.051 2adc Compacted 1@1 + 5@2 files => 11690352 bytes
+2026/10/15-01:53:29.054 2adc compacted to: files[ 1 0 8 0 0 0 0 ]
+2026/10/15-01:53:29.054 2adc Delete type=2 #1004
+2026/10/15-01:53:29.054 2adc Delete type=2 #1005
+2026/10/15-01:53:29.054 2adc Delete type=2 #1006
+2026/10/15-01:53:29.054 2adc Delete type=2 #1007
+2026/10/15-01:53:29.054 2adc Delete type=2 #1009
+2026/10/15-01:53:29.055 2adc Delete type=2 #1010
+2026/10/15-01:53:29.061 17ac Moved #1015 to level-1 1333730 bytes OK: files[ 0 1 8 0 0 0 0 ]
+2026/10/15-01:53:29.064 2adc Compacting 1@1 + 5@2 files
+2026/10/15-01:53:29.114 2adc Level-0 table #1021: started
+2026/10/15-01:53:29.145 2adc Level-0 table #1021: 1289358 bytes OK
+2026/10/15-01:53:29.148 2adc Delete type=0 #1014
+2026/10/15-01:53:29.191 2adc Generated table #1019@1: 59808 keys, 2224538 bytes
+2026/10/15-01:53:29.241 2adc Generated table #1022@1: 17863 keys, 2167338 bytes
+2026/10/15-01:53:29.282 2adc Generated table #1023@1: 3065 keys, 2154246 bytes
+2026/10/15-01:53:29.330 2adc Generated table #1024@1: 1959 keys, 2138787 bytes
+2026/10/15-01:53:29.362 2adc Level-0 table #1027: started
+2026/10/15-01:53:29.394 2adc Level-0 table #1027: 1373379 bytes OK
+2026/10/15-01:53:29.398 2adc Delete type=0 #1020
+2026/10/15-01:53:29.446 2adc Generated table #1025@1: 19263 keys, 2192327 bytes
+2026/10/15-01:53:29.534 2adc Generated table #1028@1: 19117 keys, 1381331 bytes
+2026/10/15-01:53:29.534 2adc Compacted 1@1 + 5@2 files => 12258567 bytes
+2026/10/15-01:53:29.537 2adc compacted to: files[ 2 0 9 0 0 0 0 ]
+2026/10/15-01:53:29.537 2adc Delete type=2 #1011
+2026/10/15-01:53:29.537 2adc Delete type=2 #1012
+2026/10/15-01:53:29.537 2adc Delete type=2 #1013
+2026/10/15-01:53:29.538 2adc Delete type=2 #1015
+2026/10/15-01:53:29.538 2adc Delete type=2 #1016
+2026/10/15-01:53:29.539 2adc Delete type=2 #1017
+2026/10/15-01:53:29.546 2adc Compacting 2@0 + 0@1 files
+2026/10/15-01:53:29.620 2adc Generated table #1029@0: 17835 keys, 2171808 bytes
+2026/10/15-01:53:29.648 2adc Generated table #1030@0: 6456 keys, 470230 bytes
+2026/10/15-01:53:29.648 2adc Compacted 2@0 + 0@1 files => 2642038 bytes
+2026/10/15-01:53:29.651 2adc compacted to: files[ 0 2 9 0 0 0 0 ]
+2026/10/15-01:53:29.651 2adc Delete type=2 #1021
+2026/10/15-01:53:29.651 2adc Delete type=2 #1027
+2026/10/15-01:53:29.655 2adc Compacting 1@1 + 5@2 files
+2026/10/15-01:53:29.797 2adc Generated table #1031@1: 64155 keys, 2226917 bytes
+2026/10/15-01:53:29.868 2adc Generated table #1032@1: 26525 keys, 2179149 bytes
+2026/10/15-01:53:29.910 2adc Generated table #1033@1: 2361 keys, 2148842 bytes
+2026/10/15-01:53:29.955 2adc Generated table #1034@1: 2785 keys, 2156488 bytes
+2026/10/15-01:53:29.999 2adc Generated table #1035@1: 2389 keys, 2142714 bytes
+2026/10/15-01:53:30.077 2adc Generated table #1036@1: 21561 keys, 2196406 bytes
+2026/10/15-01:53:30.096 2adc Generated table #1037@1: 16 keys, 1710 bytes
+2026/10/15-01:53:30.096 2adc Compacted 1@1 + 5@2 files => 13052226 bytes
+2026/10/15-01:53:30.099 2adc compacted to: files[ 0 1 11 0 0 0 0 ]
+2026/10/15-01:53:30.176 2adc Level-0 table #1039: started
+2026/10/15-01:53:30.216 2adc Level-0 table #1039: 827475 bytes OK
+2026/10/15-01:53:30.220 2adc Delete type=2 #1019
+2026/10/15-01:53:30.221 2adc Delete type=2 #1022
+2026/10/15-01:53:30.221 2adc Delete type=2 #1023
+2026/10/15-01:53:30.221 2adc Delete type=2 #1024
+2026/10/15-01:53:30.221 2adc Delete type=2 #1025
+2026/10/15-01:53:30.221 2adc Delete type=0 #1026
+2026/10/15-01:53:30.221 2adc Delete type=2 #1029
+2026/10/15-01:53:30.234 2adc Compacting 1@0 + 1@1 files
+2026/10/15-01:53:30.317 2adc Generated table #1040@0: 60995 keys, 1032579 bytes
+2026/10/15-01:53:30.317 2adc Compacted 1@0 + 1@1 files => 1032579 bytes
+2026/10/15-01:53:30.320 2adc compacted to: files[ 0 1 11 0 0 0 0 ]
+2026/10/15-01:53:30.320 2adc Delete type=2 #1030
+2026/10/15-01:53:30.320 2adc Delete type=2 #1039
+2026/10/15-01:53:30.541 17ac Compacting 1@1 + 9@2 files
+2026/10/15-01:53:30.676 17ac Generated table #1041@1: 68969 keys, 2237868 bytes
+2026/10/15-01:53:30.719 17ac Generated table #1042@1: 1862 keys, 2145768 bytes
+2026/10/15-01:53:30.760 17ac Generated table #1043@1: 3072 keys, 2156583 bytes
+2026/10/15-01:53:30.798 17ac Generated table #1044@1: 2043 keys, 2142405 bytes
+2026/10/15-01:53:30.844 17ac Generated table #1045@1: 3154 keys, 2146696 bytes
+2026/10/15-01:53:30.933 17ac Generated table #1046@1: 32708 keys, 2242282 bytes
+2026/10/15-01:53:30.983 17ac Generated table #1047@1: 20061 keys, 1730834 bytes
+2026/10/15-01:53:30.983 17ac Compacted 1@1 + 9@2 files => 14802436 bytes
+2026/10/15-01:53:30.986 17ac compacted to: files[ 0 0 9 0 0 0 0 ]
+2026/10/15-01:53:30.986 17ac Delete type=2 #1018
+2026/10/15-01:53:30.986 17ac Delete type=2 #1028
+2026/10/15-01:53:30.986 17ac Delete type=2 #1031
+2026/10/15-01:53:30.986 17ac Delete type=2 #1032
+2026/10/15-01:53:30.986 17ac Delete type=2 #1033
+2026/10/15-01:53:30.986 17ac Delete type=2 #1034
+2026/10/15-01:53:30.986 17ac Delete type=2 #1035
+2026/10/15-01:53:30.986 17ac Delete type=2 #1036
+2026/10/15-01:53:30.986 17ac Delete type=2 #1037
+2026/10/15-01:53:30.986 17ac Delete type=2 #1040
+2026/10/15-01:53:33.205 2adc Level-0 table #1049: started
+2026/10/15-01:53:33.683 2adc Level-0 table #1049: 1093331 bytes OK
+2026/10/15-01:53:33.687 2adc Delete type=0 #1038
+2026/10/15-01:53:33.692 2adc Compacting 1@1 + 9@2 files
+2026/10/15-01:53:33.781 2adc Generated table #1050@1: 67795 keys, 2238012 bytes
+2026/10/15-01:53:33.816 2adc Generated table #1051@1: 4810 keys, 2148577 bytes
+2026/10/15-01:53:33.852 2adc Generated table #1052@1: 3030 keys, 2155199 bytes
+2026/10/15-01:53:33.889 2adc Generated table #1053@1: 2046 keys, 2142425 bytes
+2026/10/15-01:53:33.926 2adc Generated table #1054@1: 3151 keys, 2146705 bytes
+2026/10/15-01:53:33.994 2adc Generated table #1055@1: 31809 keys, 2238377 bytes
+2026/10/15-01:53:34.058 2adc Generated table #1056@1: 21214 keys, 2210006 bytes
+2026/10/15-01:53:34.125 2adc Generated table #1057@1: 82146 keys, 2230029 bytes
+2026/10/15-01:53:34.155 2adc Generated table #1058@1: 18037 keys, 524262 bytes
+2026/10/15-01:53:34.155 2adc Compacted 1@1 + 9@2 files => 18033592 bytes
+2026/10/15-01:53:34.157 2adc compacted to: files[ 0 0 9 0 0 0 0 ]
+2026/10/15-01:53:34.158 2adc Delete type=2 #966
+2026/10/15-01:53:34.158 2adc Delete type=2 #970
+2026/10/15-01:53:34.158 2adc Delete type=2 #1041
+2026/10/15-01:53:34.158 2adc Delete type=2 #1042
+2026/10/15-01:53:34.158 2adc Delete type=2 #1043
+2026/10/15-01:53:34.158 2adc Delete type=2 #1044
+2026/10/15-01:53:34.158 2adc Delete type=2 #1045
+2026/10/15-01:53:34.159 2adc Delete type=2 #1046
+2026/10/15-01:53:34.159 2adc Delete type=2 #1047
+2026/10/15-01:53:34.160 2adc Delete type=2 #1049
+2026/10/15-01:53:48.317 2adc Level-0 table #1060: started
+2026/10/15-01:53:48.359 2adc Level-0 table #1060: 1258145 bytes OK
+2026/10/15-01:53:48.364 2adc Delete type=0 #1048
+2026/10/15-01:53:48.367 2adc Compacting 1@1 + 9@2 files
+2026/10/15-01:53:48.499 2adc Generated table #1061@1: 57417 keys, 2224453 bytes
+2026/10/15-01:53:48.569 2adc Generated table #1062@1: 21106 keys, 2168530 bytes
+2026/10/15-01:53:48.618 2adc Generated table #1063@1: 2778 keys, 2153440 bytes
+2026/10/15-01:53:48.662 2adc Generated table #1064@1: 2403 keys, 2152132 bytes
+2026/10/15-01:53:48.703 2adc Generated table #1065@1: 2695 keys, 2144100 bytes
+2026/10/15-01:53:48.703 2adc Level-0 table #1067: started
+2026/10/15-01:53:48.734 2adc Level-0 table #1067: 1307376 bytes OK
+2026/10/15-01:53:48.737 2adc Delete type=0 #1059
+2026/10/15-01:53:48.817 2adc Generated table #1068@1: 21528 keys, 2193970 bytes
+2026/10/15-01:53:48.909 2adc Generated table #1069@1: 30528 keys, 2255254 bytes
+2026/10/15-01:53:48.939 2adc Level-0 table #1072: started
+2026/10/15-01:53:48.970 2adc Level-0 table #1072: 1447394 bytes OK
+2026/10/15-01:53:48.974 2adc Delete type=0 #1066
+2026/10/15-01:53:49.009 2adc Generated table #1070@1: 42828 keys, 2185608 bytes
+2026/10/15-01:53:49.077 2adc Generated table #1073@1: 63400 keys, 1614901 bytes
+2026/10/15-01:53:49.077 2adc Compacted 1@1 + 9@2 files => 19092388 bytes
+2026/10/15-01:53:49.080 2adc compacted to: files[ 2 0 9 0 0 0 0 ]
+2026/10/15-01:53:49.080 2adc Compacting 2@0 + 0@1 files
+2026/10/15-01:53:49.146 2adc Generated table #1074@0: 14298 keys, 2163286 bytes
+2026/10/15-01:53:49.173 2adc Generated table #1075@0: 8353 keys, 570571 bytes
+2026/10/15-01:53:49.173 2adc Compacted 2@0 + 0@1 files => 2733857 bytes
+2026/10/15-01:53:49.176 2adc compacted to: files[ 0 2 9 0 0 0 0 ]
+2026/10/15-01:53:49.176 2adc Delete type=2 #1050
+2026/10/15-01:53:49.176 2adc Delete type=2 #1051
+2026/10/15-01:53:49.176 2adc Delete type=2 #1052
+2026/10/15-01:53:49.176 2adc Delete type=2 #1053
+2026/10/15-01:53:49.176 2adc Delete type=2 #1054
+2026/10/15-01:53:49.176 2adc Delete type=2 #1055
+2026/10/15-01:53:49.176 2adc Delete type=2 #1056
+2026/10/15-01:53:49.176 2adc Delete type=2 #1057
+2026/10/15-01:53:49.176 2adc Delete type=2 #1058
+2026/10/15-01:53:49.176 2adc Delete type=2 #1060
+2026/10/15-01:53:49.176 2adc Delete type=2 #1067
+2026/10/15-01:53:49.176 2adc Delete type=2 #1072
+2026/10/15-01:53:49.184 17ac Level-0 table #1077: started
+2026/10/15-01:53:49.216 17ac Level-0 table #1077: 1446536 bytes OK
+2026/10/15-01:53:49.218 17ac Delete type=0 #1071
+2026/10/15-01:53:49.222 2adc Compacting 1@0 + 2@1 files
+2026/10/15-01:53:49.286 2adc Generated table #1078@0: 18854 keys, 2169620 bytes
+2026/10/15-01:53:49.348 2adc Generated table #1079@0: 13240 keys, 2000088 bytes
+2026/10/15-01:53:49.348 2adc Compacted 1@0 + 2@1 files => 4169708 bytes
+2026/10/15-01:53:49.351 2adc compacted to: files[ 0 2 9 0 0 0 0 ]
+2026/10/15-01:53:49.360 2adc Compacting 1@1 + 3@2 files
+2026/10/15-01:53:49.491 2adc Generated table #1080@1: 61427 keys, 2226441 bytes
+2026/10/15-01:53:49.578 2adc Generated table #1081@1: 34152 keys, 2189281 bytes
+2026/10/15-01:53:49.619 2adc Generated table #1082@1: 1762 keys, 2145032 bytes
+2026/10/15-01:53:49.667 2adc Generated table #1083@1: 2813 keys, 2143030 bytes
+2026/10/15-01:53:49.667 2adc Compacted 1@1 + 3@2 files => 8703784 bytes
+2026/10/15-01:53:49.670 2adc compacted to: files[ 0 1 10 0 0 0 0 ]
+2026/10/15-01:53:49.670 2adc Delete type=2 #1061
+2026/10/15-01:53:49.670 2adc Delete type=2 #1062
+2026/10/15-01:53:49.670 2adc Delete type=2 #1063
+2026/10/15-01:53:49.670 2adc Delete type=2 #1074
+2026/10/15-01:53:49.670 2adc Delete type=2 #1075
+2026/10/15-01:53:49.671 2adc Delete type=2 #1077
+2026/10/15-01:53:49.671 2adc Delete type=2 #1078
+2026/10/15-01:53:49.758 2adc Level-0 table #1085: started
+2026/10/15-01:53:49.796 2adc Level-0 table #1085: 1022534 bytes OK
+2026/10/15-01:53:49.800 2adc Delete type=0 #1076
+2026/10/15-01:53:49.804 2adc Compacting 1@0 + 1@1 files
+2026/10/15-01:53:49.894 2adc Generated table #1086@0: 44877 keys, 2204853 bytes
+2026/10/15-01:53:49.930 2adc Generated table #1087@0: 8983 keys, 684924 bytes
+2026/10/15-01:53:49.930 2adc Compacted 1@0 + 1@1 files => 2889777 bytes
+2026/10/15-01:53:49.933 2adc compacted to: files[ 0 2 10 0 0 0 0 ]
+2026/10/15-01:53:49.933 2adc Delete type=2 #1079
+2026/10/15-01:53:49.933 2adc Delete type=2 #1085
+2026/10/15-01:53:49.937 2adc Compacting 1@1 + 7@2 files
+2026/10/15-01:53:50.059 2adc Generated table #1088@1: 64435 keys, 2232805 bytes
+2026/10/15-01:53:50.118 2adc Generated table #1089@1: 19711 keys, 2167553 bytes
+2026/10/15-01:53:50.159 2adc Generated table #1090@1: 1954 keys, 2150012 bytes
+2026/10/15-01:53:50.213 2adc Generated table #1091@1: 3079 keys, 2152266 bytes
+2026/10/15-01:53:50.254 2adc Generated table #1092@1: 2118 keys, 2145055 bytes
+2026/10/15-01:53:50.311 2adc Generated table #1093@1: 2572 keys, 2145392 bytes
+2026/10/15-01:53:50.378 2adc Generated table #1094@1: 6676 keys, 2156240 bytes
+2026/10/15-01:53:50.447 2adc Generated table #1095@1: 20949 keys, 1160681 bytes
+2026/10/15-01:53:50.448 2adc Compacted 1@1 + 7@2 files => 16310004 bytes
+2026/10/15-01:53:50.450 2adc compacted to: files[ 0 1 11 0 0 0 0 ]
+2026/10/15-01:53:50.700 2adc Compacting 1@1 + 4@2 files
+2026/10/15-01:53:50.796 2adc Generated table #1096@1: 35919 keys, 2257423 bytes
+2026/10/15-01:53:50.866 2adc Generated table #1097@1: 29436 keys, 2243534 bytes
+2026/10/15-01:53:50.934 2adc Generated table #1098@1: 54939 keys, 2193163 bytes
+2026/10/15-01:53:50.989 2adc Generated table #1099@1: 46389 keys, 1208065 bytes
+2026/10/15-01:53:50.990 2adc Compacted 1@1 + 4@2 files => 7902185 bytes
+2026/10/15-01:53:50.992 2adc compacted to: files[ 0 0 11 0 0 0 0 ]
+2026/10/15-01:53:50.993 2adc Delete type=2 #1064
+2026/10/15-01:53:50.993 2adc Delete type=2 #1065
+2026/10/15-01:53:50.993 2adc Delete type=2 #1068
+2026/10/15-01:53:50.993 2adc Delete type=2 #1080
+2026/10/15-01:53:50.993 2adc Delete type=2 #1081
+2026/10/15-01:53:50.993 2adc Delete type=2 #1082
+2026/10/15-01:53:50.993 2adc Delete type=2 #1083
+2026/10/15-01:53:50.993 2adc Delete type=2 #1086
+2026/10/15-01:54:03.566 2adc Level-0 table #1101: started
+2026/10/15-01:54:03.606 2adc Level-0 table #1101: 1053415 bytes OK
+2026/10/15-01:54:03.609 2adc Delete type=2 #1069
+2026/10/15-01:54:03.609 2adc Delete type=2 #1070
+2026/10/15-01:54:03.609 2adc Delete type=2 #1073
+2026/10/15-01:54:03.609 2adc Delete type=0 #1084
+2026/10/15-01:54:03.609 2adc Delete type=2 #1087
+2026/10/15-01:54:03.609 2adc Delete type=2 #1095
+2026/10/15-01:54:04.633 17ac Compacting 1@0 + 0@1 files
+2026/10/15-01:54:04.681 17ac Generated table #1102@0: 31138 keys, 517225 bytes
+2026/10/15-01:54:04.689 17ac Generated table #1103@0: 2137 keys, 43536 bytes
+2026/10/15-01:54:04.689 17ac Compacted 1@0 + 0@1 files => 560761 bytes
+2026/10/15-01:54:04.691 17ac compacted to: files[ 0 2 11 0 0 0 0 ]
+2026/10/15-01:54:04.692 17ac Delete type=2 #1101
+2026/10/15-01:54:05.686 2adc Compacting 1@1 + 10@2 files
+2026/10/15-01:54:05.777 2adc Generated table #1104@1: 63977 keys, 2233707 bytes
+2026/10/15-01:54:05.820 2adc Generated table #1105@1: 17635 keys, 2174732 bytes
+2026/10/15-01:54:05.854 2adc Generated table #1106@1: 1983 keys, 2149828 bytes
+2026/10/15-01:54:05.890 2adc Generated table #1107@1: 3097 keys, 2153016 bytes
+2026/10/15-01:54:05.919 2adc Generated table #1108@1: 2100 keys, 2146728 bytes
+2026/10/15-01:54:05.961 2adc Generated table #1109@1: 2597 keys, 2149296 bytes
+2026/10/15-01:54:06.004 2adc Generated table #1110@1: 7988 keys, 2157453 bytes
+2026/10/15-01:54:06.078 2adc Generated table #1111@1: 35352 keys, 2257483 bytes
+2026/10/15-01:54:06.150 2adc Generated table #1112@1: 29169 keys, 2243063 bytes
+2026/10/15-01:54:06.207 2adc Generated table #1113@1: 54305 keys, 2189560 bytes
+2026/10/15-01:54:06.224 2adc Generated table #1114@1: 3678 keys, 88679 bytes
+2026/10/15-01:54:06.224 2adc Compacted 1@1 + 10@2 files => 21943545 bytes
+2026/10/15-01:54:06.227 2adc compacted to: files[ 0 1 12 0 0 0 0 ]
+2026/10/15-01:54:06.227 2adc Delete type=2 #1088
+2026/10/15-01:54:06.227 2adc Delete type=2 #1089
+2026/10/15-01:54:06.227 2adc Delete type=2 #1090
+2026/10/15-01:54:06.227 2adc Delete type=2 #1091
+2026/10/15-01:54:06.227 2adc Delete type=2 #1092
+2026/10/15-01:54:06.227 2adc Delete type=2 #1093
+2026/10/15-01:54:06.227 2adc Delete type=2 #1094
+2026/10/15-01:54:06.227 2adc Delete type=2 #1096
+2026/10/15-01:54:06.227 2adc Delete type=2 #1097
+2026/10/15-01:54:06.228 2adc Delete type=2 #1098
+2026/10/15-01:54:06.228 2adc Delete type=2 #1102
+2026/10/15-01:54:06.719 2adc Compacting 1@1 + 1@2 files
+2026/10/15-01:54:06.789 2adc Generated table #1115@1: 48526 keys, 1260600 bytes
+2026/10/15-01:54:06.789 2adc Compacted 1@1 + 1@2 files => 1260600 bytes
+2026/10/15-01:54:06.794 2adc compacted to: files[ 0 0 12 0 0 0 0 ]
+2026/10/15-01:54:06.794 2adc Delete type=2 #1099
+2026/10/15-01:54:06.794 2adc Delete type=2 #1103
+2026/10/15-01:54:26.999 2adc Level-0 table #1117: started
+2026/10/15-01:54:27.031 2adc Level-0 table #1117: 1109168 bytes OK
+2026/10/15-01:54:27.035 2adc Delete type=0 #1100
+2026/10/15-01:54:28.031 2adc Compacting 1@0 + 0@1 files
+2026/10/15-01:54:28.079 2adc Generated table #1118@0: 31021 keys, 527850 bytes
+2026/10/15-01:54:28.092 2adc Generated table #1119@0: 8230 keys, 171825 bytes
+2026/10/15-01:54:28.092 2adc Compacted 1@0 + 0@1 files => 699675 bytes
+2026/10/15-01:54:28.094 2adc compacted to: files[ 0 2 12 0 0 0 0 ]
+2026/10/15-01:54:28.095 2adc Delete type=2 #1117
+2026/10/15-01:54:29.082 17ac Compacting 1@1 + 10@2 files
+2026/10/15-01:54:29.174 17ac Generated table #1120@1: 64029 keys, 2233512 bytes
+2026/10/15-01:54:29.214 17ac Generated table #1121@1: 17554 keys, 2173504 bytes
+2026/10/15-01:54:29.253 17ac Generated table #1122@1: 1983 keys, 2149828 bytes
+2026/10/15-01:54:29.290 17ac Generated table #1123@1: 3097 keys, 2153016 bytes
+2026/10/15-01:54:29.320 17ac Generated table #1124@1: 2100 keys, 2146728 bytes
+2026/10/15-01:54:29.353 17ac Generated table #1125@1: 2597 keys, 2149296 bytes
+2026/10/15-01:54:29.407 17ac Generated table #1126@1: 7988 keys, 2157453 bytes
+2026/10/15-01:54:29.494 17ac Generated table #1127@1: 35352 keys, 2257483 bytes
+2026/10/15-01:54:29.563 17ac Generated table #1128@1: 29169 keys, 2243128 bytes
+2026/10/15-01:54:29.619 17ac Generated table #1129@1: 48131 keys, 2181339 bytes
+2026/10/15-01:54:29.640 17ac Generated table #1130@1: 16514 keys, 398227 bytes
+2026/10/15-01:54:29.640 17ac Compacted 1@1 + 10@2 files => 22243514 bytes
+2026/10/15-01:54:29.642 17ac compacted to: files[ 0 1 13 0 0 0 0 ]
+2026/10/15-01:54:29.642 17ac Delete type=2 #1104
+2026/10/15-01:54:29.643 17ac Delete type=2 #1105
+2026/10/15-01:54:29.643 17ac Delete type=2 #1106
+2026/10/15-01:54:29.643 17ac Delete type=2 #1107
+2026/10/15-01:54:29.643 17ac Delete type=2 #1108
+2026/10/15-01:54:29.643 17ac Delete type=2 #1109
+2026/10/15-01:54:29.643 17ac Delete type=2 #1110
+2026/10/15-01:54:29.643 17ac Delete type=2 #1111
+2026/10/15-01:54:29.643 17ac Delete type=2 #1112
+2026/10/15-01:54:29.643 17ac Delete type=2 #1113
+2026/10/15-01:54:29.643 17ac Delete type=2 #1118
+2026/10/15-01:54:30.128 2adc Compacting 1@1 + 2@2 files
+2026/10/15-01:54:30.205 2adc Generated table #1131@1: 60434 keys, 1553199 bytes
+2026/10/15-01:54:30.205 2adc Compacted 1@1 + 2@2 files => 1553199 bytes
+2026/10/15-01:54:30.208 2adc compacted to: files[ 0 0 12 0 0 0 0 ]
+2026/10/15-01:54:30.208 2adc Delete type=2 #1114
+2026/10/15-01:54:30.208 2adc Delete type=2 #1115
+2026/10/15-01:54:30.208 2adc Delete type=2 #1119
+2026/10/15-01:55:00.835 2adc Level-0 table #1133: started
+2026/10/15-01:55:00.879 2adc Level-0 table #1133: 1081108 bytes OK
+2026/10/15-01:55:00.882 2adc Delete type=0 #1116
+2026/10/15-01:55:01.889 2adc Compacting 1@0 + 0@1 files
+2026/10/15-01:55:01.933 2adc Generated table #1134@0: 30052 keys, 462076 bytes
+2026/10/15-01:55:01.947 2adc Generated table #1135@0: 9167 keys, 190109 bytes
+2026/10/15-01:55:01.947 2adc Compacted 1@0 + 0@1 files => 652185 bytes
+2026/10/15-01:55:01.949 2adc compacted to: files[ 0 2 12 0 0 0 0 ]
+2026/10/15-01:55:01.950 2adc Delete type=2 #1133
+2026/10/15-01:55:02.942 2adc Compacting 1@1 + 10@2 files
+2026/10/15-01:55:03.043 2adc Generated table #1136@1: 64000 keys, 2234233 bytes
+2026/10/15-01:55:03.092 2adc Generated table #1137@1: 16055 keys, 2163693 bytes
+2026/10/15-01:55:03.128 2adc Generated table #1138@1: 1998 keys, 2150632 bytes
+2026/10/15-01:55:03.163 2adc Generated table #1139@1: 3105 keys, 2153168 bytes
+2026/10/15-01:55:03.192 2adc Generated table #1140@1: 2089 keys, 2143653 bytes
+2026/10/15-01:55:03.229 2adc Generated table #1141@1: 2593 keys, 2145666 bytes
+2026/10/15-01:55:03.277 2adc Generated table #1142@1: 8142 keys, 2156913 bytes
+2026/10/15-01:55:03.351 2adc Generated table #1143@1: 35277 keys, 2258437 bytes
+2026/10/15-01:55:03.427 2adc Generated table #1144@1: 29124 keys, 2243319 bytes
+2026/10/15-01:55:03.499 2adc Generated table #1145@1: 43810 keys, 2175430 bytes
+2026/10/15-01:55:03.522 2adc Generated table #1146@1: 11622 keys, 281397 bytes
+2026/10/15-01:55:03.522 2adc Compacted 1@1 + 10@2 files => 22106541 bytes
+2026/10/15-01:55:03.525 2adc compacted to: files[ 0 1 13 0 0 0 0 ]
+2026/10/15-01:55:03.526 2adc Delete type=2 #1120
+2026/10/15-01:55:03.526 2adc Delete type=2 #1121
+2026/10/15-01:55:03.526 2adc Delete type=2 #1122
+2026/10/15-01:55:03.526 2adc Delete type=2 #1123
+2026/10/15-01:55:03.527 2adc Delete type=2 #1124
+2026/10/15-01:55:03.527 2adc Delete type=2 #1125
+2026/10/15-01:55:03.527 2adc Delete type=2 #1126
+2026/10/15-01:55:03.527 2adc Delete type=2 #1127
+2026/10/15-01:55:03.527 2adc Delete type=2 #1128
+2026/10/15-01:55:03.527 2adc Delete type=2 #1129
+2026/10/15-01:55:03.527 2adc Delete type=2 #1134
+2026/10/15-01:55:03.981 2adc Compacting 1@1 + 2@2 files
+2026/10/15-01:55:04.077 2adc Generated table #1147@1: 86115 keys, 2165879 bytes
+2026/10/15-01:55:04.077 2adc Compacted 1@1 + 2@2 files => 2165879 bytes
+2026/10/15-01:55:04.080 2adc compacted to: files[ 0 0 12 0 0 0 0 ]
+2026/10/15-01:55:04.080 2adc Delete type=2 #1130
+2026/10/15-01:55:04.080 2adc Delete type=2 #1131
+2026/10/15-01:55:04.080 2adc Delete type=2 #1135
+2026/10/15-01:55:37.777 17ac Level-0 table #1149: started
+2026/10/15-01:55:37.816 17ac Level-0 table #1149: 1056301 bytes OK
+2026/10/15-01:55:37.819 17ac Delete type=0 #1132
+2026/10/15-01:55:38.841 17ac Compacting 1@0 + 0@1 files
+2026/10/15-01:55:38.892 17ac Generated table #1150@0: 28879 keys, 429659 bytes
+2026/10/15-01:55:38.906 17ac Generated table #1151@0: 9984 keys, 206475 bytes
+2026/10/15-01:55:38.906 17ac Compacted 1@0 + 0@1 files => 636134 bytes
+2026/10/15-01:55:38.908 17ac compacted to: files[ 0 2 12 0 0 0 0 ]
+2026/10/15-01:55:38.909 17ac Delete type=2 #1149
+2026/10/15-01:55:39.884 2adc Compacting 1@1 + 2@2 files
+2026/10/15-01:55:39.982 2adc Generated table #1152@1: 93716 keys, 2243327 bytes
+2026/10/15-01:55:40.004 2adc Generated table #1153@1: 14005 keys, 424907 bytes
+2026/10/15-01:55:40.004 2adc Compacted 1@1 + 2@2 files => 2668234 bytes
+2026/10/15-01:55:40.007 2adc compacted to: files[ 0 1 12 0 0 0 0 ]
+2026/10/15-01:55:40.007 2adc Delete type=2 #1146
+2026/10/15-01:55:40.007 2adc Delete type=2 #1147
+2026/10/15-01:55:40.007 2adc Delete type=2 #1151
+2026/10/15-01:55:40.910 2adc Compacting 1@1 + 10@2 files
+2026/10/15-01:55:41.002 2adc Generated table #1154@1: 64064 keys, 2234517 bytes
+2026/10/15-01:55:41.040 2adc Generated table #1155@1: 13531 keys, 2161139 bytes
+2026/10/15-01:55:41.071 2adc Generated table #1156@1: 2020 keys, 2149734 bytes
+2026/10/15-01:55:41.118 2adc Generated table #1157@1: 3115 keys, 2154439 bytes
+2026/10/15-01:55:41.159 2adc Generated table #1158@1: 2080 keys, 2143499 bytes
+2026/10/15-01:55:41.192 2adc Generated table #1159@1: 2597 keys, 2145412 bytes
+2026/10/15-01:55:41.234 2adc Generated table #1160@1: 8963 keys, 2159436 bytes
+2026/10/15-01:55:41.312 2adc Generated table #1161@1: 34952 keys, 2258382 bytes
+2026/10/15-01:55:41.398 2adc Generated table #1162@1: 28941 keys, 2243341 bytes
+2026/10/15-01:55:41.455 2adc Generated table #1163@1: 40645 keys, 2171057 bytes
+2026/10/15-01:55:41.470 2adc Generated table #1164@1: 8781 keys, 211798 bytes
+2026/10/15-01:55:41.470 2adc Compacted 1@1 + 10@2 files => 22032754 bytes
+2026/10/15-01:55:41.473 2adc compacted to: files[ 0 0 13 0 0 0 0 ]
+2026/10/15-01:55:41.473 2adc Delete type=2 #1136
+2026/10/15-01:55:41.473 2adc Delete type=2 #1137
+2026/10/15-01:55:41.473 2adc Delete type=2 #1138
+2026/10/15-01:55:41.473 2adc Delete type=2 #1139
+2026/10/15-01:55:41.473 2adc Delete type=2 #1140
+2026/10/15-01:55:41.473 2adc Delete type=2 #1141
+2026/10/15-01:55:41.473 2adc Delete type=2 #1142
+2026/10/15-01:55:41.473 2adc Delete type=2 #1143
+2026/10/15-01:55:41.473 2adc Delete type=2 #1144
+2026/10/15-01:55:41.473 2adc Delete type=2 #1145
+2026/10/15-01:55:41.474 2adc Delete type=2 #1150
+2026/10/15-01:56:11.605 17ac Level-0 table #1166: started
+2026/10/15-01:56:11.646 17ac Level-0 table #1166: 1097099 bytes OK
+2026/10/15-01:56:11.649 17ac Delete type=0 #1148
+2026/10/15-01:56:12.648 2adc Compacting 1@0 + 0@1 files
+2026/10/15-01:56:12.694 2adc Generated table #1167@0: 28447 keys, 431691 bytes
+2026/10/15-01:56:12.709 2adc Generated table #1168@0: 11451 keys, 239728 bytes
+2026/10/15-01:56:12.710 2adc Compacted 1@0 + 0@1 files => 671419 bytes
+2026/10/15-01:56:12.712 2adc compacted to: files[ 0 2 13 0 0 0 0 ]
+2026/10/15-01:56:12.713 2adc Delete type=2 #1166
+2026/10/15-01:56:13.705 2adc Compacting 1@1 + 10@2 files
+2026/10/15-01:56:13.800 2adc Generated table #1169@1: 64495 keys, 2236458 bytes
+2026/10/15-01:56:13.850 2adc Generated table #1170@1: 11207 keys, 2155602 bytes
+2026/10/15-01:56:13.884 2adc Generated table #1171@1: 2033 keys, 2149053 bytes
+2026/10/15-01:56:13.921 2adc Generated table #1172@1: 3111 keys, 2153404 bytes
+2026/10/15-01:56:13.958 2adc Generated table #1173@1: 2081 keys, 2146121 bytes
+2026/10/15-01:56:14.006 2adc Generated table #1174@1: 2613 keys, 2146027 bytes
+2026/10/15-01:56:14.049 2adc Generated table #1175@1: 9466 keys, 2158877 bytes
+2026/10/15-01:56:14.125 2adc Generated table #1176@1: 34782 keys, 2259199 bytes
+2026/10/15-01:56:14.202 2adc Generated table #1177@1: 28678 keys, 2241837 bytes
+2026/10/15-01:56:14.299 2adc Generated table #1178@1: 36301 keys, 2164748 bytes
+2026/10/15-01:56:14.313 2adc Generated table #1179@1: 9827 keys, 235598 bytes
+2026/10/15-01:56:14.313 2adc Compacted 1@1 + 10@2 files => 22046924 bytes
+2026/10/15-01:56:14.316 2adc compacted to: files[ 0 1 14 0 0 0 0 ]
+2026/10/15-01:56:14.317 2adc Delete type=2 #1154
+2026/10/15-01:56:14.317 2adc Delete type=2 #1155
+2026/10/15-01:56:14.317 2adc Delete type=2 #1156
+2026/10/15-01:56:14.317 2adc Delete type=2 #1157
+2026/10/15-01:56:14.317 2adc Delete type=2 #1158
+2026/10/15-01:56:14.317 2adc Delete type=2 #1159
+2026/10/15-01:56:14.317 2adc Delete type=2 #1160
+2026/10/15-01:56:14.317 2adc Delete type=2 #1161
+2026/10/15-01:56:14.317 2adc Delete type=2 #1162
+2026/10/15-01:56:14.317 2adc Delete type=2 #1163
+2026/10/15-01:56:14.317 2adc Delete type=2 #1167
+2026/10/15-01:56:14.747 2adc Compacting 1@1 + 3@2 files
+2026/10/15-01:56:14.838 2adc Generated table #1180@1: 93721 keys, 2243964 bytes
+2026/10/15-01:56:14.871 2adc Generated table #1181@1: 34232 keys, 909720 bytes
+2026/10/15-01:56:14.871 2adc Compacted 1@1 + 3@2 files => 3153684 bytes
+2026/10/15-01:56:14.874 2adc compacted to: files[ 0 0 13 0 0 0 0 ]
+2026/10/15-01:56:14.874 2adc Delete type=2 #1152
+2026/10/15-01:56:14.874 2adc Delete type=2 #1153
+2026/10/15-01:56:14.874 2adc Delete type=2 #1164
+2026/10/15-01:56:14.874 2adc Delete type=2 #1168
+2026/10/15-01:56:53.582 17ac Level-0 table #1183: started
+2026/10/15-01:56:53.622 17ac Level-0 table #1183: 1065480 bytes OK
+2026/10/15-01:56:53.626 17ac Delete type=0 #1165
+2026/10/15-01:56:54.624 2adc Compacting 1@0 + 0@1 files
+2026/10/15-01:56:54.668 2adc Generated table #1184@0: 27501 keys, 402072 bytes
+2026/10/15-01:56:54.684 2adc Generated table #1185@0: 11036 keys, 231157 bytes
+2026/10/15-01:56:54.684 2adc Compacted 1@0 + 0@1 files => 633229 bytes
+2026/10/15-01:56:54.687 2adc compacted to: files[ 0 2 13 0 0 0 0 ]
+2026/10/15-01:56:54.687 2adc Delete type=2 #1183
+2026/10/15-01:56:55.676 2adc Compacting 1@1 + 3@2 files
+2026/10/15-01:56:55.769 2adc Generated table #1186@1: 93761 keys, 2244148 bytes
+2026/10/15-01:56:55.829 2adc Generated table #1187@1: 55055 keys, 1408245 bytes
+2026/10/15-01:56:55.829 2adc Compacted 1@1 + 3@2 files => 3652393 bytes
+2026/10/15-01:56:55.832 2adc compacted to: files[ 0 1 12 0 0 0 0 ]
+2026/10/15-01:56:55.832 2adc Delete type=2 #1179
+2026/10/15-01:56:55.832 2adc Delete type=2 #1180
+2026/10/15-01:56:55.832 2adc Delete type=2 #1181
+2026/10/15-01:56:55.832 2adc Delete type=2 #1185
+2026/10/15-01:56:56.707 2adc Compacting 1@1 + 10@2 files
+2026/10/15-01:56:56.803 2adc Generated table #1188@1: 64648 keys, 2236496 bytes
+2026/10/15-01:56:56.840 2adc Generated table #1189@1: 9332 keys, 2154339 bytes
+2026/10/15-01:56:56.882 2adc Generated table #1190@1: 2047 keys, 2150924 bytes
+2026/10/15-01:56:56.929 2adc Generated table #1191@1: 3117 keys, 2155002 bytes
+2026/10/15-01:56:56.957 2adc Generated table #1192@1: 2078 keys, 2145028 bytes
+2026/10/15-01:56:56.995 2adc Generated table #1193@1: 2623 keys, 2146702 bytes
+2026/10/15-01:56:57.059 2adc Generated table #1194@1: 9911 keys, 2160088 bytes
+2026/10/15-01:56:57.133 2adc Generated table #1195@1: 34650 keys, 2259806 bytes
+2026/10/15-01:56:57.200 2adc Generated table #1196@1: 28434 keys, 2240320 bytes
+2026/10/15-01:56:57.248 2adc Generated table #1197@1: 32777 keys, 2158563 bytes
+2026/10/15-01:56:57.266 2adc Generated table #1198@1: 8436 keys, 200304 bytes
+2026/10/15-01:56:57.266 2adc Compacted 1@1 + 10@2 files => 22007572 bytes
+2026/10/15-01:56:57.269 2adc compacted to: files[ 0 0 13 0 0 0 0 ]
+2026/10/15-01:56:57.269 2adc Delete type=2 #1169
+2026/10/15-01:56:57.270 2adc Delete type=2 #1170
+2026/10/15-01:56:57.270 2adc Delete type=2 #1171
+2026/10/15-01:56:57.270 2adc Delete type=2 #1172
+2026/10/15-01:56:57.270 2adc Delete type=2 #1173
+2026/10/15-01:56:57.270 2adc Delete type=2 #1174
+2026/10/15-01:56:57.270 2adc Delete type=2 #1175
+2026/10/15-01:56:57.270 2adc Delete type=2 #1176
+2026/10/15-01:56:57.270 2adc Delete type=2 #1177
+2026/10/15-01:56:57.270 2adc Delete type=2 #1178
+2026/10/15-01:56:57.270 2adc Delete type=2 #1184
+2026/10/15-01:57:30.552 17ac Level-0 table #1200: started
+2026/10/15-01:57:30.622 17ac Level-0 table #1200: 1142676 bytes OK
+2026/10/15-01:57:30.625 17ac Delete type=0 #1182
+2026/10/15-01:57:30.631 17ac Compacting 1@0 + 0@1 files
+2026/10/15-01:57:30.690 17ac Generated table #1201@0: 27170 keys, 475451 bytes
+2026/10/15-01:57:30.708 17ac Generated table #1202@0: 7467 keys, 153921 bytes
+2026/10/15-01:57:30.709 17ac Compacted 1@0 + 0@1 files => 629372 bytes
+2026/10/15-01:57:30.713 17ac compacted to: files[ 0 2 13 0 0 0 0 ]
+2026/10/15-01:57:30.714 17ac Delete type=2 #1200
+2026/10/15-01:57:30.721 2adc Compacting 1@1 + 10@2 files
+2026/10/15-01:57:30.910 2adc Generated table #1203@1: 63089 keys, 2233255 bytes
+2026/10/15-01:57:30.995 2adc Generated table #1204@1: 13437 keys, 2159436 bytes
+2026/10/15-01:57:31.049 2adc Generated table #1205@1: 2016 keys, 2151294 bytes
+2026/10/15-01:57:31.103 2adc Generated table #1206@1: 3112 keys, 2154482 bytes
+2026/10/15-01:57:31.145 2adc Generated table #1207@1: 2085 keys, 2145215 bytes
+2026/10/15-01:57:31.192 2adc Generated table #1208@1: 2596 keys, 2146240 bytes
+2026/10/15-01:57:31.268 2adc Generated table #1209@1: 8864 keys, 2157880 bytes
+2026/10/15-01:57:31.454 2adc Generated table #1210@1: 34979 keys, 2258995 bytes
+2026/10/15-01:57:31.536 2adc Generated table #1211@1: 29008 keys, 2245391 bytes
+2026/10/15-01:57:31.590 2adc Generated table #1212@1: 28414 keys, 2153822 bytes
+2026/10/15-01:57:31.604 2adc Generated table #1213@1: 7676 keys, 185695 bytes
+2026/10/15-01:57:31.604 2adc Compacted 1@1 + 10@2 files => 21991705 bytes
+2026/10/15-01:57:31.606 2adc compacted to: files[ 0 1 14 0 0 0 0 ]
+2026/10/15-01:57:31.607 2adc Delete type=2 #1188
+2026/10/15-01:57:31.607 2adc Delete type=2 #1189
+2026/10/15-01:57:31.607 2adc Delete type=2 #1190
+2026/10/15-01:57:31.607 2adc Delete type=2 #1191
+2026/10/15-01:57:31.607 2adc Delete type=2 #1192
+2026/10/15-01:57:31.607 2adc Delete type=2 #1193
+2026/10/15-01:57:31.607 2adc Delete type=2 #1194
+2026/10/15-01:57:31.607 2adc Delete type=2 #1195
+2026/10/15-01:57:31.607 2adc Delete type=2 #1196
+2026/10/15-01:57:31.607 2adc Delete type=2 #1197
+2026/10/15-01:57:31.607 2adc Delete type=2 #1201
+2026/10/15-01:57:31.956 17ac Compacting 1@1 + 3@2 files
+2026/10/15-01:57:32.087 17ac Generated table #1214@1: 94083 keys, 2245252 bytes
+2026/10/15-01:57:32.166 17ac Generated table #1215@1: 70633 keys, 1777328 bytes
+2026/10/15-01:57:32.166 17ac Compacted 1@1 + 3@2 files => 4022580 bytes
+2026/10/15-01:57:32.169 17ac compacted to: files[ 0 0 13 0 0 0 0 ]
+2026/10/15-01:57:32.169 17ac Delete type=2 #1186
+2026/10/15-01:57:32.169 17ac Delete type=2 #1187
+2026/10/15-01:57:32.169 17ac Delete type=2 #1198
+2026/10/15-01:57:32.169 17ac Delete type=2 #1202
+2026/10/15-01:58:01.392 ff0 Level-0 table #1217: started
+2026/10/15-01:58:01.425 ff0 Level-0 table #1217: 1133508 bytes OK
+2026/10/15-01:58:01.428 ff0 Delete type=0 #1199
+2026/10/15-01:58:02.404 17ac Compacting 1@0 + 0@1 files
+2026/10/15-01:58:02.452 17ac Generated table #1218@0: 23950 keys, 452772 bytes
+2026/10/15-01:58:02.466 17ac Generated table #1219@0: 8011 keys, 165037 bytes
+2026/10/15-01:58:02.466 17ac Compacted 1@0 + 0@1 files => 617809 bytes
+2026/10/15-01:58:02.469 17ac compacted to: files[ 0 2 13 0 0 0 0 ]
+2026/10/15-01:58:02.469 17ac Delete type=2 #1217
+2026/10/15-01:58:03.469 17ac Compacting 1@1 + 3@2 files
+2026/10/15-01:58:03.557 17ac Generated table #1220@1: 94603 keys, 2245670 bytes
+2026/10/15-01:58:03.639 17ac Generated table #1221@1: 85800 keys, 2128040 bytes
+2026/10/15-01:58:03.639 17ac Compacted 1@1 + 3@2 files => 4373710 bytes
+2026/10/15-01:58:03.642 17ac compacted to: files[ 0 1 12 0 0 0 0 ]
+2026/10/15-01:58:03.642 17ac Delete type=2 #1213
+2026/10/15-01:58:03.642 17ac Delete type=2 #1214
+2026/10/15-01:58:03.642 17ac Delete type=2 #1215
+2026/10/15-01:58:03.642 17ac Delete type=2 #1219
+2026/10/15-01:58:04.498 2adc Compacting 1@1 + 10@2 files
+2026/10/15-01:58:04.606 2adc Generated table #1222@1: 63663 keys, 2234211 bytes
+2026/10/15-01:58:04.640 2adc Generated table #1223@1: 13811 keys, 2160846 bytes
+2026/10/15-01:58:04.675 2adc Generated table #1224@1: 2013 keys, 2148966 bytes
+2026/10/15-01:58:04.719 2adc Generated table #1225@1: 3111 keys, 2154671 bytes
+2026/10/15-01:58:04.749 2adc Generated table #1226@1: 2091 keys, 2143610 bytes
+2026/10/15-01:58:04.782 2adc Generated table #1227@1: 2591 keys, 2145181 bytes
+2026/10/15-01:58:04.833 2adc Generated table #1228@1: 8718 keys, 2159330 bytes
+2026/10/15-01:58:04.908 2adc Generated table #1229@1: 35031 keys, 2258667 bytes
+2026/10/15-01:58:04.981 2adc Generated table #1230@1: 29078 keys, 2243431 bytes
+2026/10/15-01:58:05.035 2adc Generated table #1231@1: 25459 keys, 2149308 bytes
+2026/10/15-01:58:05.047 2adc Generated table #1232@1: 5872 keys, 141389 bytes
+2026/10/15-01:58:05.047 2adc Compacted 1@1 + 10@2 files => 21939610 bytes
+2026/10/15-01:58:05.050 2adc compacted to: files[ 0 0 13 0 0 0 0 ]
+2026/10/15-01:58:05.050 2adc Delete type=2 #1203
+2026/10/15-01:58:05.051 2adc Delete type=2 #1204
+2026/10/15-01:58:05.051 2adc Delete type=2 #1205
+2026/10/15-01:58:05.051 2adc Delete type=2 #1206
+2026/10/15-01:58:05.051 2adc Delete type=2 #1207
+2026/10/15-01:58:05.051 2adc Delete type=2 #1208
+2026/10/15-01:58:05.051 2adc Delete type=2 #1209
+2026/10/15-01:58:05.051 2adc Delete type=2 #1210
+2026/10/15-01:58:05.051 2adc Delete type=2 #1211
+2026/10/15-01:58:05.051 2adc Delete type=2 #1212
+2026/10/15-01:58:05.051 2adc Delete type=2 #1218
+2026/10/15-01:58:36.236 2adc Level-0 table #1234: started
+2026/10/15-01:58:36.269 2adc Level-0 table #1234: 1067020 bytes OK
+2026/10/15-01:58:36.272 2adc Delete type=0 #1216
+2026/10/15-01:58:37.263 17ac Compacting 1@0 + 0@1 files
+2026/10/15-01:58:37.307 17ac Generated table #1235@0: 25535 keys, 362442 bytes
+2026/10/15-01:58:37.325 17ac Generated table #1236@0: 13439 keys, 280032 bytes
+2026/10/15-01:58:37.325 17ac Compacted 1@0 + 0@1 files => 642474 bytes
+2026/10/15-01:58:37.327 17ac compacted to: files[ 0 2 13 0 0 0 0 ]
+2026/10/15-01:58:37.328 17ac Delete type=2 #1234
+2026/10/15-01:58:38.326 2adc Compacting 1@1 + 3@2 files
+2026/10/15-01:58:38.424 2adc Generated table #1237@1: 94563 keys, 2244755 bytes
+2026/10/15-01:58:38.519 2adc Generated table #1238@1: 94486 keys, 2245658 bytes
+2026/10/15-01:58:38.540 2adc Generated table #1239@1: 10665 keys, 344129 bytes
+2026/10/15-01:58:38.540 2adc Compacted 1@1 + 3@2 files => 4834542 bytes
+2026/10/15-01:58:38.542 2adc compacted to: files[ 0 1 13 0 0 0 0 ]
+2026/10/15-01:58:38.543 2adc Delete type=2 #1220
+2026/10/15-01:58:38.543 2adc Delete type=2 #1221
+2026/10/15-01:58:38.543 2adc Delete type=2 #1232
+2026/10/15-01:58:38.543 2adc Delete type=2 #1236
+2026/10/15-01:58:39.369 2adc Compacting 1@1 + 10@2 files
+2026/10/15-01:58:39.476 2adc Generated table #1240@1: 63718 keys, 2234922 bytes
+2026/10/15-01:58:39.517 2adc Generated table #1241@1: 11674 keys, 2157083 bytes
+2026/10/15-01:58:39.550 2adc Generated table #1242@1: 2028 keys, 2149566 bytes
+2026/10/15-01:58:39.596 2adc Generated table #1243@1: 3115 keys, 2152952 bytes
+2026/10/15-01:58:39.623 2adc Generated table #1244@1: 2077 keys, 2144292 bytes
+2026/10/15-01:58:39.658 2adc Generated table #1245@1: 2606 keys, 2146135 bytes
+2026/10/15-01:58:39.699 2adc Generated table #1246@1: 9321 keys, 2160315 bytes
+2026/10/15-01:58:39.777 2adc Generated table #1247@1: 34835 keys, 2259614 bytes
+2026/10/15-01:58:39.848 2adc Generated table #1248@1: 28776 keys, 2243905 bytes
+2026/10/15-01:58:39.890 2adc Generated table #1249@1: 21910 keys, 2145923 bytes
+2026/10/15-01:58:39.903 2adc Generated table #1250@1: 6294 keys, 149630 bytes
+2026/10/15-01:58:39.903 2adc Compacted 1@1 + 10@2 files => 21944337 bytes
+2026/10/15-01:58:39.905 2adc compacted to: files[ 0 0 14 0 0 0 0 ]
+2026/10/15-01:58:39.906 2adc Delete type=2 #1222
+2026/10/15-01:58:39.906 2adc Delete type=2 #1223
+2026/10/15-01:58:39.906 2adc Delete type=2 #1224
+2026/10/15-01:58:39.906 2adc Delete type=2 #1225
+2026/10/15-01:58:39.906 2adc Delete type=2 #1226
+2026/10/15-01:58:39.906 2adc Delete type=2 #1227
+2026/10/15-01:58:39.906 2adc Delete type=2 #1228
+2026/10/15-01:58:39.906 2adc Delete type=2 #1229
+2026/10/15-01:58:39.906 2adc Delete type=2 #1230
+2026/10/15-01:58:39.906 2adc Delete type=2 #1231
+2026/10/15-01:58:39.906 2adc Delete type=2 #1235
+2026/10/15-01:59:17.289 2adc Level-0 table #1252: started
+2026/10/15-01:59:17.331 2adc Level-0 table #1252: 1068765 bytes OK
+2026/10/15-01:59:17.334 2adc Delete type=0 #1233
+2026/10/15-01:59:18.346 17ac Compacting 1@0 + 0@1 files
+2026/10/15-01:59:18.387 17ac Generated table #1253@0: 25071 keys, 363398 bytes
+2026/10/15-01:59:18.403 17ac Generated table #1254@0: 12179 keys, 250342 bytes
+2026/10/15-01:59:18.403 17ac Compacted 1@0 + 0@1 files => 613740 bytes
+2026/10/15-01:59:18.406 17ac compacted to: files[ 0 2 14 0 0 0 0 ]
+2026/10/15-01:59:18.406 17ac Delete type=2 #1252
+2026/10/15-01:59:19.388 17ac Compacting 1@1 + 4@2 files
+2026/10/15-01:59:19.483 17ac Generated table #1255@1: 94831 keys, 2245943 bytes
+2026/10/15-01:59:19.568 17ac Generated table #1256@1: 94662 keys, 2244854 bytes
+2026/10/15-01:59:19.599 17ac Generated table #1257@1: 28694 keys, 770431 bytes
+2026/10/15-01:59:19.599 17ac Compacted 1@1 + 4@2 files => 5261228 bytes
+2026/10/15-01:59:19.601 17ac compacted to: files[ 0 1 13 0 0 0 0 ]
+2026/10/15-01:59:19.602 17ac Delete type=2 #1237
+2026/10/15-01:59:19.602 17ac Delete type=2 #1238
+2026/10/15-01:59:19.602 17ac Delete type=2 #1239
+2026/10/15-01:59:19.602 17ac Delete type=2 #1250
+2026/10/15-01:59:19.602 17ac Delete type=2 #1254
+2026/10/15-01:59:20.424 17ac Compacting 1@1 + 10@2 files
+2026/10/15-01:59:20.524 17ac Generated table #1258@1: 63879 keys, 2234853 bytes
+2026/10/15-01:59:20.573 17ac Generated table #1259@1: 9655 keys, 2155417 bytes
+2026/10/15-01:59:20.613 17ac Generated table #1260@1: 2043 keys, 2149401 bytes
+2026/10/15-01:59:20.654 17ac Generated table #1261@1: 3117 keys, 2153437 bytes
+2026/10/15-01:59:20.694 17ac Generated table #1262@1: 2074 keys, 2143091 bytes
+2026/10/15-01:59:20.733 17ac Generated table #1263@1: 2613 keys, 2144816 bytes
+2026/10/15-01:59:20.774 17ac Generated table #1264@1: 9717 keys, 2159075 bytes
+2026/10/15-01:59:20.854 17ac Generated table #1265@1: 34704 keys, 2259327 bytes
+2026/10/15-01:59:20.930 17ac Generated table #1266@1: 28572 keys, 2242717 bytes
+2026/10/15-01:59:20.969 17ac Generated table #1267@1: 17205 keys, 2138768 bytes
+2026/10/15-01:59:20.983 17ac Generated table #1268@1: 7350 keys, 144054 bytes
+2026/10/15-01:59:20.984 17ac Compacted 1@1 + 10@2 files => 21924956 bytes
+2026/10/15-01:59:20.986 17ac compacted to: files[ 0 0 14 0 0 0 0 ]
+2026/10/15-01:59:20.986 17ac Delete type=2 #1240
+2026/10/15-01:59:20.987 17ac Delete type=2 #1241
+2026/10/15-01:59:20.987 17ac Delete type=2 #1242
+2026/10/15-01:59:20.987 17ac Delete type=2 #1243
+2026/10/15-01:59:20.987 17ac Delete type=2 #1244
+2026/10/15-01:59:20.987 17ac Delete type=2 #1245
+2026/10/15-01:59:20.987 17ac Delete type=2 #1246
+2026/10/15-01:59:20.987 17ac Delete type=2 #1247
+2026/10/15-01:59:20.987 17ac Delete type=2 #1248
+2026/10/15-01:59:20.987 17ac Delete type=2 #1249
+2026/10/15-01:59:20.987 17ac Delete type=2 #1253
+2026/10/15-01:59:50.149 2adc Level-0 table #1270: started
+2026/10/15-01:59:50.182 2adc Level-0 table #1270: 1069713 bytes OK
+2026/10/15-01:59:50.185 2adc Delete type=0 #1251
+2026/10/15-01:59:51.183 17ac Compacting 1@0 + 0@1 files
+2026/10/15-01:59:51.245 17ac Generated table #1271@0: 21585 keys, 318995 bytes
+2026/10/15-01:59:51.270 17ac Generated table #1272@0: 15988 keys, 331120 bytes
+2026/10/15-01:59:51.270 17ac Compacted 1@0 + 0@1 files => 650115 bytes
+2026/10/15-01:59:51.272 17ac compacted to: files[ 0 2 14 0 0 0 0 ]
+2026/10/15-01:59:51.273 17ac Delete type=2 #1270
+2026/10/15-01:59:52.265 17ac Compacting 1@1 + 4@2 files
+2026/10/15-01:59:52.357 17ac Generated table #1273@1: 96267 keys, 2247644 bytes
+2026/10/15-01:59:52.435 17ac Generated table #1274@1: 95017 keys, 2246312 bytes
+2026/10/15-01:59:52.485 17ac Generated table #1275@1: 50241 keys, 1278047 bytes
+2026/10/15-01:59:52.486 17ac Compacted 1@1 + 4@2 files => 5772003 bytes
+2026/10/15-01:59:52.489 17ac compacted to: files[ 0 1 13 0 0 0 0 ]
+2026/10/15-01:59:52.489 17ac Delete type=2 #1255
+2026/10/15-01:59:52.490 17ac Delete type=2 #1256
+2026/10/15-01:59:52.490 17ac Delete type=2 #1257
+2026/10/15-01:59:52.490 17ac Delete type=2 #1268
+2026/10/15-01:59:52.490 17ac Delete type=2 #1272
+2026/10/15-01:59:57.491 2adc Compacting 1@1 + 10@2 files
+2026/10/15-01:59:57.585 2adc Generated table #1276@1: 64081 keys, 2236966 bytes
+2026/10/15-01:59:57.621 2adc Generated table #1277@1: 9151 keys, 2153658 bytes
+2026/10/15-01:59:57.654 2adc Generated table #1278@1: 2047 keys, 2150011 bytes
+2026/10/15-01:59:57.702 2adc Generated table #1279@1: 3114 keys, 2152850 bytes
+2026/10/15-01:59:57.738 2adc Generated table #1280@1: 2078 keys, 2145028 bytes
+2026/10/15-01:59:57.773 2adc Generated table #1281@1: 2623 keys, 2146702 bytes
+2026/10/15-01:59:57.811 2adc Generated table #1282@1: 9911 keys, 2160088 bytes
+2026/10/15-01:59:57.886 2adc Generated table #1283@1: 34650 keys, 2259747 bytes
+2026/10/15-01:59:57.962 2adc Generated table #1284@1: 28455 keys, 2242805 bytes
+2026/10/15-01:59:57.998 2adc Generated table #1285@1: 10262 keys, 2130055 bytes
+2026/10/15-01:59:58.012 2adc Generated table #1286@1: 8142 keys, 146491 bytes
+2026/10/15-01:59:58.012 2adc Compacted 1@1 + 10@2 files => 21924401 bytes
+2026/10/15-01:59:58.015 2adc compacted to: files[ 0 0 14 0 0 0 0 ]
+2026/10/15-01:59:58.016 2adc Delete type=2 #1258
+2026/10/15-01:59:58.016 2adc Delete type=2 #1259
+2026/10/15-01:59:58.016 2adc Delete type=2 #1260
+2026/10/15-01:59:58.016 2adc Delete type=2 #1261
+2026/10/15-01:59:58.016 2adc Delete type=2 #1262
+2026/10/15-01:59:58.016 2adc Delete type=2 #1263
+2026/10/15-01:59:58.016 2adc Delete type=2 #1264
+2026/10/15-01:59:58.016 2adc Delete type=2 #1265
+2026/10/15-01:59:58.016 2adc Delete type=2 #1266
+2026/10/15-01:59:58.016 2adc Delete type=2 #1267
+2026/10/15-01:59:58.016 2adc Delete type=2 #1271
+2026/10/15-02:00:27.017 2adc Level-0 table #1288: started
+2026/10/15-02:00:27.053 2adc Level-0 table #1288: 1027537 bytes OK
+2026/10/15-02:00:27.057 2adc Delete type=0 #1269
+2026/10/15-02:00:28.056 17ac Compacting 1@0 + 0@1 files
+2026/10/15-02:00:28.101 17ac Generated table #1289@0: 22452 keys, 308963 bytes
+2026/10/15-02:00:28.128 17ac Generated table #1290@0: 15115 keys, 303014 bytes
+2026/10/15-02:00:28.129 17ac Compacted 1@0 + 0@1 files => 611977 bytes
+2026/10/15-02:00:28.131 17ac compacted to: files[ 0 2 14 0 0 0 0 ]
+2026/10/15-02:00:29.152 2adc Compacting 1@1 + 4@2 files
+2026/10/15-02:00:29.245 2adc Generated table #1291@1: 98849 keys, 2249346 bytes
+2026/10/15-02:00:29.328 2adc Generated table #1292@1: 95273 keys, 2244989 bytes
+2026/10/15-02:00:29.394 2adc Generated table #1293@1: 70660 keys, 1758841 bytes
+2026/10/15-02:00:29.394 2adc Compacted 1@1 + 4@2 files => 6253176 bytes
+2026/10/15-02:00:29.396 2adc compacted to: files[ 0 1 13 0 0 0 0 ]
+2026/10/15-02:00:29.397 2adc Delete type=2 #1273
+2026/10/15-02:00:29.397 2adc Delete type=2 #1274
+2026/10/15-02:00:29.397 2adc Delete type=2 #1275
+2026/10/15-02:00:29.397 2adc Delete type=2 #1286
+2026/10/15-02:00:29.397 2adc Delete type=2 #1288
+2026/10/15-02:00:29.397 2adc Delete type=2 #1290
+2026/10/15-02:00:52.134 2adc Compacting 1@1 + 10@2 files
+2026/10/15-02:00:52.243 2adc Generated table #1294@1: 64157 keys, 2234972 bytes
+2026/10/15-02:00:52.281 2adc Generated table #1295@1: 7351 keys, 2153025 bytes
+2026/10/15-02:00:52.320 2adc Generated table #1296@1: 2057 keys, 2150445 bytes
+2026/10/15-02:00:52.368 2adc Generated table #1297@1: 3114 keys, 2153312 bytes
+2026/10/15-02:00:52.405 2adc Generated table #1298@1: 2080 keys, 2143215 bytes
+2026/10/15-02:00:52.439 2adc Generated table #1299@1: 2630 keys, 2146258 bytes
+2026/10/15-02:00:52.481 2adc Generated table #1300@1: 10269 keys, 2160655 bytes
+2026/10/15-02:00:52.559 2adc Generated table #1301@1: 34543 keys, 2260361 bytes
+2026/10/15-02:00:52.624 2adc Generated table #1302@1: 28177 keys, 2238970 bytes
+2026/10/15-02:00:52.668 2adc Generated table #1303@1: 6942 keys, 2125596 bytes
+2026/10/15-02:00:52.678 2adc Generated table #1304@1: 3960 keys, 114707 bytes
+2026/10/15-02:00:52.678 2adc Compacted 1@1 + 10@2 files => 21881516 bytes
+2026/10/15-02:00:52.681 2adc compacted to: files[ 0 0 14 0 0 0 0 ]
+2026/10/15-02:00:52.681 2adc Delete type=2 #1276
+2026/10/15-02:00:52.681 2adc Delete type=2 #1277
+2026/10/15-02:00:52.681 2adc Delete type=2 #1278
+2026/10/15-02:00:52.681 2adc Delete type=2 #1279
+2026/10/15-02:00:52.682 2adc Delete type=2 #1280
+2026/10/15-02:00:52.682 2adc Delete type=2 #1281
+2026/10/15-02:00:52.682 2adc Delete type=2 #1282
+2026/10/15-02:00:52.682 2adc Delete type=2 #1283
+2026/10/15-02:00:52.682 2adc Delete type=2 #1284
+2026/10/15-02:00:52.682 2adc Delete type=2 #1285
+2026/10/15-02:00:52.682 2adc Delete type=2 #1289
+2026/10/15-02:01:13.341 ff0 Level-0 table #1306: started
+2026/10/15-02:01:13.378 ff0 Level-0 table #1306: 1018823 bytes OK
+2026/10/15-02:01:13.382 ff0 Delete type=0 #1287
+2026/10/15-02:01:14.370 2adc Compacting 1@0 + 0@1 files
+2026/10/15-02:01:14.407 2adc Generated table #1307@0: 22694 keys, 191038 bytes
+2026/10/15-02:01:14.429 2adc Generated table #1308@0: 14867 keys, 404938 bytes
+2026/10/15-02:01:14.429 2adc Compacted 1@0 + 0@1 files => 595976 bytes
+2026/10/15-02:01:14.431 2adc compacted to: files[ 0 2 14 0 0 0 0 ]
+2026/10/15-02:01:14.432 2adc Delete type=2 #1306
+2026/10/15-02:01:15.421 17ac Compacting 1@1 + 4@2 files
+2026/10/15-02:01:15.518 17ac Generated table #1309@1: 94331 keys, 2243989 bytes
+2026/10/15-02:01:15.607 17ac Generated table #1310@1: 95471 keys, 2246779 bytes
+2026/10/15-02:01:15.697 17ac Generated table #1311@1: 92467 keys, 2242633 bytes
+2026/10/15-02:01:15.707 17ac Generated table #1312@1: 1340 keys, 57631 bytes
+2026/10/15-02:01:15.707 17ac Compacted 1@1 + 4@2 files => 6791032 bytes
+2026/10/15-02:01:15.709 17ac compacted to: files[ 0 1 14 0 0 0 0 ]
+2026/10/15-02:01:15.710 17ac Delete type=2 #1291
+2026/10/15-02:01:15.710 17ac Delete type=2 #1292
+2026/10/15-02:01:15.710 17ac Delete type=2 #1293
+2026/10/15-02:01:15.710 17ac Delete type=2 #1304
+2026/10/15-02:01:15.710 17ac Delete type=2 #1308
+2026/10/15-02:01:31.119 17ac Compacting 1@1 + 9@2 files
+2026/10/15-02:01:31.227 17ac Generated table #1313@1: 64357 keys, 2234379 bytes
+2026/10/15-02:01:31.268 17ac Generated table #1314@1: 4674 keys, 2153647 bytes
+2026/10/15-02:01:31.308 17ac Generated table #1315@1: 2067 keys, 2150541 bytes
+2026/10/15-02:01:31.360 17ac Generated table #1316@1: 3122 keys, 2155468 bytes
+2026/10/15-02:01:31.401 17ac Generated table #1317@1: 2088 keys, 2144697 bytes
+2026/10/15-02:01:31.464 17ac Generated table #1318@1: 2647 keys, 2146440 bytes
+2026/10/15-02:01:31.518 17ac Generated table #1319@1: 10981 keys, 2161868 bytes
+2026/10/15-02:01:31.593 17ac Generated table #1320@1: 34325 keys, 2261169 bytes
+2026/10/15-02:01:31.662 17ac Generated table #1321@1: 27614 keys, 2199538 bytes
+2026/10/15-02:01:31.662 17ac Compacted 1@1 + 9@2 files => 19607747 bytes
+2026/10/15-02:01:31.665 17ac compacted to: files[ 0 0 14 0 0 0 0 ]
+2026/10/15-02:01:31.665 17ac Delete type=2 #1294
+2026/10/15-02:01:31.665 17ac Delete type=2 #1295
+2026/10/15-02:01:31.666 17ac Delete type=2 #1296
+2026/10/15-02:01:31.666 17ac Delete type=2 #1297
+2026/10/15-02:01:31.666 17ac Delete type=2 #1298
+2026/10/15-02:01:31.666 17ac Delete type=2 #1299
+2026/10/15-02:01:31.666 17ac Delete type=2 #1300
+2026/10/15-02:01:31.666 17ac Delete type=2 #1301
+2026/10/15-02:01:31.666 17ac Delete type=2 #1302
+2026/10/15-02:01:31.666 17ac Delete type=2 #1307
+2026/10/15-02:01:52.400 17ac Level-0 table #1323: started
+2026/10/15-02:01:52.460 17ac Level-0 table #1323: 1041344 bytes OK
+2026/10/15-02:01:52.463 17ac Delete type=0 #1305
+2026/10/15-02:01:53.478 2adc Compacting 1@0 + 0@1 files
+2026/10/15-02:01:53.515 2adc Generated table #1324@0: 21944 keys, 184622 bytes
+2026/10/15-02:01:53.540 2adc Generated table #1325@0: 15799 keys, 441373 bytes
+2026/10/15-02:01:53.540 2adc Compacted 1@0 + 0@1 files => 625995 bytes
+2026/10/15-02:01:53.543 2adc compacted to: files[ 0 2 14 0 0 0 0 ]
+2026/10/15-02:01:53.552 2adc Compacting 1@1 + 3@2 files
+2026/10/15-02:01:53.644 2adc Generated table #1326@1: 90062 keys, 2238653 bytes
+2026/10/15-02:01:53.730 2adc Generated table #1327@1: 95388 keys, 2245985 bytes
+2026/10/15-02:01:53.813 2adc Generated table #1328@1: 95164 keys, 2246298 bytes
+2026/10/15-02:01:53.834 2adc Generated table #1329@1: 17454 keys, 471557 bytes
+2026/10/15-02:01:53.834 2adc Compacted 1@1 + 3@2 files => 7202493 bytes
+2026/10/15-02:01:53.837 2adc compacted to: files[ 0 1 15 0 0 0 0 ]
+2026/10/15-02:01:53.837 2adc Delete type=2 #1309
+2026/10/15-02:01:53.837 2adc Delete type=2 #1310
+2026/10/15-02:01:53.837 2adc Delete type=2 #1311
+2026/10/15-02:01:53.837 2adc Delete type=2 #1323
+2026/10/15-02:01:53.837 2adc Delete type=2 #1325
+2026/10/15-02:02:10.664 2adc Level-0 table #1331: started
+2026/10/15-02:02:10.712 2adc Level-0 table #1331: 1057673 bytes OK
+2026/10/15-02:02:10.715 2adc Delete type=0 #1322
+2026/10/15-02:02:10.719 2adc Compacting 1@0 + 1@1 files
+2026/10/15-02:02:10.771 2adc Generated table #1332@0: 41922 keys, 351717 bytes
+2026/10/15-02:02:10.804 2adc Generated table #1333@0: 18161 keys, 508180 bytes
+2026/10/15-02:02:10.804 2adc Compacted 1@0 + 1@1 files => 859897 bytes
+2026/10/15-02:02:10.807 2adc compacted to: files[ 0 2 15 0 0 0 0 ]
+2026/10/15-02:02:10.812 2adc Compacting 1@1 + 4@2 files
+2026/10/15-02:02:10.900 2adc Generated table #1334@1: 83999 keys, 2229504 bytes
+2026/10/15-02:02:11.018 2adc Generated table #1335@1: 95493 keys, 2244612 bytes
+2026/10/15-02:02:11.099 2adc Generated table #1336@1: 95394 keys, 2245646 bytes
+2026/10/15-02:02:11.137 2adc Generated table #1337@1: 41343 keys, 1038450 bytes
+2026/10/15-02:02:11.137 2adc Compacted 1@1 + 4@2 files => 7758212 bytes
+2026/10/15-02:02:11.139 2adc compacted to: files[ 0 1 15 0 0 0 0 ]
+2026/10/15-02:02:11.139 2adc Delete type=2 #1324
+2026/10/15-02:02:11.140 2adc Delete type=2 #1326
+2026/10/15-02:02:11.140 2adc Delete type=2 #1327
+2026/10/15-02:02:11.140 2adc Delete type=2 #1328
+2026/10/15-02:02:11.140 2adc Delete type=2 #1329
+2026/10/15-02:02:11.140 2adc Delete type=2 #1331
+2026/10/15-02:02:11.140 2adc Delete type=2 #1333
+2026/10/15-02:02:15.047 17ac Compacting 1@1 + 9@2 files
+2026/10/15-02:02:15.193 17ac Generated table #1338@1: 64535 keys, 2234328 bytes
+2026/10/15-02:02:15.234 17ac Generated table #1339@1: 2974 keys, 2146730 bytes
+2026/10/15-02:02:15.272 17ac Generated table #1340@1: 2076 keys, 2149722 bytes
+2026/10/15-02:02:15.317 17ac Generated table #1341@1: 3119 keys, 2153145 bytes
+2026/10/15-02:02:15.358 17ac Generated table #1342@1: 2087 keys, 2143400 bytes
+2026/10/15-02:02:15.436 17ac Generated table #1343@1: 2650 keys, 2145342 bytes
+2026/10/15-02:02:15.481 17ac Generated table #1344@1: 11132 keys, 2161414 bytes
+2026/10/15-02:02:15.574 17ac Generated table #1345@1: 34264 keys, 2260765 bytes
+2026/10/15-02:02:15.648 17ac Generated table #1346@1: 27508 keys, 2191991 bytes
+2026/10/15-02:02:15.648 17ac Compacted 1@1 + 9@2 files => 19586837 bytes
+2026/10/15-02:02:15.651 17ac compacted to: files[ 0 0 15 0 0 0 0 ]
+2026/10/15-02:02:15.651 17ac Delete type=2 #1313
+2026/10/15-02:02:15.652 17ac Delete type=2 #1314
+2026/10/15-02:02:15.652 17ac Delete type=2 #1315
+2026/10/15-02:02:15.652 17ac Delete type=2 #1316
+2026/10/15-02:02:15.652 17ac Delete type=2 #1317
+2026/10/15-02:02:15.652 17ac Delete type=2 #1318
+2026/10/15-02:02:15.652 17ac Delete type=2 #1319
+2026/10/15-02:02:15.652 17ac Delete type=2 #1320
+2026/10/15-02:02:15.652 17ac Delete type=2 #1321
+2026/10/15-02:02:15.652 17ac Delete type=2 #1332
+2026/10/15-02:02:42.504 2adc Level-0 table #1348: started
+2026/10/15-02:02:42.542 2adc Level-0 table #1348: 1028316 bytes OK
+2026/10/15-02:02:42.547 2adc Delete type=0 #1330
+2026/10/15-02:02:43.524 2adc Compacting 1@0 + 0@1 files
+2026/10/15-02:02:43.559 2adc Generated table #1349@0: 22380 keys, 193425 bytes
+2026/10/15-02:02:43.585 2adc Generated table #1350@0: 15613 keys, 429613 bytes
+2026/10/15-02:02:43.585 2adc Compacted 1@0 + 0@1 files => 623038 bytes
+2026/10/15-02:02:43.588 2adc compacted to: files[ 0 2 15 0 0 0 0 ]
+2026/10/15-02:02:43.588 2adc Delete type=2 #1348
+2026/10/15-02:02:44.568 2adc Compacting 1@1 + 4@2 files
+2026/10/15-02:02:44.656 2adc Generated table #1351@1: 79269 keys, 2223834 bytes
+2026/10/15-02:02:44.740 2adc Generated table #1352@1: 95878 keys, 2246177 bytes
+2026/10/15-02:02:44.819 2adc Generated table #1353@1: 95151 keys, 2244593 bytes
+2026/10/15-02:02:44.881 2adc Generated table #1354@1: 61544 keys, 1508726 bytes
+2026/10/15-02:02:44.881 2adc Compacted 1@1 + 4@2 files => 8223330 bytes
+2026/10/15-02:02:44.883 2adc compacted to: files[ 0 1 15 0 0 0 0 ]
+2026/10/15-02:02:44.884 2adc Delete type=2 #1334
+2026/10/15-02:02:44.884 2adc Delete type=2 #1335
+2026/10/15-02:02:44.884 2adc Delete type=2 #1336
+2026/10/15-02:02:44.884 2adc Delete type=2 #1337
+2026/10/15-02:02:44.884 2adc Delete type=2 #1350
+2026/10/15-02:02:58.185 2adc Compacting 1@1 + 9@2 files
+2026/10/15-02:02:58.288 2adc Generated table #1355@1: 63596 keys, 2234760 bytes
+2026/10/15-02:02:58.329 2adc Generated table #1356@1: 2002 keys, 2153857 bytes
+2026/10/15-02:02:58.372 2adc Generated table #1357@1: 2103 keys, 2149626 bytes
+2026/10/15-02:02:58.416 2adc Generated table #1358@1: 3132 keys, 2154254 bytes
+2026/10/15-02:02:58.454 2adc Generated table #1359@1: 2062 keys, 2144156 bytes
+2026/10/15-02:02:58.509 2adc Generated table #1360@1: 2678 keys, 2146144 bytes
+2026/10/15-02:02:58.586 2adc Generated table #1361@1: 11879 keys, 2163601 bytes
+2026/10/15-02:02:58.665 2adc Generated table #1362@1: 34028 keys, 2262416 bytes
+2026/10/15-02:02:58.729 2adc Generated table #1363@1: 26940 keys, 2152165 bytes
+2026/10/15-02:02:58.729 2adc Compacted 1@1 + 9@2 files => 19560979 bytes
+2026/10/15-02:02:58.731 2adc compacted to: files[ 0 0 15 0 0 0 0 ]
+2026/10/15-02:02:58.732 2adc Delete type=2 #1338
+2026/10/15-02:02:58.732 2adc Delete type=2 #1339
+2026/10/15-02:02:58.732 2adc Delete type=2 #1340
+2026/10/15-02:02:58.732 2adc Delete type=2 #1341
+2026/10/15-02:02:58.732 2adc Delete type=2 #1342
+2026/10/15-02:02:58.732 2adc Delete type=2 #1343
+2026/10/15-02:02:58.732 2adc Delete type=2 #1344
+2026/10/15-02:02:58.732 2adc Delete type=2 #1345
+2026/10/15-02:02:58.732 2adc Delete type=2 #1346
+2026/10/15-02:02:58.732 2adc Delete type=2 #1349
+2026/10/15-02:03:20.346 2adc Level-0 table #1365: started
+2026/10/15-02:03:20.379 2adc Level-0 table #1365: 1027059 bytes OK
+2026/10/15-02:03:20.383 2adc Delete type=0 #1347
+2026/10/15-02:03:21.382 2adc Compacting 1@0 + 0@1 files
+2026/10/15-02:03:21.433 2adc Generated table #1366@0: 22067 keys, 184095 bytes
+2026/10/15-02:03:21.461 2adc Generated table #1367@0: 15858 keys, 436646 bytes
+2026/10/15-02:03:21.461 2adc Compacted 1@0 + 0@1 files => 620741 bytes
+2026/10/15-02:03:21.464 2adc compacted to: files[ 0 2 15 0 0 0 0 ]
+2026/10/15-02:03:21.464 2adc Delete type=2 #1365
+2026/10/15-02:03:22.457 17ac Compacting 1@1 + 4@2 files
+2026/10/15-02:03:22.559 17ac Generated table #1368@1: 74445 keys, 2219006 bytes
+2026/10/15-02:03:22.653 17ac Generated table #1369@1: 96282 keys, 2244781 bytes
+2026/10/15-02:03:22.739 17ac Generated table #1370@1: 95499 keys, 2243912 bytes
+2026/10/15-02:03:22.816 17ac Generated table #1371@1: 81474 keys, 1972555 bytes
+2026/10/15-02:03:22.817 17ac Compacted 1@1 + 4@2 files => 8680254 bytes
+2026/10/15-02:03:22.819 17ac compacted to: files[ 0 1 15 0 0 0 0 ]
+2026/10/15-02:03:22.820 17ac Delete type=2 #1351
+2026/10/15-02:03:22.820 17ac Delete type=2 #1352
+2026/10/15-02:03:22.820 17ac Delete type=2 #1353
+2026/10/15-02:03:22.820 17ac Delete type=2 #1354
+2026/10/15-02:03:22.820 17ac Delete type=2 #1367
+2026/10/15-02:03:47.431 2adc Compacting 1@1 + 9@2 files
+2026/10/15-02:03:47.539 2adc Generated table #1372@1: 61477 keys, 2230905 bytes
+2026/10/15-02:03:47.585 2adc Generated table #1373@1: 1987 keys, 2145526 bytes
+2026/10/15-02:03:47.629 2adc Generated table #1374@1: 2113 keys, 2153891 bytes
+2026/10/15-02:03:47.674 2adc Generated table #1375@1: 3137 keys, 2154251 bytes
+2026/10/15-02:03:47.705 2adc Generated table #1376@1: 2049 keys, 2143470 bytes
+2026/10/15-02:03:47.738 2adc Generated table #1377@1: 2700 keys, 2147014 bytes
+2026/10/15-02:03:47.778 2adc Generated table #1378@1: 12466 keys, 2162702 bytes
+2026/10/15-02:03:47.857 2adc Generated table #1379@1: 33741 keys, 2262069 bytes
+2026/10/15-02:03:47.921 2adc Generated table #1380@1: 26593 keys, 2127605 bytes
+2026/10/15-02:03:47.921 2adc Compacted 1@1 + 9@2 files => 19527433 bytes
+2026/10/15-02:03:47.923 2adc compacted to: files[ 0 0 15 0 0 0 0 ]
+2026/10/15-02:03:47.924 2adc Delete type=2 #1355
+2026/10/15-02:03:47.924 2adc Delete type=2 #1356
+2026/10/15-02:03:47.924 2adc Delete type=2 #1357
+2026/10/15-02:03:47.924 2adc Delete type=2 #1358
+2026/10/15-02:03:47.924 2adc Delete type=2 #1359
+2026/10/15-02:03:47.924 2adc Delete type=2 #1360
+2026/10/15-02:03:47.924 2adc Delete type=2 #1361
+2026/10/15-02:03:47.924 2adc Delete type=2 #1362
+2026/10/15-02:03:47.925 2adc Delete type=2 #1363
+2026/10/15-02:03:47.925 2adc Delete type=2 #1366
+2026/10/15-02:04:04.512 17ac Level-0 table #1382: started
+2026/10/15-02:04:04.549 17ac Level-0 table #1382: 1029001 bytes OK
+2026/10/15-02:04:04.553 17ac Delete type=0 #1364
+2026/10/15-02:04:05.539 2adc Compacting 1@0 + 0@1 files
+2026/10/15-02:04:05.578 2adc Generated table #1383@0: 22776 keys, 191613 bytes
+2026/10/15-02:04:05.599 2adc Generated table #1384@0: 14856 keys, 413701 bytes
+2026/10/15-02:04:05.599 2adc Compacted 1@0 + 0@1 files => 605314 bytes
+2026/10/15-02:04:05.601 2adc compacted to: files[ 0 2 15 0 0 0 0 ]
+2026/10/15-02:04:05.602 2adc Delete type=2 #1382
+2026/10/15-02:04:06.579 2adc Compacting 1@1 + 4@2 files
+2026/10/15-02:04:06.672 2adc Generated table #1385@1: 70667 keys, 2212881 bytes
+2026/10/15-02:04:06.760 2adc Generated table #1386@1: 96238 keys, 2245073 bytes
+2026/10/15-02:04:06.844 2adc Generated table #1387@1: 95196 keys, 2243693 bytes
+2026/10/15-02:04:06.927 2adc Generated table #1388@1: 96304 keys, 2246442 bytes
+2026/10/15-02:04:06.938 2adc Generated table #1389@1: 4151 keys, 165063 bytes
+2026/10/15-02:04:06.938 2adc Compacted 1@1 + 4@2 files => 9113152 bytes
+2026/10/15-02:04:06.941 2adc compacted to: files[ 0 1 16 0 0 0 0 ]
+2026/10/15-02:04:06.941 2adc Delete type=2 #1368
+2026/10/15-02:04:06.941 2adc Delete type=2 #1369
+2026/10/15-02:04:06.941 2adc Delete type=2 #1370
+2026/10/15-02:04:06.941 2adc Delete type=2 #1371
+2026/10/15-02:04:06.941 2adc Delete type=2 #1384
+2026/10/15-02:04:17.067 17ac Compacting 1@1 + 9@2 files
+2026/10/15-02:04:17.176 17ac Generated table #1390@1: 58884 keys, 2228548 bytes
+2026/10/15-02:04:17.214 17ac Generated table #1391@1: 1956 keys, 2144126 bytes
+2026/10/15-02:04:17.256 17ac Generated table #1392@1: 2131 keys, 2151049 bytes
+2026/10/15-02:04:17.292 17ac Generated table #1393@1: 3138 keys, 2154612 bytes
+2026/10/15-02:04:17.339 17ac Generated table #1394@1: 2044 keys, 2142080 bytes
+2026/10/15-02:04:17.389 17ac Generated table #1395@1: 2711 keys, 2145906 bytes
+2026/10/15-02:04:17.439 17ac Generated table #1396@1: 13240 keys, 2164899 bytes
+2026/10/15-02:04:17.516 17ac Generated table #1397@1: 33353 keys, 2262931 bytes
+2026/10/15-02:04:17.586 17ac Generated table #1398@1: 26160 keys, 2097830 bytes
+2026/10/15-02:04:17.586 17ac Compacted 1@1 + 9@2 files => 19491981 bytes
+2026/10/15-02:04:17.589 17ac compacted to: files[ 0 0 16 0 0 0 0 ]
+2026/10/15-02:04:17.590 17ac Delete type=2 #1372
+2026/10/15-02:04:17.590 17ac Delete type=2 #1373
+2026/10/15-02:04:17.590 17ac Delete type=2 #1374
+2026/10/15-02:04:17.590 17ac Delete type=2 #1375
+2026/10/15-02:04:17.590 17ac Delete type=2 #1376
+2026/10/15-02:04:17.590 17ac Delete type=2 #1377
+2026/10/15-02:04:17.590 17ac Delete type=2 #1378
+2026/10/15-02:04:17.590 17ac Delete type=2 #1379
+2026/10/15-02:04:17.590 17ac Delete type=2 #1380
+2026/10/15-02:04:17.590 17ac Delete type=2 #1383
+2026/10/15-02:04:46.057 2adc Level-0 table #1400: started
+2026/10/15-02:04:46.108 2adc Level-0 table #1400: 1048723 bytes OK
+2026/10/15-02:04:46.112 2adc Delete type=0 #1381
+2026/10/15-02:04:47.121 17ac Compacting 1@0 + 0@1 files
+2026/10/15-02:04:47.160 17ac Generated table #1401@0: 21425 keys, 179173 bytes
+2026/10/15-02:04:47.180 17ac Generated table #1402@0: 16398 keys, 457238 bytes
+2026/10/15-02:04:47.180 17ac Compacted 1@0 + 0@1 files => 636411 bytes
+2026/10/15-02:04:47.182 17ac compacted to: files[ 0 2 16 0 0 0 0 ]
+2026/10/15-02:04:47.183 17ac Delete type=2 #1400
+2026/10/15-02:04:48.180 2adc Compacting 1@1 + 5@2 files
+2026/10/15-02:04:48.278 2adc Generated table #1403@1: 66088 keys, 2206892 bytes
+2026/10/15-02:04:48.366 2adc Generated table #1404@1: 95817 keys, 2244522 bytes
+2026/10/15-02:04:48.447 2adc Generated table #1405@1: 96015 keys, 2246418 bytes
+2026/10/15-02:04:48.533 2adc Generated table #1406@1: 95495 keys, 2244900 bytes
+2026/10/15-02:04:48.560 2adc Generated table #1407@1: 25539 keys, 656410 bytes
+2026/10/15-02:04:48.560 2adc Compacted 1@1 + 5@2 files => 9599142 bytes
+2026/10/15-02:04:48.563 2adc compacted to: files[ 0 1 16 0 0 0 0 ]
+2026/10/15-02:04:48.563 2adc Delete type=2 #1385
+2026/10/15-02:04:48.563 2adc Delete type=2 #1386
+2026/10/15-02:04:48.563 2adc Delete type=2 #1387
+2026/10/15-02:04:48.564 2adc Delete type=2 #1388
+2026/10/15-02:04:48.564 2adc Delete type=2 #1389
+2026/10/15-02:04:48.564 2adc Delete type=2 #1402
+2026/10/15-02:04:53.567 2adc Compacting 1@1 + 9@2 files
+2026/10/15-02:04:53.664 2adc Generated table #1408@1: 57565 keys, 2228391 bytes
+2026/10/15-02:04:53.705 2adc Generated table #1409@1: 1943 keys, 2144478 bytes
+2026/10/15-02:04:53.742 2adc Generated table #1410@1: 2143 keys, 2152052 bytes
+2026/10/15-02:04:53.779 2adc Generated table #1411@1: 3129 keys, 2153940 bytes
+2026/10/15-02:04:53.809 2adc Generated table #1412@1: 2041 keys, 2143695 bytes
+2026/10/15-02:04:53.872 2adc Generated table #1413@1: 2729 keys, 2146509 bytes
+2026/10/15-02:04:53.934 2adc Generated table #1414@1: 13834 keys, 2166575 bytes
+2026/10/15-02:04:54.004 2adc Generated table #1415@1: 33027 keys, 2262298 bytes
+2026/10/15-02:04:54.065 2adc Generated table #1416@1: 25856 keys, 2076593 bytes
+2026/10/15-02:04:54.065 2adc Compacted 1@1 + 9@2 files => 19474531 bytes
+2026/10/15-02:04:54.068 2adc compacted to: files[ 0 0 16 0 0 0 0 ]
+2026/10/15-02:04:54.068 2adc Delete type=2 #1390
+2026/10/15-02:04:54.068 2adc Delete type=2 #1391
+2026/10/15-02:04:54.069 2adc Delete type=2 #1392
+2026/10/15-02:04:54.069 2adc Delete type=2 #1393
+2026/10/15-02:04:54.069 2adc Delete type=2 #1394
+2026/10/15-02:04:54.069 2adc Delete type=2 #1395
+2026/10/15-02:04:54.069 2adc Delete type=2 #1396
+2026/10/15-02:04:54.069 2adc Delete type=2 #1397
+2026/10/15-02:04:54.069 2adc Delete type=2 #1398
+2026/10/15-02:04:54.069 2adc Delete type=2 #1401

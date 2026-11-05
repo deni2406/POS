@@ -1,0 +1,518 @@
+﻿const { Client, LocalAuth } = require('whatsapp-web.js');
+const { MessageAck } = require('whatsapp-web.js/src/util/Constants');
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
+// ACK VALUES yang dianggap sebagai konfirmasi sukses (bukan ERROR, bukan PENDING)
+const CONFIRMED_ACK_VALUES = new Set([
+    MessageAck.ACK_SERVER,
+    MessageAck.ACK_DEVICE,
+    MessageAck.ACK_READ,
+    MessageAck.ACK_PLAYED,
+]);
+
+/**
+ * PendingEntry menyimpan status satu pengiriman pesan.
+ * PendingEntry disimpan di pendingSends dengan key = chatId (msg.to).
+ * msg.id.id dipakai sebagai correlId internal untuk audit, bukan sebagai key Map.
+ */
+function createPendingEntry(chatId) {
+    return {
+        chatId,
+        resolve: null,
+        reject: null,
+        confirmed: false,
+        ackError: false,
+        ack: undefined,
+        ackTs: undefined,
+        serverId: undefined,
+        created: false,
+        createdTs: undefined,
+        _timeoutHandle: null, // handle timer agar bisa dibersihkan
+        correlId: null, // msg.id.id dari event pertama, dipakai sebagai key Map setelah pendaftaran
+    };
+}
+
+function clearTimeoutFor(entry) {
+    if (entry._timeoutHandle !== null) {
+        clearTimeout(entry._timeoutHandle);
+        entry._timeoutHandle = null;
+    }
+}
+
+const pendingSends = new Map();
+
+const app = express();
+const PORT = 3101;
+const HOST = '127.0.0.1';
+const TOKEN_PATH = path.join(__dirname, 'api-token.txt');
+
+if (!fs.existsSync(TOKEN_PATH)) {
+  throw new Error('File api-token.txt tidak ditemukan.');
+}
+
+const API_TOKEN = fs.readFileSync(TOKEN_PATH, 'utf8').trim();
+
+if (!API_TOKEN) {
+  throw new Error('Token API kosong.');
+}
+
+app.use(express.json({ limit: '16kb' }));
+
+let whatsappReady = false;
+
+const CACHE_PATH = path.join(__dirname, 'number-cache.json');
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 hari
+
+function loadNumberCache() {
+  try {
+    if (!fs.existsSync(CACHE_PATH)) return {};
+    const raw = fs.readFileSync(CACHE_PATH, 'utf8');
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Gagal memuat cache nomor:', err.message);
+    return {};
+  }
+}
+
+function saveNumberCache(cache) {
+  try {
+    fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Gagal menyimpan cache nomor:', err.message);
+  }
+}
+
+function isCacheValid(number, cache) {
+  const entry = cache[number];
+  return entry &&
+    typeof entry.registered === 'boolean' &&
+    typeof entry.checkedAt === 'number' &&
+    Date.now() - entry.checkedAt < CACHE_TTL_MS;
+}
+
+function isRegistered(number, cache) {
+  return isCacheValid(number, cache) && cache[number].registered;
+}
+
+let numberCache = loadNumberCache();
+
+const inFlightChecks = new Map();
+
+async function ensureRegistered(number, cache) {
+  if (isRegistered(number, cache)) return true;
+  if (isCacheValid(number, cache)) return cache[number].registered;
+  if (inFlightChecks.has(number)) {
+    return await inFlightChecks.get(number);
+  }
+  const promise = (async () => {
+    try {
+      const wid = await client.getNumberId(number);
+      const registered = Boolean(wid);
+      cache[number] = { registered, checkedAt: Date.now() };
+      saveNumberCache(cache);
+      return registered;
+    } finally {
+      inFlightChecks.delete(number);
+    }
+  })();
+  inFlightChecks.set(number, promise);
+  return await promise;
+}
+
+const client = new Client({
+  authStrategy: new LocalAuth({
+    dataPath: path.join(__dirname, 'session')
+  }),
+  puppeteer: {
+    headless: true
+  }
+});
+
+client.on('qr', (qr) => {
+  console.log('QR diterima. Buka WhatsApp di HP untuk menautkan perangkat.');
+  require('qrcode-terminal').generate(qr, { small: true });
+});
+
+client.on('authenticated', () => {
+  console.log('WhatsApp berhasil diautentikasi.');
+});
+
+client.on('ready', () => {
+  whatsappReady = true;
+  console.log('WHATSAPP_GATEWAY_READY');
+});
+
+client.on('auth_failure', (message) => {
+  whatsappReady = false;
+  console.error('Autentikasi gagal:', message);
+});
+
+client.on('disconnected', (reason) => {
+  whatsappReady = false;
+  console.log('WhatsApp terputus:', reason);
+});
+
+/**
+ * Cari entri pending: coba msg.id.id dulu (key utama setelah migrasi),
+ * fallback ke msg.to (key awal saat pendaftaran).
+ */
+function lookupPending(msg) {
+  if (!msg || !msg.id) return null;
+  if (msg.id.id) {
+    const byId = pendingSends.get(msg.id.id);
+    if (byId) return byId;
+  }
+  if (msg.to) return pendingSends.get(msg.to) || null;
+  return null;
+}
+
+function handleSendEvent(msg, ack, isAckEvent) {
+  if (!msg || !msg.id || !msg.id.fromMe) return;
+
+  // Cari entry:优先 msg.id.id (setelah migrasi), fallback ke msg.to (saat pendaftaran).
+  const pending = lookupPending(msg);
+  if (!pending) return;
+
+  // Simpan msg.id.id sebagai serverId (unik per pesan, dipakai untuk audit).
+  if (msg.id._serialized && !pending.serverId) {
+    pending.serverId = msg.id._serialized;
+  }
+  // Migrasi key Map dari msg.to ke msg.id.id (unik per pesan).
+  // Mencegah tabrakan saat dua pesan dikirim ke nomor yang sama berurutan
+  // sebelum ACK pesan pertama tiba.
+  if (msg.id.id && !pending.correlId) {
+    pending.correlId = msg.id.id;
+    if (msg.to && pendingSends.has(msg.to)) pendingSends.delete(msg.to);
+    pendingSends.set(msg.id.id, pending);
+  }
+
+  const isAckError = MessageAck.ACK_ERROR !== undefined && ack === MessageAck.ACK_ERROR;
+
+  if (isAckEvent) {
+    if (isAckError) {
+      pending.ackError = true;
+      pending.ackErrorTs = Date.now();
+      clearTimeoutFor(pending);
+      if (pending.reject) pending.reject(new Error('ACK_ERROR'));
+      return;
+    }
+    // Hanya terima ACK yang masuk CONFIRMED_ACK_VALUES.
+    // ACK_PENDING (0) dan nilai tak dikenal TIDAK menghasilkan konfirmasi sukses.
+    if (pending.confirmed) return;
+    if (ack === MessageAck.ACK_PENDING) return;
+    if (!CONFIRMED_ACK_VALUES.has(ack)) return;
+    pending.confirmed = true;
+    pending.ack = ack;
+    pending.ackTs = Date.now();
+    clearTimeoutFor(pending);
+    // Resolve TIDAK menghapus entry di sini — biarkan resolve() callback yang membersihkan.
+    if (pending.resolve) pending.resolve({ id: msg.id._serialized, ack });
+    return;
+  }
+
+  // message_create event (hanya catatan, bukan konfirmasi)
+  pending.created = true;
+  pending.createdTs = Date.now();
+}
+
+client.on('message_ack', (msg, ack) => {
+  handleSendEvent(msg, ack, true);
+});
+
+client.on('message_create', (msg) => {
+  handleSendEvent(msg, undefined, false);
+});
+
+function authMiddleware(req, res, next) {
+  const supplied = req.get('x-api-token') || '';
+  const a = Buffer.from(supplied);
+  const b = Buffer.from(API_TOKEN);
+
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  }
+
+  next();
+}
+
+app.get('/health', (req, res) => {
+  res.json({
+    ok: true,
+    whatsappReady
+  });
+});
+
+app.post('/send', authMiddleware, async (req, res) => {
+  if (!whatsappReady) {
+    return res.status(503).json({
+      ok: false,
+      error: 'WhatsApp belum siap.'
+    });
+  }
+
+  const { number, message } = req.body || {};
+
+  if (typeof number !== 'string' ||
+      !/^\d{8,15}$/.test(number)) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Nomor harus berupa kode negara dan angka saja, tanpa tanda + atau spasi.'
+    });
+  }
+
+  if (typeof message !== 'string' ||
+      !message.trim() ||
+      message.length > 4000) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Pesan wajib diisi dan maksimal 4000 karakter.'
+    });
+  }
+
+  try {
+    if (!await ensureRegistered(number, numberCache)) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Nomor tidak terdaftar di WhatsApp.'
+      });
+    }
+
+    const chatId = `${number}@c.us`;
+
+    // Reject concurrent sends to the same chat (scan values, not keys)
+    for (const entry of pendingSends.values()) {
+      if (entry.chatId === chatId && !entry.confirmed && !entry.ackError) {
+        return res.status(409).json({
+          ok: false,
+          error: 'Terdapat pengiriman ke nomor ini yang masih menunggu konfirmasi. Silakan coba lagi.',
+          chatId
+        });
+      }
+    }
+
+    const pendingEntry = createPendingEntry(chatId);
+    // Daftar entry by chatId untuk concurrent check dan pembersihan timeout.
+    // Korelasi event (msg.id.id) dilakukan di handleSendEvent via lookupChatId().
+    pendingSends.set(chatId, pendingEntry);
+
+    const sendPromise = client.sendMessage(chatId, message.trim(), {
+      waitUntilMsgSent: true
+    });
+
+    // ackPromise resolves when an ACK is received, rejects on ACK_ERROR or timeout.
+    let settled = false;
+    const ackPromise = new Promise((resolve, reject) => {
+      pendingEntry.resolve = (payload) => {
+        if (settled) return;
+        settled = true;
+        pendingEntry.confirmed = true;
+        clearTimeoutFor(pendingEntry);
+        // Bersih kan entry SETELAH resolve() dipanggil, bukan sebelum.
+        if (pendingEntry.correlId && pendingSends.has(pendingEntry.correlId)) pendingSends.delete(pendingEntry.correlId);
+        if (pendingSends.has(chatId)) pendingSends.delete(chatId);
+        resolve(payload);
+      };
+      pendingEntry.reject = (err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeoutFor(pendingEntry);
+        if (pendingEntry.correlId && pendingSends.has(pendingEntry.correlId)) pendingSends.delete(pendingEntry.correlId);
+        if (pendingSends.has(chatId)) pendingSends.delete(chatId);
+        reject(err);
+      };
+
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        pendingEntry._timeoutHandle = null;
+        if (pendingEntry.correlId && pendingSends.has(pendingEntry.correlId)) pendingSends.delete(pendingEntry.correlId);
+        if (pendingSends.has(chatId)) pendingSends.delete(chatId);
+        reject(new Error('ACK_TIMEOUT'));
+      }, SEND_TIMEOUT_MS);
+      pendingEntry._timeoutHandle = timer;
+    });
+
+    let sendResult = null;
+    let sendError = null;
+    let ackPayload = null;
+    let ackTimeout = false;
+    let ackError = false;
+
+    // Jalankan sendPromise dan ackPromise bersamaan.
+    // Promise.any resolves dengan hasil tercepat (send atau ACK).
+    // Timeout tetap aktif membatasi total waktu tunggu HTTP.
+    try {
+      const fastest = await Promise.any([
+        sendPromise.then((result) => ({ kind: 'send', result })),
+        ackPromise.then((payload) => ({ kind: 'ack', payload }))
+      ]);
+      if (fastest.kind === 'send') {
+        if (fastest.result && fastest.result.id && fastest.result.id._serialized) {
+          sendResult = fastest.result.id._serialized;
+          pendingEntry.serverId = sendResult;
+        }
+      } else {
+        ackPayload = fastest.payload;
+      }
+    } catch (ackErr) {
+      if (ackErr.errors) {
+        // Promise.any reject: cek semua promise yang gagal
+        for (const err of ackErr.errors) {
+          if (err.message === 'ACK_TIMEOUT') ackTimeout = true;
+          else if (err.message === 'ACK_ERROR') ackError = true;
+          else sendError = err;
+        }
+      } else {
+        sendError = ackErr;
+      }
+    }
+
+    if (ackError) {
+      return res.status(500).json({
+        ok: false,
+        error: 'Server WhatsApp mengembalikan ACK_ERROR. Pengiriman gagal.',
+        chatId
+      });
+    }
+
+    if (ackTimeout && sendError) {
+      return res.status(500).json({
+        ok: false,
+        error: 'Pengiriman pesan gagal: ' + sendError.message,
+        chatId
+      });
+    }
+
+    if (ackPayload) {
+      let ackLevel = 'server';
+      if (ackPayload.ack === MessageAck.ACK_DEVICE) ackLevel = 'device';
+      else if (ackPayload.ack === MessageAck.ACK_READ) ackLevel = 'read';
+      else if (ackPayload.ack === MessageAck.ACK_PLAYED) ackLevel = 'played';
+
+      const finalMsgId = ackPayload.id || sendResult || pendingEntry.serverId;
+
+      return res.json({
+        ok: true,
+        messageId: finalMsgId,
+        ackLevel,
+        confirmed: true,
+        chatId
+      });
+    }
+
+    if (sendResult) {
+      // waitUntilMsgSent=true sukses, tapi ACK belum/tidak datang sebelum timeout.
+      return res.status(202).json({
+        ok: true,
+        messageId: sendResult,
+        confirmed: false,
+        status: 'pending_ack',
+        chatId
+      });
+    }
+
+    if (pendingEntry.created) {
+      // message_create terdeteksi tapi tidak ada ACK — pesan mungkin belum sampai server.
+      return res.status(202).json({
+        ok: true,
+        messageId: pendingEntry.serverId || null,
+        confirmed: false,
+        status: 'created_no_ack',
+        chatId
+      });
+    }
+
+    // Timeout atau error tanpa sendResult sama sekali.
+    return res.status(202).json({
+      ok: false,
+      messageId: null,
+      confirmed: false,
+      status: 'unconfirmed',
+      error: ackTimeout ? 'Timeout: konfirmasi ACK tidak diterima dalam 30 detik.' : 'Konfirmasi tidak lengkap. Pesan mungkin gagal dikirim.',
+      chatId
+    });
+  } catch (error) {
+    console.error('Gagal mengirim pesan:', error.message);
+    return res.status(500).json({
+      ok: false,
+      error: 'Pengiriman pesan gagal.'
+    });
+  }
+});
+
+app.get('/diag/number', authMiddleware, async (req, res) => {
+  if (!whatsappReady) {
+    return res.status(503).json({
+      ok: false,
+      error: 'WhatsApp belum siap.'
+    });
+  }
+
+  const number = req.query.number;
+
+  if (typeof number !== 'string' ||
+      !/^\d{8,15}$/.test(number)) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Nomor tidak valid.'
+    });
+  }
+
+  try {
+    const registered = await ensureRegistered(number, numberCache);
+
+    return res.json({
+      ok: true,
+      registered
+    });
+  } catch (error) {
+    console.error('Gagal memeriksa nomor:', error.message);
+    return res.status(500).json({
+      ok: false,
+      error: 'Gagal memeriksa nomor.'
+    });
+  }
+});
+
+app.get('/diag/chat', authMiddleware, async (req, res) => {
+  if (!whatsappReady) {
+    return res.status(503).json({
+      ok: false,
+      error: 'WhatsApp belum siap.'
+    });
+  }
+
+  const number = req.query.number;
+
+  if (typeof number !== 'string' ||
+      !/^\d{8,15}$/.test(number)) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Nomor tidak valid.'
+    });
+  }
+
+  try {
+    const chat = await client.getChatById(`${number}@c.us`);
+    return res.json({
+      ok: true,
+      chatFound: Boolean(chat),
+      isGroup: chat?.isGroup
+    });
+  } catch (error) {
+    console.error('Gagal memeriksa chat:', error.message);
+    return res.status(500).json({
+      ok: false,
+      error: 'Gagal memeriksa chat.'
+    });
+  }
+});
+
+app.listen(PORT, HOST, () => {
+  console.log(`WHATSAPP_API_LISTENING http://${HOST}:${PORT}`);
+});
+
+client.initialize();

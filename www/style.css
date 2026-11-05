@@ -1,0 +1,957 @@
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+  overflow: hidden;
+}
+
+body {
+  touch-action: manipulation;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+  user-select: none;
+}
+
+.hidden {
+  display: none !important;
+}
+
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+.login-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f172a;
+  z-index: 1000;
+}
+
+.login-card {
+  width: 380px;
+  max-width: 90%;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.login-title {
+  font-size: 26px;
+  font-weight: 900;
+  margin-bottom: 4px;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+}
+
+.login-subtitle {
+  color: #64748b;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-input {
+  width: 100%;
+  height: 48px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0 14px;
+  margin-bottom: 16px;
+  font-size: 16px;
+  outline: none;
+  background: #ffffff;
+  color: #0f172a;
+  transition: border-color 0.15s ease;
+}
+
+.form-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.primary-btn {
+  width: 100%;
+  height: 50px;
+  border: 0;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  transition: background-color 0.15s ease;
+}
+
+.primary-btn:hover {
+  background: #1d4ed8;
+}
+
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   APP
+========================================================= */
+
+.app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+
+/* =========================================================
+   TOP BAR
+========================================================= */
+
+.topbar {
+  height: 56px;
+  min-height: 56px;
+  background: #0f172a;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #1e293b;
+}
+
+.brand {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+}
+
+.sync-info {
+  color: #94a3b8;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.server-status {
+  color: #22c55e;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.cashier-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.sync-produk-btn {
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 13px;
+  transition: background-color 0.15s ease;
+}
+
+.sync-produk-btn:hover {
+  background: #1d4ed8;
+}
+
+.sync-produk-btn:active {
+  transform: scale(.97);
+}
+
+.close-cashier-btn {
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 13px;
+  transition: background-color 0.15s ease;
+}
+
+.close-cashier-btn:hover {
+  background: #b91c1c;
+}
+
+
+/* =========================================================
+   POS LAYOUT
+========================================================= */
+
+.pos-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 62% 38%;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+
+/* =========================================================
+   PRODUK PANEL & SEARCH
+========================================================= */
+
+.products-panel {
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.search-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.search-wrapper .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.search-box {
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 0 14px 0 38px;
+  font-size: 15px;
+  outline: none;
+  margin-bottom: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.15s ease;
+}
+
+.search-box:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+
+/* =========================================================
+   KATEGORI
+========================================================= */
+
+.category-bar {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.category-bar::-webkit-scrollbar {
+  height: 4px;
+}
+
+.category-bar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.category-btn {
+  flex: 0 0 auto;
+  min-width: 80px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.category-btn svg {
+  flex-shrink: 0;
+}
+
+.category-btn.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+.category-btn:active {
+  transform: scale(.97);
+}
+
+
+/* =========================================================
+   PRODUCTS GRID
+========================================================= */
+
+.products {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-content: start;
+  padding-right: 2px;
+  padding-top: 2px;
+}
+
+.products::-webkit-scrollbar {
+  width: 5px;
+}
+
+.products::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.product-card {
+  min-height: 85px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: left;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.product-card:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.product-card:active {
+  transform: scale(.97);
+  background: #eff6ff;
+}
+
+.product-name {
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.product-price {
+  color: #2563eb;
+  font-size: 15px;
+  font-weight: 900;
+  margin-top: 6px;
+}
+
+.empty-product {
+  padding: 40px;
+  color: #94a3b8;
+  text-align: center;
+  grid-column: 1 / -1;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   CART PANEL
+========================================================= */
+
+.cart-panel {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  background: #ffffff;
+  border-left: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.02);
+}
+
+.cart-title {
+  height: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 15px;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.cart-items {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 16px;
+}
+
+.cart-items::-webkit-scrollbar {
+  width: 5px;
+}
+
+.cart-items::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.cart-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cart-item {
+  min-height: 68px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.cart-item-name {
+  font-weight: 800;
+  font-size: 14px;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.cart-item-price {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.cart-subtotal {
+  font-weight: 900;
+  font-size: 15px;
+  color: #0f172a;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.qty-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.qty-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  font-size: 16px;
+  font-weight: 800;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.qty-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+.qty-btn:active {
+  transform: scale(0.95);
+}
+
+
+/* =========================================================
+   PAYMENT SECTION
+========================================================= */
+
+.payment-box {
+  flex-shrink: 0;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 12px 16px 16px;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 20px;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+}
+
+/* SEGMENTED CONTROL METODE PEMBAYARAN */
+.payment-methods {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-bottom: 10px;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.payment-btn {
+  height: 36px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.payment-btn svg {
+  flex-shrink: 0;
+}
+
+.payment-btn.active {
+  border: none;
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.cash-input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  outline: none;
+  margin-bottom: 8px;
+  background: #ffffff;
+  transition: border-color 0.15s ease;
+}
+
+.cash-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.change-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 800;
+  color: #475569;
+  margin-bottom: 12px;
+}
+
+.pay-btn {
+  width: 100%;
+  height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+  transition: background-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pay-btn:hover {
+  background: #15803d;
+}
+
+.pay-btn:active {
+  transform: scale(0.99);
+}
+
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 2000;
+}
+
+.modal-card {
+  width: 520px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-title {
+  font-size: 22px;
+  font-weight: 900;
+  margin-bottom: 4px;
+  color: #0f172a;
+}
+
+.modal-note {
+  color: #64748b;
+  margin-bottom: 18px;
+  font-size: 14px;
+}
+
+.locked-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.locked-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.actual-input {
+  width: 100%;
+  height: 50px;
+  border: 2px solid #2563eb;
+  border-radius: 8px;
+  padding: 0 14px;
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 12px;
+  color: #0f172a;
+}
+
+.confirm-close-btn {
+  width: 100%;
+  height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.report {
+  margin-top: 18px;
+}
+
+.report-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.report-total {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.difference-positive {
+  color: #16a34a;
+}
+
+.difference-negative {
+  color: #dc2626;
+}
+
+.close-finish-btn {
+  width: 100%;
+  height: 48px;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+
+/* =========================================================
+   RESPONSIVE TABLET LANDSCAPE (OPTIMIZED)
+========================================================= */
+
+@media (orientation: landscape) and (max-height: 800px) {
+
+  .topbar {
+    height: 52px;
+    min-height: 52px;
+    padding: 0 12px;
+  }
+
+  .brand {
+    font-size: 17px;
+  }
+
+  .pos-layout {
+    grid-template-columns: 60% 40%;
+  }
+
+  .products-panel {
+    padding: 8px;
+  }
+
+  .search-wrapper {
+    margin-bottom: 6px;
+  }
+
+  .search-box {
+    height: 40px;
+    min-height: 40px;
+    font-size: 14px;
+  }
+
+  .category-bar {
+    min-height: 38px;
+    padding-bottom: 6px;
+  }
+
+  .category-btn {
+    height: 32px;
+    font-size: 12px;
+    padding: 0 12px;
+  }
+
+  .products {
+    gap: 8px;
+  }
+
+  .product-card {
+    min-height: 76px;
+    padding: 10px;
+  }
+
+  .product-name {
+    font-size: 12px;
+  }
+
+  .product-price {
+    font-size: 14px;
+  }
+
+  .cart-title {
+    height: 42px;
+    min-height: 42px;
+    font-size: 14px;
+    padding: 0 12px;
+  }
+
+  .cart-items {
+    padding: 0 12px;
+  }
+
+  .cart-item {
+    min-height: 60px;
+    padding: 8px 0;
+  }
+
+  .payment-box {
+    padding: 8px 12px 12px;
+  }
+
+  .total-row {
+    font-size: 18px;
+    margin-bottom: 6px;
+  }
+
+  .payment-methods {
+    margin-bottom: 6px;
+  }
+
+  .payment-btn {
+    height: 32px;
+    font-size: 11px;
+  }
+
+  .cash-input {
+    height: 36px;
+    font-size: 15px;
+    margin-bottom: 6px;
+  }
+
+  .change-row {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+
+  .pay-btn {
+    height: 42px;
+    font-size: 16px;
+  }
+}
+
+
+/* =========================================================
+   MOBILE LANDSCAPE ABSOLUTE ANCHORING FIX (ANDROID)
+========================================================= */
+
+@media (orientation: landscape) and (max-width: 1024px) {
+  .cart-panel {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .cart-items {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    padding-bottom: 220px !important;
+  }
+
+  .payment-box {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 10 !important;
+    background: #ffffff !important;
+    border-top: 1px solid #cbd5e1 !important;
+    padding: 8px 12px 10px !important;
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .total-row {
+    font-size: 17px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .payment-methods {
+    margin-bottom: 4px !important;
+  }
+
+  .payment-btn {
+    height: 30px !important;
+    font-size: 11px !important;
+  }
+
+  .cash-input {
+    height: 34px !important;
+    font-size: 14px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .change-row {
+    margin-bottom: 4px !important;
+    font-size: 12px !important;
+  }
+
+  .pay-btn {
+    height: 38px !important;
+    font-size: 15px !important;
+  }
+}

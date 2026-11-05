@@ -1,0 +1,4 @@
+2026/10/15-01:51:42.498 1e7c Creating DB C:\pos\wa-gateway\session\session\Default\Site Characteristics Database since it was missing.
+2026/10/15-01:51:42.521 1e7c Reusing MANIFEST C:\pos\wa-gateway\session\session\Default\Site Characteristics Database/MANIFEST-000001
+2026/10/15-01:51:42.522 1e7c Recovering log #3
+2026/10/15-01:51:42.523 1e7c Reusing old log C:\pos\wa-gateway\session\session\Default\Site Characteristics Database/000003.log 

@@ -1,0 +1,6 @@
+2026/10/15-02:13:26.195 13c8 Reusing MANIFEST C:\pos\wa-gateway\session\session\Default\Local Storage\leveldb/MANIFEST-000001
+2026/10/15-02:13:26.204 13c8 Recovering log #12
+2026/10/15-02:13:26.207 13c8 Reusing old log C:\pos\wa-gateway\session\session\Default\Local Storage\leveldb/000012.log 
+2026/10/15-08:03:54.735 2b08 Level-0 table #14: started
+2026/10/15-08:03:54.745 2b08 Level-0 table #14: 19202 bytes OK
+2026/10/15-08:03:54.749 2b08 Delete type=0 #12

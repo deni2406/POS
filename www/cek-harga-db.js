@@ -1,0 +1,1 @@
+const sqlite3=require("sqlite3").verbose();const db=new sqlite3.Database("C:/POS/pos.db");db.all("SELECT name,sql FROM sqlite_master WHERE type=\"table\" AND (name LIKE \"%harga%\" OR name LIKE \"%member%\") ORDER BY name",[],(e,r)=>{if(e) console.error(e); else console.log(r);db.close();});

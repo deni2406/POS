@@ -1,0 +1,1 @@
+const sqlite3=require("sqlite3").verbose();const db=new sqlite3.Database("C:/POS/pos.db");db.all("SELECT id,session_id,nomor_meja,nama_pemesan,member_id,kategori_member,status,waktu_mulai FROM sesi_meja WHERE status=\"AKTIF\" ORDER BY id DESC LIMIT 10",[],(e,r)=>{if(e) console.error(e); else console.log(r);db.close();});

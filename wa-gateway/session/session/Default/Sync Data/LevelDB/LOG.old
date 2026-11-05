@@ -1,0 +1,4 @@
+2026/10/15-01:51:42.491 ff0 Creating DB C:\pos\wa-gateway\session\session\Default\Sync Data\LevelDB since it was missing.
+2026/10/15-01:51:42.514 ff0 Reusing MANIFEST C:\pos\wa-gateway\session\session\Default\Sync Data\LevelDB/MANIFEST-000001
+2026/10/15-01:51:42.515 ff0 Recovering log #3
+2026/10/15-01:51:42.515 ff0 Reusing old log C:\pos\wa-gateway\session\session\Default\Sync Data\LevelDB/000003.log 

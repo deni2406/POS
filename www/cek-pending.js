@@ -1,0 +1,1 @@
+const sqlite3=require("sqlite3").verbose();const db=new sqlite3.Database("./pos.db");db.all("SELECT id,nomor_transaksi,nomor_meja,tanggal,jam,kasir,metode_pembayaran,status_sync,sync_at FROM transaksi WHERE status_sync = 'PENDING' ORDER BY id ASC",(e,r)=>{if(e)console.error(e);else{console.log("PENDING:",r.length);console.table(r)}db.close()});
