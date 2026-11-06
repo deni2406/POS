@@ -4,6 +4,21 @@ Memori perubahan proyek ALVA-POS. Setiap entri dicatat saat perubahan dilakukan.
 Format: Tanggal · Deskripsi · File · Kolom/Tabel baru.
 
 ## [Unreleased]
+
+## [FIX & FEATURE] - Dashboard Widget Meja Terlaris (Top 10)
+
+### Added
+- **Widget Top 10 Meja Terlaris**: Menambahkan modul visual statistik pada Dashboard Utama Admin & POS untuk menampilkan urutan meja paling sering disewa (Meja 1 - Meja 10) beserta total pemakaian (sesi) dan akumulasi omset.
+- **API Endpoint**: Route baru `GET /api/dashboard/meja-terlaris` pada `server.js` dan handler `handleDashboardMejaTerlaris()` pada `admin/admin-server.js`.
+
+### Fixed & Refactored
+- **Critical Bugfix Omset (F1)**: Memperbaiki agregasi omset yang sebelumnya menggunakan subquery korelatif di dalam `GROUP BY` (di mana SQLite hanya meng-evaluasi 1 baris acak per grup). Mengganti kueri menjadi `LEFT JOIN transaksi` yang memfiltrasi status `BATAL`/`CANCELLED` dan melakukan `SUM(t.total)`. 
+  - *Dampak Perbaikan*: Agregasi omset real-time Meja 1 terakurasi dari Rp 64.000 menjadi Rp 20.184.000 (439 sesi).
+- **Submodule Git Tracking (F2)**: Memastikan seluruh perubahan file UI (`dashboard.html`, `dashboard.js`, `dashboard.css`, `admin-server.js`) ter-track dan ter-commit dengan benar pada submodule Git `admin/`.
+
+### Security
+- **Auth Guard (F3)**: Menerapkan `validateLoginSession(req, res)` pada endpoint `/api/dashboard/meja-terlaris` di `server.js` untuk mencegah akses publik terhadap data omset finansial venue.
+
 ### Fix Skema Tabel Pembelian & PO (`admin-server.js`, `pos.db`)
 Memperbaiki error SQLITE_ERROR pada tombol "Simpan & Buat Nomor PO" — skema tabel `pembelian` dan `detail_pembelian` di database tidak cocok dengan query INSERT di `admin-server.js`. Kolom lama (`nomor_pembelian, supplier, total, id_barang TEXT, harga_beli, subtotal`) diganti dengan kolom yang diharapkan kode (`nota_no, kasir_id, total_modal, total_qty, catat_kas_keluar, barang_id INTEGER, hpp_lama, hpp_baru, harga_jual_lama, harga_jual_baru, subtotal_modal`). Migrasi dilakukan dengan DROP + CREATE ulang karena tabel kosong (0 baris). Semua endpoint PO (POST create, GET list, GET detail, PUT edit, PUT status) diverifikasi berfungsi dengan skema baru.
 ### Fix Bug Kategori PO (`pembelian.js`)

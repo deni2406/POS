@@ -4930,6 +4930,69 @@ function getKasLaciSaldo(waktu = null) {
     return;
   }
 
+// ==================================================
+// DASHBOARD: GET /api/dashboard/meja-terlaris (Top 10 Meja)
+// Statistik "Meja Terlaris": total sesi + total omset per Meja 1-10,
+// diurutkan dari meja paling banyak dipakai (COUNT sesi DESC).
+//
+// Sumber data (skema riil, diverifikasi terhadap pos.db):
+//   - `sesi_meja.nomor_meja` INTEGER 1..10 — meja diwakili ANGKA,
+//     bukan string 'Meja N', sehingga kueri memakai nomor_meja BETWEEN.
+//   - `transaksi.total` — omset per meja di-JOIN-kan lewat
+//     `t.session_id = sm.session_id` (LEFT JOIN, dengan filter
+//     BATAL/CANCELLED di klausa ON), lalu di-SUM-kan per meja.
+//     Kueri LAMA memakai subquery korelatif
+//     `COALESCE((SELECT SUM(t.total) WHERE t.session_id = sm.session_id),0)`
+//     di dalam GROUP BY — SQLite mengevaluasinya hanya untuk SATU baris
+//     sembarang per grup, jadi total_omset keluar = omset satu sesi acak
+//     (verifikasi 2026-11-05: Meja 1 = 439 sesi tapi total_omset hanya
+//     Rp 64.000; setelah JOIN → Rp 20.184.000, sesuai 439 sesi).
+//     Sesi AKTIF (belum checkout) tidak punya transaksi → kontribusinya
+//     tetap 0; LEFT JOIN menjaga baris meja dengan 0 transaksi tidak hilang
+//     (konsisten dengan pola omzet di tutup-preview & /api/admin/tables/revenue).
+//   - Transaksi BATAL/CANCELLED dikecualikan (pola filter yang sama
+//     dipakai seluruh perhitungan omzet di server ini).
+//   - COUNT(DISTINCT session_id): session_id UNIQUE di sesi_meja,
+//    Distinct aman dari duplikat bila ada anomali data.
+// Response: { status:'success', data:[{meja,nomor_meja,total_sesi,total_omset}] }
+// Auth: wajib login kasir (pola sama persis dengan /api/riwayat-transaksi
+// di baris berikutnya) — data omzet per meja adalah data finansial,
+// jadi endpoint ini tidak dibuat publik.
+// ==================================================
+  if (req.method === "GET" && req.url === "/api/dashboard/meja-terlaris") {
+    const session = validateLoginSession(req, res);
+    if (!session) return;
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    db.all(
+      `SELECT
+         sm.nomor_meja AS nomor_meja,
+         COUNT(DISTINCT sm.session_id) AS total_sesi,
+         COALESCE(SUM(t.total), 0) AS total_omset
+       FROM sesi_meja sm
+       LEFT JOIN transaksi t
+         ON t.session_id = sm.session_id
+         AND UPPER(COALESCE(t.status_sync, '')) NOT IN ('BATAL', 'CANCELLED')
+       WHERE sm.nomor_meja BETWEEN 1 AND 10
+       GROUP BY sm.nomor_meja
+       ORDER BY total_sesi DESC, sm.nomor_meja ASC`,
+      [],
+      (err, rows) => {
+        if (err) {
+          res.end(JSON.stringify({ status: "error", message: err.message }));
+          return;
+        }
+        const data = (rows || []).map((r) => ({
+          meja: "Meja " + String(r.nomor_meja),
+          nomor_meja: Number(r.nomor_meja),
+          total_sesi: Number(r.total_sesi) || 0,
+          total_omset: Number(r.total_omset) || 0,
+        }));
+        res.end(JSON.stringify({ status: "success", data }));
+      }
+    );
+    return;
+  }
+
   if (req.method === "GET" && req.url.startsWith("/api/riwayat-transaksi")) {
     const session = validateLoginSession(req, res);
     if (!session) return;
